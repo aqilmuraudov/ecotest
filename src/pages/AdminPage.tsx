@@ -18,6 +18,7 @@ import { ProductFormModal } from '../components/admin/ProductFormModal';
 import { BlogFormModal } from '../components/admin/BlogFormModal';
 import { ProjectFormModal } from '../components/admin/ProjectFormModal';
 import { InquiryViewModal } from '../components/admin/InquiryViewModal';
+import { UsersTab } from '../components/admin/UsersTab';
 import { adminTranslations } from '../data/adminTranslations';
 import { 
   Database, 
@@ -42,7 +43,10 @@ import {
   UploadCloud,
   ChevronRight,
   FolderPlus,
-  Globe
+  Globe,
+  Users,
+  UserPlus,
+  UserCog
 } from 'lucide-react';
 
 interface AdminPageProps {
@@ -551,6 +555,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
             { id: 'projects', label: `${t.tabs.projects} (${projects.length})`, icon: Briefcase },
             { id: 'inquiries', label: `${t.tabs.inquiries} (${inquiries.length})`, icon: Mail },
             ...(userRole === 'admin' ? [
+              { id: 'users', label: 'İstifadəçilər', icon: Users },
               { id: 'import_export', label: 'İdxal / İxrac', icon: UploadCloud },
               { id: 'database', label: t.tabs.database, icon: Database }
             ] : [])
@@ -1187,6 +1192,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 5.5: USERS */}
+        {/* ========================================================================= */}
+        {activeTab === 'users' && userRole === 'admin' && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+            <UsersTab />
           </div>
         )}
 
