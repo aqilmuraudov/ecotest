@@ -17,6 +17,7 @@ const SESSION_STORAGE_KEY = 'ecolife_admin_session_check';
 export interface AdminSession {
   userId: string;
   email: string;
+  role: string;
   expiresAt: number;
 }
 
@@ -133,7 +134,7 @@ export async function getCurrentAdmin(): Promise<AdminSession | null> {
     // İstifadəçinin admin olub-olmadığını yoxla (caching üçün short TTL)
     const { data: adminRow } = await supabase
       .from('admin_users')
-      .select('user_id, email')
+      .select('user_id, email, role')
       .eq('user_id', session.user.id)
       .maybeSingle();
 
@@ -146,6 +147,7 @@ export async function getCurrentAdmin(): Promise<AdminSession | null> {
     return {
       userId: session.user.id,
       email: adminRow.email,
+      role: adminRow.role || 'admin',
       expiresAt: (session.expires_at ?? 0) * 1000,
     };
   } catch {

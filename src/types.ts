@@ -219,3 +219,11 @@ export interface Inquiry {
   createdAt: string;
   status: 'new' | 'in_progress' | 'contacted' | 'completed';
 }
+
+export type UserRole = 'admin' | 'moderator';
+
+export interface UserProfile {
+  id: string;
+  role: UserRole;
+  email?: string;
+}

@@ -255,12 +255,23 @@ CREATE TABLE IF NOT EXISTS public.categories (
 CREATE TABLE IF NOT EXISTS public.admin_users (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL UNIQUE,
-  role TEXT NOT NULL DEFAULT 'admin' CHECK (role IN ('admin', 'editor')),
+  role TEXT NOT NULL DEFAULT 'admin' CHECK (role IN ('admin', 'moderator')),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Helper function: cari istifadəçinin admin olub-olmadığını yoxlayır
-CREATE OR REPLACE FUNCTION public.is_admin()
+-- Helper function: cari istifadəçinin master admin olub-olmadığını yoxlayır
+CREATE OR REPLACE FUNCTION public.is_master_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.admin_users
+    WHERE user_id = auth.uid() AND role = 'admin'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
+-- Helper function: cari istifadəçinin ən azı moderator olub-olmadığını yoxlayır
+CREATE OR REPLACE FUNCTION public.is_admin_or_moderator()
 RETURNS BOOLEAN AS $$
 BEGIN
   RETURN EXISTS (
@@ -288,33 +299,38 @@ DROP POLICY IF EXISTS "Public Read/Update Inquiries" ON public.inquiries;
 DROP POLICY IF EXISTS "Public Insert/Update Categories" ON public.categories;
 DROP POLICY IF EXISTS "Public Storage Access" ON storage.objects;
 
--- PRODUCTS: Hamı oxuya bilər, yalnız admin yaza bilər
+-- PRODUCTS: Hamı oxuya bilər
 CREATE POLICY "Public Read Products" ON public.products FOR SELECT USING (true);
-CREATE POLICY "Admin Write Products" ON public.products FOR ALL
-  USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Moderator Insert Products" ON public.products FOR INSERT WITH CHECK (public.is_admin_or_moderator());
+CREATE POLICY "Moderator Update Products" ON public.products FOR UPDATE USING (public.is_admin_or_moderator()) WITH CHECK (public.is_admin_or_moderator());
+CREATE POLICY "Admin Delete Products" ON public.products FOR DELETE USING (public.is_master_admin());
 
--- ARTICLES: Hamı oxuya bilər, yalnız admin yaza bilər
+-- ARTICLES: Hamı oxuya bilər
 CREATE POLICY "Public Read Articles" ON public.articles FOR SELECT USING (true);
-CREATE POLICY "Admin Write Articles" ON public.articles FOR ALL
-  USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Moderator Insert Articles" ON public.articles FOR INSERT WITH CHECK (public.is_admin_or_moderator());
+CREATE POLICY "Moderator Update Articles" ON public.articles FOR UPDATE USING (public.is_admin_or_moderator()) WITH CHECK (public.is_admin_or_moderator());
+CREATE POLICY "Admin Delete Articles" ON public.articles FOR DELETE USING (public.is_master_admin());
 
--- PROJECTS: Hamı oxuya bilər, yalnız admin yaza bilər
+-- PROJECTS: Hamı oxuya bilər
 CREATE POLICY "Public Read Projects" ON public.projects FOR SELECT USING (true);
-CREATE POLICY "Admin Write Projects" ON public.projects FOR ALL
-  USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Moderator Insert Projects" ON public.projects FOR INSERT WITH CHECK (public.is_admin_or_moderator());
+CREATE POLICY "Moderator Update Projects" ON public.projects FOR UPDATE USING (public.is_admin_or_moderator()) WITH CHECK (public.is_admin_or_moderator());
+CREATE POLICY "Admin Delete Projects" ON public.projects FOR DELETE USING (public.is_master_admin());
 
 -- INQUIRIES:
 --   - Anon istifadəçi yalnız INSERT edə bilər (contact form)
 --   - SELECT/UPDATE/DELETE yalnız admin üçün
 CREATE POLICY "Public Insert Inquiries" ON public.inquiries FOR INSERT
   WITH CHECK (true);
-CREATE POLICY "Admin Read/Update Inquiries" ON public.inquiries FOR ALL
-  USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Moderator Read/Update Inquiries" ON public.inquiries FOR SELECT USING (public.is_admin_or_moderator());
+CREATE POLICY "Moderator Update Inquiries" ON public.inquiries FOR UPDATE USING (public.is_admin_or_moderator()) WITH CHECK (public.is_admin_or_moderator());
+CREATE POLICY "Admin Delete Inquiries" ON public.inquiries FOR DELETE USING (public.is_master_admin());
 
--- CATEGORIES: Hamı oxuya bilər, yalnız admin yaza bilər
+-- CATEGORIES: Hamı oxuya bilər
 CREATE POLICY "Public Read Categories" ON public.categories FOR SELECT USING (true);
-CREATE POLICY "Admin Write Categories" ON public.categories FOR ALL
-  USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Moderator Insert Categories" ON public.categories FOR INSERT WITH CHECK (public.is_admin_or_moderator());
+CREATE POLICY "Moderator Update Categories" ON public.categories FOR UPDATE USING (public.is_admin_or_moderator()) WITH CHECK (public.is_admin_or_moderator());
+CREATE POLICY "Admin Delete Categories" ON public.categories FOR DELETE USING (public.is_master_admin());
 
 -- ADMIN_USERS: yalnız admin öz sətirini oxuya bilər
 CREATE POLICY "Admin Self Read" ON public.admin_users FOR SELECT
@@ -332,9 +348,11 @@ DROP POLICY IF EXISTS "Public Storage Access" ON storage.objects;
 CREATE POLICY "Public Read Storage" ON storage.objects FOR SELECT
   USING (bucket_id = 'ecolife');
 CREATE POLICY "Admin Upload Storage" ON storage.objects FOR INSERT
-  WITH CHECK (bucket_id = 'ecolife' AND public.is_admin());
+  WITH CHECK (bucket_id = 'ecolife' AND public.is_admin_or_moderator());
+CREATE POLICY "Admin Update Storage" ON storage.objects FOR UPDATE
+  USING (bucket_id = 'ecolife' AND public.is_admin_or_moderator()) WITH CHECK (bucket_id = 'ecolife' AND public.is_admin_or_moderator());
 CREATE POLICY "Admin Delete Storage" ON storage.objects FOR DELETE
-  USING (bucket_id = 'ecolife' AND public.is_admin());
+  USING (bucket_id = 'ecolife' AND public.is_master_admin());
 
 -- ==========================================
 -- İLK ADMİN TƏYİN ETMƏK ÜÇÜN:

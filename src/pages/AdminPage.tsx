@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Language, Product, BlogPost, Project, Inquiry } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Language, Product, BlogPost, Project, Inquiry, UserProfile } from '../types';
 import { useData } from '../context/DataContext';
 import { ecolifeAllProducts } from '../data/ecolifeAllProducts';
 import { getLocalizedText } from '../utils/lang';
@@ -10,7 +10,7 @@ import {
   getStorageBucketName,
   setStorageBucketName
 } from '../lib/supabase';
-import { signInWithEmail, signOut, hasAdminSessionMarker } from '../utils/auth';
+import { signInWithEmail, signOut, hasAdminSessionMarker, getCurrentAdmin } from '../utils/auth';
 import { sanitizeEmail, sanitizeText } from '../utils/sanitize';
 import { normalizeImportedProducts } from '../utils/importProducts';
 import { CategoryManagerModal } from '../components/CategoryManagerModal';
@@ -86,10 +86,27 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return hasAdminSessionMarker();
   });
+  const [userRole, setUserRole] = useState<'admin' | 'moderator'>('moderator'); // Default to moderator for safety
   const [emailInput, setEmailInput] = useState<string>('');
   const [passwordInput, setPasswordInput] = useState<string>('');
   const [authError, setAuthError] = useState<string>('');
   const [isAuthenticating, setIsAuthenticating] = useState<boolean>(false);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const session = await getCurrentAdmin();
+      if (session) {
+        setIsAuthenticated(true);
+        setUserRole(session.role as 'admin' | 'moderator');
+      } else {
+        setIsAuthenticated(false);
+      }
+    };
+    
+    if (isAuthenticated) {
+      checkSession();
+    }
+  }, [isAuthenticated]);
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'blog' | 'projects' | 'inquiries' | 'import_export' | 'database'>('overview');
@@ -509,6 +526,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               <span>{t.header.goToSite}</span>
             </button>
 
+            <div className="flex items-center gap-1.5 text-xs bg-white/5 border border-white/10 px-3 py-2 rounded-lg text-gray-300 font-mono uppercase">
+              <span className={userRole === 'admin' ? 'text-[#FFD21A]' : 'text-blue-400'}>
+                {userRole}
+              </span>
+            </div>
+
             <button
               onClick={handleLogout}
               className="flex items-center gap-1.5 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-3 py-2 rounded-lg transition-colors font-medium"
@@ -527,8 +550,10 @@ export const AdminPage: React.FC<AdminPageProps> = ({
             { id: 'blog', label: `${t.tabs.blog} (${blogPosts.length})`, icon: FileText },
             { id: 'projects', label: `${t.tabs.projects} (${projects.length})`, icon: Briefcase },
             { id: 'inquiries', label: `${t.tabs.inquiries} (${inquiries.length})`, icon: Mail },
-            { id: 'import_export', label: 'İdxal / İxrac', icon: UploadCloud },
-            { id: 'database', label: t.tabs.database, icon: Database },
+            ...(userRole === 'admin' ? [
+              { id: 'import_export', label: 'İdxal / İxrac', icon: UploadCloud },
+              { id: 'database', label: t.tabs.database, icon: Database }
+            ] : [])
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -781,24 +806,26 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   <span>{t.products.manageCategories} ({categories.length})</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (window.confirm("Bütün məhsulları silmək istədiyinizə əminsiniz? Bu əməliyyat geri qaytarılmır.")) {
-                      const res = await deleteAllProducts();
-                      if (res.success) {
-                        alert("Bütün məhsullar uğurla silindi.");
-                      } else {
-                        alert(`Xəta: ${res.error}`);
+                {userRole === 'admin' && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (window.confirm("Bütün məhsulları silmək istədiyinizə əminsiniz? Bu əməliyyat geri qaytarılmır.")) {
+                        const res = await deleteAllProducts();
+                        if (res.success) {
+                          alert("Bütün məhsullar uğurla silindi.");
+                        } else {
+                          alert(`Xəta: ${res.error}`);
+                        }
                       }
-                    }
-                  }}
-                  className="flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-xl transition-all whitespace-nowrap cursor-pointer"
-                  title="Hamısını sil"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>Hamısını sil ({products.length})</span>
-                </button>
+                    }}
+                    className="flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-xl transition-all whitespace-nowrap cursor-pointer"
+                    title="Hamısını sil"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Hamısını sil ({products.length})</span>
+                  </button>
+                )}
 
                 <button
                   onClick={() => {
@@ -884,18 +911,20 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
 
-                            <button
-                              onClick={async () => {
-                                if (window.confirm(t.products.deleteConfirm.replace('{name}', p.name))) {
-                                  await deleteProduct(p.id);
-                                  showToast(`"${p.name}" ${t.products.deletedSuccess}`);
-                                }
-                              }}
-                              title={t.products.delete}
-                              className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {userRole === 'admin' && (
+                              <button
+                                onClick={async () => {
+                                  if (window.confirm(t.products.deleteConfirm.replace('{name}', p.name))) {
+                                    await deleteProduct(p.id);
+                                    showToast(`"${p.name}" ${t.products.deletedSuccess}`);
+                                  }
+                                }}
+                                title={t.products.delete}
+                                className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -958,17 +987,19 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                       >
                         <Edit3 className="w-3.5 h-3.5" />
                       </button>
-                      <button
-                        onClick={async () => {
-                          if (window.confirm(t.blog.deleteConfirm)) {
-                            await deleteBlogPost(post.id);
-                            showToast(t.blog.deletedSuccess);
-                          }
-                        }}
-                        className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {userRole === 'admin' && (
+                        <button
+                          onClick={async () => {
+                            if (window.confirm(t.blog.deleteConfirm)) {
+                              await deleteBlogPost(post.id);
+                              showToast(t.blog.deletedSuccess);
+                            }
+                          }}
+                          className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1034,17 +1065,19 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                       >
                         <Edit3 className="w-3.5 h-3.5" />
                       </button>
-                      <button
-                        onClick={async () => {
-                          if (window.confirm(t.projects.deleteConfirm)) {
-                            await deleteProject(proj.id);
-                            showToast(t.projects.deletedSuccess);
-                          }
-                        }}
-                        className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {userRole === 'admin' && (
+                        <button
+                          onClick={async () => {
+                            if (window.confirm(t.projects.deleteConfirm)) {
+                              await deleteProject(proj.id);
+                              showToast(t.projects.deletedSuccess);
+                            }
+                          }}
+                          className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1132,17 +1165,19 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                               >
                                 <Eye className="w-3.5 h-3.5" />
                               </button>
-                              <button
-                                onClick={async () => {
-                                  if (window.confirm(t.inquiries.deleteConfirm)) {
-                                    await deleteInquiry(inq.id);
-                                    showToast(t.inquiries.deletedSuccess);
-                                  }
-                                }}
-                                className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              {userRole === 'admin' && (
+                                <button
+                                  onClick={async () => {
+                                    if (window.confirm(t.inquiries.deleteConfirm)) {
+                                      await deleteInquiry(inq.id);
+                                      showToast(t.inquiries.deletedSuccess);
+                                    }
+                                  }}
+                                  className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
