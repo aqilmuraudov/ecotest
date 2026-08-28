@@ -25,10 +25,8 @@ export const adminTranslations = {
       subtitle: 'Kataloq məhsulları, xəbərlər və layihələri Supabase bazasından idarə etmək üçün daxil olun.',
       portalTitle: 'Ecolife İdarəetmə Paneli',
       portalDesc: 'Kataloq məhsulları, xəbərlər və layihələri Supabase bazasından idarə etmək üçün daxil olun.',
-      emailLabel: "Email ünvanı:",
-      emailPlaceholder: "admin@ecolife.az",
       passwordLabel: 'Admin Şifrəsi:',
-      passwordPlaceholder: 'Şifrəni daxil edin (admin / ecolife2026)...',
+      passwordPlaceholder: 'Şifrəni daxil edin...',
       loginBtn: 'Daxil Ol',
       supabaseUrlLabel: 'Supabase URL:',
       errorMsg: 'Şifrə yanlışdır! Təkrar yoxlayın.',
@@ -53,12 +51,14 @@ export const adminTranslations = {
 
     // Tabs
     tabs: {
-      overview: 'Ümumi Baxış',
+      overview: 'Ümumi',
       products: 'Məhsullar',
-      blog: 'Xəbərlər & Məqalələr',
+      blog: 'Xəbərlər',
       projects: 'Layihələr',
       inquiries: 'Sorğular',
-      database: 'Supabase / SQL Quraşdırma',
+      database: 'Database',
+      users: 'İstifadəçilər',
+      import_export: 'İdxal / İxrac',
     },
 
     // Overview Tab
@@ -458,10 +458,8 @@ export const adminTranslations = {
       subtitle: 'Sign in to manage catalog products, articles, and projects directly from Supabase database.',
       portalTitle: 'Ecolife Management Portal',
       portalDesc: 'Sign in to manage catalog products, articles, and projects directly from Supabase database.',
-      emailLabel: "Email ünvanı:",
-      emailPlaceholder: "admin@ecolife.az",
       passwordLabel: 'Admin Password:',
-      passwordPlaceholder: 'Enter password (admin / ecolife2026)...',
+      passwordPlaceholder: 'Enter password...',
       loginBtn: 'Sign In',
       supabaseUrlLabel: 'Supabase URL:',
       errorMsg: 'Incorrect password! Please try again.',
@@ -488,10 +486,12 @@ export const adminTranslations = {
     tabs: {
       overview: 'Overview',
       products: 'Products',
-      blog: 'News & Articles',
+      blog: 'News',
       projects: 'Projects',
       inquiries: 'Inquiries',
-      database: 'Supabase / SQL Setup',
+      database: 'Database',
+      users: 'Users',
+      import_export: 'Import / Export',
     },
 
     // Overview Tab
@@ -891,10 +891,8 @@ export const adminTranslations = {
       subtitle: 'Войдите для управления каталогом товаров, статьями и проектами в базе данных Supabase.',
       portalTitle: 'Панель Управления Ecolife',
       portalDesc: 'Войдите для управления каталогом товаров, статьями и проектами в базе данных Supabase.',
-      emailLabel: "Email ünvanı:",
-      emailPlaceholder: "admin@ecolife.az",
       passwordLabel: 'Пароль Администратора:',
-      passwordPlaceholder: 'Введите пароль (admin / ecolife2026)...',
+      passwordPlaceholder: 'Введите пароль...',
       loginBtn: 'Войти',
       supabaseUrlLabel: 'Supabase URL:',
       errorMsg: 'Неверный пароль! Попробуйте снова.',
@@ -921,10 +919,12 @@ export const adminTranslations = {
     tabs: {
       overview: 'Обзор',
       products: 'Продукты',
-      blog: 'Новости и Статьи',
+      blog: 'Новости',
       projects: 'Проекты',
       inquiries: 'Запросы',
-      database: 'Supabase / SQL Настройка',
+      database: 'Database',
+      users: 'Пользователи',
+      import_export: 'Импорт / Экспорт',
     },
 
     // Overview Tab

@@ -370,7 +370,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                 type="email"
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
-                placeholder="admin@ecolife.az"
+                placeholder="E-mail daxil edin"
                 autoComplete="email"
                 className="w-full bg-[#16181F] border border-white/15 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#FFD21A] transition-colors font-mono"
                 autoFocus
@@ -405,44 +405,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               <Unlock className="w-4 h-4" />
               <span>{isAuthenticating ? 'Giriş edilir...' : t.auth.loginBtn}</span>
             </button>
-
-            {/* Quick Demo/Master Auto-Fill Button */}
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setEmailInput('admin@ecolife.az');
-                  setPasswordInput('ecolife2026!');
-                  setAuthError('');
-                }}
-                className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 text-xs py-2.5 rounded-xl transition-colors font-mono flex items-center justify-center gap-1.5"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-[#FFD21A]" />
-                <span>Admin Məlumatlarını Doldur (1-Klik)</span>
-              </button>
-            </div>
           </form>
-
-          {/* Master Credentials Info Box */}
-          <div className="mt-5 p-3.5 bg-black/40 border border-[#FFD21A]/20 rounded-xl space-y-1 text-xs">
-            <div className="text-[11px] font-bold text-[#FFD21A] uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3" />
-              <span>Master Admin Giriş Məlumatları:</span>
-            </div>
-            <div className="text-[11px] text-gray-300 font-mono">
-              Email: <strong className="text-white">admin@ecolife.az</strong>
-            </div>
-            <div className="text-[11px] text-gray-300 font-mono">
-              Parol: <strong className="text-white">ecolife2026!</strong>
-            </div>
-          </div>
-
-          <div className="mt-6 pt-6 border-t border-white/5 flex items-center justify-between text-[11px] text-gray-400">
-            <span>{t.auth.supabaseUrlLabel}</span>
-            <span className="font-mono text-gray-300 truncate max-w-[200px]">
-              {SUPABASE_URL && !SUPABASE_URL.includes('invalid') ? SUPABASE_URL.replace('https://', '') : 'Lokal / Master Rejim'}
-            </span>
-          </div>
         </div>
       </div>
     );
@@ -547,36 +510,45 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         </div>
 
         {/* NAVIGATION TABS */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex overflow-x-auto no-scrollbar gap-2 border-t border-white/5 pt-2">
-          {[
-            { id: 'overview', label: t.tabs.overview, icon: Sparkles },
-            { id: 'products', label: `${t.tabs.products} (${products.length})`, icon: Layers },
-            { id: 'blog', label: `${t.tabs.blog} (${blogPosts.length})`, icon: FileText },
-            { id: 'projects', label: `${t.tabs.projects} (${projects.length})`, icon: Briefcase },
-            { id: 'inquiries', label: `${t.tabs.inquiries} (${inquiries.length})`, icon: Mail },
-            ...(userRole === 'admin' ? [
-              { id: 'users', label: 'İstifadəçilər', icon: Users },
-              { id: 'import_export', label: 'İdxal / İxrac', icon: UploadCloud },
-              { id: 'database', label: t.tabs.database, icon: Database }
-            ] : [])
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-t-lg transition-colors whitespace-nowrap border-b-2 ${
-                  isActive
-                    ? 'border-[#FFD21A] text-[#FFD21A] bg-[#FFD21A]/5'
-                    : 'border-transparent text-gray-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-white/5 pt-3 pb-3">
+          <div className="flex overflow-x-auto no-scrollbar gap-1.5 pb-1">
+            {[
+              { id: 'overview', label: t.tabs.overview, icon: Sparkles },
+              { id: 'products', label: t.tabs.products, count: products.length, icon: Layers },
+              { id: 'blog', label: t.tabs.blog, count: blogPosts.length, icon: FileText },
+              { id: 'projects', label: t.tabs.projects, count: projects.length, icon: Briefcase },
+              { id: 'inquiries', label: t.tabs.inquiries, count: inquiries.length, icon: Mail },
+              ...(userRole === 'admin' ? [
+                { id: 'users', label: t.tabs.users, icon: Users },
+                { id: 'import_export', label: t.tabs.import_export, icon: UploadCloud },
+                { id: 'database', label: t.tabs.database, icon: Database }
+              ] : [])
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`group flex items-center gap-2 px-3.5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all whitespace-nowrap flex-shrink-0 border ${
+                    isActive
+                      ? 'bg-[#FFD21A] text-black border-[#FFD21A] shadow-[0_0_20px_rgba(255,210,26,0.15)]'
+                      : 'bg-[#12131A] text-gray-400 border-white/5 hover:border-white/10 hover:text-white hover:bg-[#1A1C23]'
+                  }`}
+                >
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-black/80' : 'text-gray-500 group-hover:text-gray-400 transition-colors'}`} />
+                  <span>{tab.label}</span>
+                  {tab.count !== undefined && (
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono leading-none flex items-center justify-center min-w-[20px] ${
+                      isActive ? 'bg-black/20 text-black' : 'bg-white/5 text-gray-500 group-hover:bg-white/10 group-hover:text-gray-400'
+                    }`}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 

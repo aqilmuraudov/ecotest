@@ -332,9 +332,11 @@ CREATE POLICY "Moderator Insert Categories" ON public.categories FOR INSERT WITH
 CREATE POLICY "Moderator Update Categories" ON public.categories FOR UPDATE USING (public.is_admin_or_moderator()) WITH CHECK (public.is_admin_or_moderator());
 CREATE POLICY "Admin Delete Categories" ON public.categories FOR DELETE USING (public.is_master_admin());
 
--- ADMIN_USERS: yalnız admin öz sətirini oxuya bilər
-CREATE POLICY "Admin Self Read" ON public.admin_users FOR SELECT
-  USING (user_id = auth.uid());
+-- ADMIN_USERS: master adminlər hər şeyi görə bilər, digərləri yalnız özünü
+CREATE POLICY "Admin Self Read" ON public.admin_users FOR SELECT USING (user_id = auth.uid());
+CREATE POLICY "Master Admin Read All" ON public.admin_users FOR SELECT USING (public.is_master_admin());
+CREATE POLICY "Master Admin Insert" ON public.admin_users FOR INSERT WITH CHECK (public.is_master_admin());
+CREATE POLICY "Master Admin Delete" ON public.admin_users FOR DELETE USING (public.is_master_admin());
 
 -- ==========================================
 -- STORAGE BUCKET (Şəkil və Fayllar üçün)
