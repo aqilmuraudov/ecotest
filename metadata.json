@@ -1,0 +1,6 @@
+{
+  "name": "Ecolife - Architectural Lighting & LED Solutions",
+  "description": "Official website for Ecolife architectural lighting, linear LED systems, project portfolio, interactive lighting configurator, and technical catalog in Azerbaijan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

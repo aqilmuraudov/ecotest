@@ -1,0 +1,281 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-primary: #08090A;
+    --bg-surface: #101114;
+    --bg-surface-elevated: #16181D;
+    --bg-surface-card: #0E0F12;
+    --accent-yellow: #FFD21A;
+    --accent-yellow-hover: #F0C413;
+    --text-primary: #F5F5F5;
+    --text-secondary: #9E9EA4;
+    --text-muted: #64646E;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-highlight: rgba(255, 210, 26, 0.35);
+  }
+
+  /* Light mode root variable mapping */
+  html.light,
+  [data-theme="light"] {
+    --bg-primary: #F8F9FA;
+    --bg-surface: #FFFFFF;
+    --bg-surface-elevated: #F1F5F9;
+    --bg-surface-card: #FFFFFF;
+    --accent-yellow: #FFD21A;
+    --accent-yellow-hover: #EAB308;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #94A3B8;
+    --border-subtle: #E2E8F0;
+    --border-highlight: rgba(234, 179, 8, 0.5);
+  }
+
+  body {
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #08090A;
+    color: #F5F5F5;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  html.light body {
+    background-color: #F8F9FA;
+    color: #0F172A;
+  }
+
+  /* Custom subtle scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #08090A;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #23242A;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #FFD21A;
+  }
+
+  html.light ::-webkit-scrollbar-track {
+    background: #F1F5F9;
+  }
+  html.light ::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+  }
+  html.light ::-webkit-scrollbar-thumb:hover {
+    background: #FFD21A;
+  }
+}
+
+/* Custom helper classes */
+.glow-yellow {
+  box-shadow: 0 0 35px -5px rgba(255, 210, 26, 0.15);
+}
+
+.glow-yellow-sm {
+  box-shadow: 0 0 15px -3px rgba(255, 210, 26, 0.2);
+}
+
+.architectural-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}
+
+html.light .architectural-grid {
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+}
+
+/* ========================================================================= */
+/* LIGHT MODE STYLING SUITE (Clean, High-Contrast Architectural Light UI) */
+/* ========================================================================= */
+html.light .bg-\[\#08090A\],
+html.light [class*="bg-[#08090A]"] {
+  background-color: #F8F9FA !important;
+}
+
+html.light .bg-\[\#101114\],
+html.light .bg-\[\#0E0F12\],
+html.light [class*="bg-[#101114]"],
+html.light [class*="bg-[#0E0F12]"] {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+}
+
+html.light .bg-\[\#16181D\],
+html.light [class*="bg-[#16181D]"] {
+  background-color: #F1F5F9 !important;
+  border-color: #E2E8F0 !important;
+}
+
+/* Light Mode Background Tints */
+html.light .bg-white\/5 {
+  background-color: #F1F5F9 !important;
+}
+html.light .bg-white\/10 {
+  background-color: #E2E8F0 !important;
+}
+html.light .hover\:bg-white\/5:hover {
+  background-color: #F1F5F9 !important;
+}
+html.light .hover\:bg-white\/10:hover {
+  background-color: #E2E8F0 !important;
+}
+
+/* Light Mode Text Overrides */
+html.light .text-\[\#F5F5F5\],
+html.light [class*="text-[#F5F5F5]"] {
+  color: #0F172A !important;
+}
+
+html.light .text-white {
+  color: #0F172A !important;
+}
+
+html.light .text-gray-300,
+html.light .text-gray-400,
+html.light .text-\[\#9E9EA4\] {
+  color: #475569 !important;
+}
+
+html.light .text-gray-500 {
+  color: #64748B !important;
+}
+
+/* Light Mode Borders */
+html.light .border-white\/5,
+html.light .border-white\/10,
+html.light .border-white\/15,
+html.light .border-white\/20,
+html.light [class*="border-white/"] {
+  border-color: #E2E8F0 !important;
+}
+
+/* Light Mode Header Navigation */
+html.light #ecolife-global-header {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Light Mode Footer */
+html.light #ecolife-global-footer {
+  background-color: #F1F5F9 !important;
+  border-top: 1px solid #E2E8F0 !important;
+  color: #475569 !important;
+}
+html.light #ecolife-global-footer .border-b {
+  border-bottom-color: #E2E8F0 !important;
+}
+
+/* Light Mode Mobile Modal Menu */
+html.light #ecolife-mobile-nav-modal {
+  background-color: #F8F9FA !important;
+  color: #0F172A !important;
+}
+
+html.light #ecolife-mobile-nav-modal > div:first-child {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-bottom-color: #E2E8F0 !important;
+}
+
+/* Maintain Black Text on Solid Yellow Elements */
+html.light .bg-\[\#FFD21A\],
+html.light .bg-\[\#FFD21A\] *,
+html.light button.bg-\[\#FFD21A\],
+html.light [class*="bg-[#FFD21A]"] {
+  color: #000000 !important;
+}
+
+/* Keep Full Contrast on Hero / Project Photographic Overlays */
+html.light .preserve-dark-photo,
+html.light .relative .absolute.inset-0 + div.relative h1,
+html.light .relative .absolute.inset-0 + div.relative p,
+html.light .relative .absolute.inset-0 + div.relative span {
+  color: #FFFFFF !important;
+}
+html.light .relative .absolute.inset-0 + div.relative span.text-\[\#FFD21A\] {
+  color: #FFD21A !important;
+}
+
+/* Form Inputs in Light Mode */
+html.light input,
+html.light select,
+html.light textarea {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+  border-color: #CBD5E1 !important;
+}
+html.light input:focus,
+html.light select:focus,
+html.light textarea:focus {
+  border-color: #FFD21A !important;
+  outline-color: #FFD21A !important;
+}
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #94A3B8 !important;
+}
+
+/* Dropdown menus & Popovers in Light Mode */
+html.light .animate-fadeIn {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Logo Switcher */
+html.light .dark-logo {
+  display: none !important;
+}
+html.light .light-logo {
+  display: block !important;
+}
+
+/* Why Us Feature Icons in Light Mode */
+html.light .why-us-icon {
+  background-color: #FFFFFF !important;
+  border-color: rgba(255, 210, 26, 0.5) !important;
+  color: #D97706 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Product Code Badge over Images in Light Mode */
+html.light .product-code-badge {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+  border-color: #E2E8F0 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Configurator Promo Banner in Light Mode (Matching Untitled-1.png) */
+html.light .configurator-promo-card {
+  background-color: #FFFFFF !important;
+  border: 2px solid #FFD21A !important;
+  box-shadow: 0 10px 35px -5px rgba(255, 210, 26, 0.15), 0 4px 18px rgba(0, 0, 0, 0.04) !important;
+}
+html.light .configurator-promo-card h2 {
+  color: #0F172A !important;
+}
+html.light .configurator-promo-card p {
+  color: #334155 !important;
+}
+html.light .configurator-promo-card .configurator-promo-tag {
+  background-color: #FFFBEB !important;
+  border: 1px solid #FFD21A !important;
+}
+html.light .configurator-promo-card .configurator-promo-tag span {
+  color: #0F172A !important;
+  font-weight: 800 !important;
+}
+html.light .configurator-promo-card .configurator-promo-tag svg {
+  color: #D97706 !important;
+}
+
+
