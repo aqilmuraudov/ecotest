@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Language, Project } from '../types';
 import { translations } from '../data/translations';
 import { useData } from '../context/DataContext';
-import { ArrowRight, MapPin, Calendar, Building, Sparkles } from 'lucide-react';
+import { ArrowRight, MapPin } from 'lucide-react';
 
 interface ProjectsPageProps {
   currentLang: Language;

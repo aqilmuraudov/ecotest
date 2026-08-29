@@ -9,7 +9,7 @@ import {
   checkRateLimit,
   getClientFingerprint,
 } from '../utils/sanitize';
-import { X, CheckCircle, Send, FileText, Phone, Mail, Sparkles } from 'lucide-react';
+import { X, CheckCircle, Send, FileText, Phone, Mail } from 'lucide-react';
 
 interface ContactModalProps {
   isOpen: boolean;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, Sliders } from 'lucide-react';
+import { ArrowRight, SlidersHorizontal } from 'lucide-react';
 
 interface ConfiguratorPromoSectionProps {
   title: string;
@@ -25,7 +25,7 @@ export const ConfiguratorPromoSection: React.FC<ConfiguratorPromoSectionProps> =
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-8 space-y-4">
             <div className="configurator-promo__tag inline-flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-black uppercase tracking-wider">
-              <Sliders className="w-3.5 h-3.5 configurator-promo__tag-icon" />
+              <SlidersHorizontal className="w-3.5 h-3.5 configurator-promo__tag-icon stroke-[2]" />
               <span>
                 ECOLIFE CONFIGURATOR
                 <span className="configurator-promo__pro"> PRO</span>

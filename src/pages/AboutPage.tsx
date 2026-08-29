@@ -2,12 +2,10 @@ import React from 'react';
 import { Language } from '../types';
 import { translations } from '../data/translations';
 import { 
-  Building2, 
-  Award, 
+  DraftingCompass, 
   ShieldCheck, 
   Cpu, 
-  Users, 
-  Sparkles, 
+  Users2, 
   ArrowRight,
   CheckCircle2
 } from 'lucide-react';
@@ -98,7 +96,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           <div className="bg-[#101114] border border-white/10 rounded-xl p-6 space-y-3">
             <div className="w-12 h-12 rounded-lg bg-[#FFD21A]/10 text-[#FFD21A] flex items-center justify-center">
-              <Building2 className="w-6 h-6" />
+              <DraftingCompass className="w-6 h-6 stroke-[1.5]" />
             </div>
             <h3 className="text-base font-bold text-white uppercase">{t.stats.experience}</h3>
             <p className="text-xs text-gray-400 leading-relaxed">
@@ -108,7 +106,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({
 
           <div className="bg-[#101114] border border-white/10 rounded-xl p-6 space-y-3">
             <div className="w-12 h-12 rounded-lg bg-[#FFD21A]/10 text-[#FFD21A] flex items-center justify-center">
-              <Cpu className="w-6 h-6" />
+              <Cpu className="w-6 h-6 stroke-[1.5]" />
             </div>
             <h3 className="text-base font-bold text-white uppercase">{t.about.values.engineering}</h3>
             <p className="text-xs text-gray-400 leading-relaxed">
@@ -118,7 +116,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({
 
           <div className="bg-[#101114] border border-white/10 rounded-xl p-6 space-y-3">
             <div className="w-12 h-12 rounded-lg bg-[#FFD21A]/10 text-[#FFD21A] flex items-center justify-center">
-              <Award className="w-6 h-6" />
+              <ShieldCheck className="w-6 h-6 stroke-[1.5]" />
             </div>
             <h3 className="text-base font-bold text-white uppercase">{t.whyUs.warranty}</h3>
             <p className="text-xs text-gray-400 leading-relaxed">
@@ -128,7 +126,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({
 
           <div className="bg-[#101114] border border-white/10 rounded-xl p-6 space-y-3">
             <div className="w-12 h-12 rounded-lg bg-[#FFD21A]/10 text-[#FFD21A] flex items-center justify-center">
-              <Users className="w-6 h-6" />
+              <Users2 className="w-6 h-6 stroke-[1.5]" />
             </div>
             <h3 className="text-base font-bold text-white uppercase">{t.whyUs.expertSupport}</h3>
             <p className="text-xs text-gray-400 leading-relaxed">
@@ -147,9 +145,10 @@ export const AboutPage: React.FC<AboutPageProps> = ({
           </p>
           <button
             onClick={onOpenContact}
-            className="bg-[#FFD21A] text-black font-bold text-xs uppercase tracking-wider px-8 py-4 rounded hover:bg-[#F0C413] transition-all shadow-[0_0_20px_rgba(255,210,26,0.25)]"
+            className="inline-flex items-center gap-2 bg-[#FFD21A] text-black font-bold text-xs uppercase tracking-wider px-8 py-4 rounded hover:bg-[#F0C413] transition-all shadow-[0_0_20px_rgba(255,210,26,0.25)]"
           >
-            {t.nav.writeUs} →
+            <span>{t.nav.writeUs}</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 

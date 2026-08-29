@@ -9,10 +9,9 @@ import {
   ArrowRight, 
   ChevronRight, 
   SlidersHorizontal, 
-  Layers, 
-  Headphones, 
+  LampCeiling, 
+  DraftingCompass, 
   Truck, 
-  Sparkles,
   X,
   Filter
 } from 'lucide-react';
@@ -364,7 +363,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             
             <div className="flex items-center gap-4 pt-4 lg:pt-0 first:pt-0">
               <div className="w-12 h-12 rounded-lg bg-[#FFD21A]/10 border border-[#FFD21A]/30 flex items-center justify-center text-[#FFD21A] flex-shrink-0">
-                <Layers className="w-6 h-6 stroke-[1.5]" />
+                <LampCeiling className="w-6 h-6 stroke-[1.5]" />
               </div>
               <div>
                 <div className="text-xl font-extrabold text-white tracking-tight">
@@ -378,7 +377,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
 
             <div className="flex items-center gap-4 pt-4 lg:pt-0 lg:pl-8">
               <div className="w-12 h-12 rounded-lg bg-[#FFD21A]/10 border border-[#FFD21A]/30 flex items-center justify-center text-[#FFD21A] flex-shrink-0">
-                <Headphones className="w-6 h-6 stroke-[1.5]" />
+                <DraftingCompass className="w-6 h-6 stroke-[1.5]" />
               </div>
               <div>
                 <div className="text-base font-extrabold text-white tracking-tight">
@@ -406,7 +405,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
 
             <div className="flex items-center gap-4 pt-4 lg:pt-0 lg:pl-8">
               <div className="w-12 h-12 rounded-lg bg-[#FFD21A]/10 border border-[#FFD21A]/30 flex items-center justify-center text-[#FFD21A] flex-shrink-0">
-                <Sparkles className="w-6 h-6 stroke-[1.5]" />
+                <SlidersHorizontal className="w-6 h-6 stroke-[1.5]" />
               </div>
               <div>
                 <div className="text-base font-extrabold text-white tracking-tight">

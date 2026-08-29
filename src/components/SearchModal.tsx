@@ -4,7 +4,7 @@ import { translations } from '../data/translations';
 import { useData } from '../context/DataContext';
 import { solutions } from '../data/solutions';
 import { getLocalizedText } from '../utils/lang';
-import { Search, X, ArrowRight, Layers, Building2, Sparkles } from 'lucide-react';
+import { Search, X, ArrowRight } from 'lucide-react';
 
 interface SearchModalProps {
   isOpen: boolean;

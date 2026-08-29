@@ -5,15 +5,15 @@ import { solutions } from '../data/solutions';
 import { products } from '../data/products';
 import { projects } from '../data/projects';
 import { 
-  Building2, 
+  Building, 
   Briefcase, 
-  Utensils, 
+  Hotel, 
   Home, 
   CheckCircle2, 
   ArrowRight, 
-  Sparkles,
-  Layers,
-  MessageSquare
+  LampCeiling,
+  Layers, 
+  MessageSquare 
 } from 'lucide-react';
 
 interface SolutionsPageProps {
@@ -45,10 +45,10 @@ export const SolutionsPage: React.FC<SolutionsPageProps> = ({
   );
 
   const icons = {
-    commercial: <Building2 className="w-5 h-5" />,
-    office: <Briefcase className="w-5 h-5" />,
-    hospitality: <Utensils className="w-5 h-5" />,
-    residential: <Home className="w-5 h-5" />
+    commercial: <Building className="w-5 h-5 stroke-[1.5]" />,
+    office: <Briefcase className="w-5 h-5 stroke-[1.5]" />,
+    hospitality: <Hotel className="w-5 h-5 stroke-[1.5]" />,
+    residential: <Home className="w-5 h-5 stroke-[1.5]" />
   };
 
   return (
@@ -89,7 +89,7 @@ export const SolutionsPage: React.FC<SolutionsPageProps> = ({
                   }`}
                 >
                   <div className={`p-2 rounded-lg w-fit mb-3 ${isActive ? 'bg-[#FFD21A] text-black' : 'bg-white/5 text-gray-300'}`}>
-                    {icons[sol.id as keyof typeof icons] || <Sparkles className="w-5 h-5" />}
+                    {icons[sol.id as keyof typeof icons] || <LampCeiling className="w-5 h-5 stroke-[1.5]" />}
                   </div>
                   <div>
                     <h3 className={`text-xs sm:text-sm font-bold uppercase tracking-wide ${isActive ? 'text-[#FFD21A]' : 'text-white'}`}>
