@@ -7,7 +7,6 @@ import { motion } from 'motion/react';
 import { FadeIn } from '../components/ui/FadeIn';
 import { TiltCard } from '../components/ui/TiltCard';
 import { LedLightBeam } from '../components/ui/LedLightBeam';
-import { LedInteractiveShowcase } from '../components/ui/LedInteractiveShowcase';
 import { LedAmbientGlow } from '../components/ui/LedAmbientGlow';
 import { 
   ArrowRight, 
@@ -323,18 +322,6 @@ export const HomePage: React.FC<HomePageProps> = ({
 
           </div>
         </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* SECTION 02.5: INTERACTIVE ARCHITECTURAL LED STUDIO & CCT SIMULATOR */}
-      {/* ========================================================================= */}
-      <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <FadeIn direction="up">
-          <LedInteractiveShowcase 
-            currentLang={currentLang} 
-            onOpenContact={onOpenContact} 
-          />
-        </FadeIn>
       </section>
 
       {/* ========================================================================= */}
