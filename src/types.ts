@@ -211,6 +211,9 @@ export interface Inquiry {
   message: string;
   productCode?: string;
   productName?: string;
+  productImage?: string;
+  productCategory?: string;
+  productSpecs?: Record<string, any>;
   roomPreset?: string;
   configSummary?: string;
   projectType?: string;

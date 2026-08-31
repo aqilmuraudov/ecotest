@@ -173,6 +173,7 @@ export default function App() {
           <CatalogPage
             currentLang={currentLang}
             onNavigate={handleNavigate}
+            onRequestQuote={handleRequestProductQuote}
             initialCategory={pageParam || 'all'}
           />
         );

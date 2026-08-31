@@ -19,12 +19,14 @@ import {
 interface CatalogPageProps {
   currentLang: Language;
   onNavigate: (page: string, param?: string) => void;
+  onRequestQuote?: (product: Product) => void;
   initialCategory?: ProductCategory | string;
 }
 
 export const CatalogPage: React.FC<CatalogPageProps> = ({
   currentLang,
   onNavigate,
+  onRequestQuote,
   initialCategory = 'all'
 }) => {
   const t = translations[currentLang];
@@ -319,12 +321,27 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                         </p>
                       </div>
 
-                      <div className="pt-3 mt-3 border-t border-white/5 flex items-center justify-between">
-                        <span className="text-[11px] font-medium text-gray-400">
-                          {product.specs.dimensions}
+                      <div className="pt-3 mt-3 border-t border-white/5 flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-medium text-gray-400 truncate">
+                          {product.specs.dimensions || product.category}
                         </span>
-                        <div className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center text-[#FFD21A] group-hover:bg-[#FFD21A] group-hover:text-black transition-all">
-                          <ArrowRight className="w-3.5 h-3.5" />
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {onRequestQuote && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onRequestQuote(product);
+                              }}
+                              className="px-2.5 py-1 rounded bg-[#FFD21A]/10 hover:bg-[#FFD21A] text-[#FFD21A] hover:text-black text-[10px] font-bold uppercase tracking-wider border border-[#FFD21A]/30 hover:border-[#FFD21A] transition-all cursor-pointer"
+                              title="Sorğu Göndər"
+                            >
+                              Sorğu Göndər
+                            </button>
+                          )}
+                          <div className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center text-[#FFD21A] group-hover:bg-[#FFD21A] group-hover:text-black transition-all">
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </div>
                         </div>
                       </div>
                     </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Language, Product } from '../types';
 import { translations } from '../data/translations';
 import { useData } from '../context/DataContext';
+import { getLocalizedText } from '../utils/lang';
 import {
   sanitizeEmail,
   sanitizePhone,
@@ -9,7 +10,7 @@ import {
   checkRateLimit,
   getClientFingerprint,
 } from '../utils/sanitize';
-import { X, CheckCircle, Send, FileText, Phone, Mail } from 'lucide-react';
+import { X, CheckCircle, Send, Phone, Layers, ShieldCheck, Box, Sliders } from 'lucide-react';
 
 interface ContactModalProps {
   isOpen: boolean;
@@ -111,6 +112,9 @@ export const ContactModal: React.FC<ContactModalProps> = ({
         message: cleanMessage,
         productName: prefilledProduct ? sanitizeText(prefilledProduct.name, 200) : undefined,
         productCode: prefilledProduct?.code,
+        productImage: prefilledProduct?.image,
+        productCategory: prefilledProduct?.category,
+        productSpecs: prefilledProduct?.specs,
         configSummary: configSummary ? sanitizeText(configSummary, 1000) : undefined,
         ipHash: fingerprint,
       } as any);
@@ -128,15 +132,15 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
       <div 
         id="ecolife-inquiry-modal"
-        className="relative w-full max-w-2xl bg-[#101114] border border-white/15 rounded-xl shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto text-[#F5F5F5]"
+        className="relative w-full max-w-2xl bg-[#101114] border border-white/15 rounded-2xl shadow-2xl p-5 sm:p-8 max-h-[92vh] overflow-y-auto text-[#F5F5F5]"
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/5 transition-colors"
+          className="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/5 transition-colors z-20"
           aria-label="Close"
         >
           <X className="w-5 h-5" />
@@ -148,15 +152,20 @@ export const ContactModal: React.FC<ContactModalProps> = ({
               <CheckCircle className="w-8 h-8" />
             </div>
             <h3 className="text-2xl font-bold text-white">
-              {currentLang === 'az' ? 'Sorğunuz Qəbul Edildi!' : currentLang === 'ru' ? 'Запрос успешно отправлен!' : 'Inquiry Successfully Received!'}
+              {currentLang === 'az' ? 'Sorğunuz Uğurla Qəbul Edildi!' : currentLang === 'ru' ? 'Запрос успешно отправлен!' : 'Inquiry Successfully Received!'}
             </h3>
             <p className="text-sm text-gray-300 max-w-md mx-auto">
               {t.contact.form.success}
             </p>
+            {prefilledProduct && (
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-white/5 border border-white/10 text-xs text-[#FFD21A] font-mono">
+                <span>{prefilledProduct.name} [{prefilledProduct.code}]</span>
+              </div>
+            )}
             <div className="pt-4">
               <button
                 onClick={handleReset}
-                className="bg-[#FFD21A] text-black font-bold text-xs uppercase tracking-wider px-8 py-3 rounded hover:bg-[#F0C413] transition-colors"
+                className="bg-[#FFD21A] text-black font-bold text-xs uppercase tracking-wider px-8 py-3 rounded-xl hover:bg-[#F0C413] transition-colors"
               >
                 {currentLang === 'az' ? 'Pəncərəni Bağla' : currentLang === 'ru' ? 'Закрыть' : 'Close Window'}
               </button>
@@ -165,7 +174,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
         ) : (
           <div>
             {/* Header */}
-            <div className="space-y-1.5 pb-6 border-b border-white/10">
+            <div className="space-y-1.5 pb-4 border-b border-white/10">
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-bold uppercase tracking-widest text-[#FFD21A] bg-[#FFD21A]/10 px-2.5 py-0.5 rounded border border-[#FFD21A]/30">
                   {t.nav.writeUs}
@@ -176,7 +185,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                   </span>
                 )}
               </div>
-              <h2 className="text-2xl font-bold text-white">
+              <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight uppercase">
                 {prefilledProduct 
                   ? `${prefilledProduct.name} - ${t.productDetail.requestQuote}`
                   : configSummary 
@@ -188,9 +197,79 @@ export const ContactModal: React.FC<ContactModalProps> = ({
               </p>
             </div>
 
+            {/* REAL SELECTED PRODUCT CARD PREVIEW */}
+            {prefilledProduct && (
+              <div className="mt-4 p-3.5 sm:p-4 bg-[#16181F] border border-[#FFD21A]/30 rounded-xl flex flex-col sm:flex-row items-start sm:items-center gap-4 shadow-lg">
+                {/* Product Thumbnail */}
+                <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-black/60 border border-white/10 flex-shrink-0 flex items-center justify-center">
+                  <img
+                    src={prefilledProduct.image || (prefilledProduct.gallery && prefilledProduct.gallery[0]) || 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=300&q=80'}
+                    alt={prefilledProduct.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute top-1 left-1 bg-black/80 px-1.5 py-0.5 rounded text-[9px] font-mono text-[#FFD21A] font-bold">
+                    {prefilledProduct.code}
+                  </div>
+                </div>
+
+                {/* Product Meta & Key Specs */}
+                <div className="flex-1 space-y-1.5 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-bold text-white uppercase tracking-tight truncate">
+                      {prefilledProduct.name}
+                    </h3>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-white/10 text-gray-300">
+                      {getLocalizedText(prefilledProduct.categoryName, currentLang)}
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-gray-300 line-clamp-1">
+                    {getLocalizedText(prefilledProduct.subtitle, currentLang)}
+                  </p>
+
+                  {/* Spec badges */}
+                  <div className="flex flex-wrap gap-1.5 pt-1 text-[10px] font-mono text-gray-300">
+                    {prefilledProduct.specs.dimensions && (
+                      <span className="px-2 py-0.5 rounded bg-black/40 border border-white/5 text-[#FFD21A]">
+                        {prefilledProduct.specs.dimensions}
+                      </span>
+                    )}
+                    {prefilledProduct.specs.mounting && (
+                      <span className="px-2 py-0.5 rounded bg-black/40 border border-white/5 text-gray-300">
+                        {prefilledProduct.specs.mounting}
+                      </span>
+                    )}
+                    {prefilledProduct.specs.ipRating && (
+                      <span className="px-2 py-0.5 rounded bg-black/40 border border-white/5 text-gray-300">
+                        {prefilledProduct.specs.ipRating}
+                      </span>
+                    )}
+                    {prefilledProduct.specs.power && (
+                      <span className="px-2 py-0.5 rounded bg-black/40 border border-white/5 text-emerald-400">
+                        {prefilledProduct.specs.power}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Custom Configuration Summary Banner if from Configurator */}
+            {!prefilledProduct && configSummary && (
+              <div className="mt-4 p-3.5 bg-[#16181F] border border-emerald-500/30 rounded-xl space-y-1">
+                <div className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sliders className="w-3.5 h-3.5" />
+                  <span>Xüsusi Konfiqurasiya</span>
+                </div>
+                <div className="text-xs font-mono text-gray-200 whitespace-pre-line leading-relaxed">
+                  {configSummary}
+                </div>
+              </div>
+            )}
+
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4 pt-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
                     {t.contact.form.firstName} *
@@ -201,7 +280,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                     placeholder="Adınız"
-                    className="w-full bg-[#18191E] border border-white/10 rounded px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#FFD21A] transition-colors"
+                    className="w-full bg-[#18191E] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#FFD21A] transition-colors"
                   />
                 </div>
                 <div>
@@ -213,12 +292,12 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                     placeholder="Soyadınız"
-                    className="w-full bg-[#18191E] border border-white/10 rounded px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#FFD21A] transition-colors"
+                    className="w-full bg-[#18191E] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#FFD21A] transition-colors"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
                     {t.contact.form.email} *
@@ -229,7 +308,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="example@mail.com"
-                    className="w-full bg-[#18191E] border border-white/10 rounded px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#FFD21A] transition-colors"
+                    className="w-full bg-[#18191E] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#FFD21A] transition-colors"
                   />
                 </div>
                 <div>
@@ -242,12 +321,12 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="+994 50 000 00 00"
-                    className="w-full bg-[#18191E] border border-white/10 rounded px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#FFD21A] transition-colors"
+                    className="w-full bg-[#18191E] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#FFD21A] transition-colors"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
                     {t.contact.form.company}
@@ -257,7 +336,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                     value={formData.company}
                     onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                     placeholder="Memarlıq Bürosu / Şirkət"
-                    className="w-full bg-[#18191E] border border-white/10 rounded px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#FFD21A] transition-colors"
+                    className="w-full bg-[#18191E] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#FFD21A] transition-colors"
                   />
                 </div>
                 <div>
@@ -267,7 +346,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                   <select
                     value={formData.projectType}
                     onChange={(e) => setFormData({ ...formData, projectType: e.target.value })}
-                    className="w-full bg-[#18191E] border border-white/10 rounded px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#FFD21A] transition-colors"
+                    className="w-full bg-[#18191E] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#FFD21A] transition-colors"
                   >
                     <option value="commercial">Ticarət & Retail</option>
                     <option value="office">Ofis & Biznes Mərkəzi</option>
@@ -283,12 +362,12 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                   {t.contact.form.message} *
                 </label>
                 <textarea
-                  rows={4}
+                  rows={3}
                   required
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                   placeholder="Layihənizin detallarını, tələb olunan metrajı və ya xüsusi qeydlərinizi daxil edin..."
-                  className="w-full bg-[#18191E] border border-white/10 rounded px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#FFD21A] transition-colors resize-none"
+                  className="w-full bg-[#18191E] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#FFD21A] transition-colors resize-none"
                 />
               </div>
 
@@ -304,7 +383,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#FFD21A] text-black font-bold text-xs uppercase tracking-wider px-8 py-3.5 rounded hover:bg-[#F0C413] transition-all shadow-[0_0_20px_rgba(255,210,26,0.25)] disabled:opacity-50"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#FFD21A] text-black font-bold text-xs uppercase tracking-wider px-8 py-3.5 rounded-xl hover:bg-[#F0C413] transition-all shadow-[0_0_20px_rgba(255,210,26,0.25)] disabled:opacity-50 cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
                   <span>{isSubmitting ? t.contact.form.submitting : t.contact.form.submit}</span>

@@ -316,6 +316,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           message: d.message,
           productCode: d.product_code,
           productName: d.product_name,
+          productImage: d.product_image,
+          productCategory: d.product_category,
+          productSpecs: d.product_specs,
+          projectType: d.project_type,
           roomPreset: d.room_preset,
           configSummary: d.config_summary,
           status: d.status || 'new',
@@ -359,6 +363,76 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     refreshData();
   }, [refreshData]);
+
+  // Realtime inquiries subscription (Supabase Realtime + Local multi-tab)
+  useEffect(() => {
+    // 1. Supabase Postgres Realtime Channel
+    const channel = supabase
+      .channel('public:inquiries:realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inquiries' }, (payload: any) => {
+        if (payload.eventType === 'INSERT' && payload.new) {
+          const newRow = payload.new;
+          const newInq: Inquiry = {
+            id: newRow.id,
+            name: newRow.name,
+            email: newRow.email,
+            phone: newRow.phone,
+            company: newRow.company,
+            subject: newRow.subject,
+            message: newRow.message,
+            productCode: newRow.product_code,
+            productName: newRow.product_name,
+            productImage: newRow.product_image,
+            productCategory: newRow.product_category,
+            productSpecs: newRow.product_specs,
+            projectType: newRow.project_type,
+            roomPreset: newRow.room_preset,
+            configSummary: newRow.config_summary,
+            status: newRow.status || 'new',
+            createdAt: newRow.created_at || new Date().toISOString()
+          };
+          setInquiries((prev) => {
+            if (prev.some(i => i.id === newInq.id)) return prev;
+            const updated = [newInq, ...prev];
+            saveToLocal(LOCAL_STORAGE_INQUIRIES, updated);
+            return updated;
+          });
+        } else if (payload.eventType === 'UPDATE' && payload.new) {
+          const updatedRow = payload.new;
+          setInquiries((prev) => {
+            const updated = prev.map(i => i.id === updatedRow.id ? { ...i, status: updatedRow.status } : i);
+            saveToLocal(LOCAL_STORAGE_INQUIRIES, updated);
+            return updated;
+          });
+        } else if (payload.eventType === 'DELETE' && payload.old) {
+          const oldRow = payload.old;
+          setInquiries((prev) => {
+            const updated = prev.filter(i => i.id !== oldRow.id);
+            saveToLocal(LOCAL_STORAGE_INQUIRIES, updated);
+            return updated;
+          });
+        }
+      })
+      .subscribe();
+
+    // 2. Cross-tab storage listener
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === LOCAL_STORAGE_INQUIRIES && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setInquiries(parsed);
+          }
+        } catch (err) {}
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   // Category CRUD
   const addCategory = async (catData: CategoryItem): Promise<{ success: boolean; error?: string }> => {
@@ -686,6 +760,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         message: inqData.message,
         product_code: inqData.productCode || null,
         product_name: inqData.productName || null,
+        product_image: inqData.productImage || null,
+        product_category: inqData.productCategory || null,
+        product_specs: inqData.productSpecs || null,
+        project_type: inqData.projectType || null,
         room_preset: inqData.roomPreset || null,
         config_summary: inqData.configSummary || null,
         status: 'new',

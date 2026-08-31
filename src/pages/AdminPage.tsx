@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Language, Product, BlogPost, Project, Inquiry, UserProfile } from '../types';
 import { useData } from '../context/DataContext';
 import { ecolifeAllProducts } from '../data/ecolifeAllProducts';
@@ -46,7 +46,11 @@ import {
   Globe,
   Users,
   UserPlus,
-  UserCog
+  UserCog,
+  Phone,
+  MessageSquare,
+  Flame,
+  Filter
 } from 'lucide-react';
 
 interface AdminPageProps {
@@ -114,6 +118,35 @@ export const AdminPage: React.FC<AdminPageProps> = ({
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'blog' | 'projects' | 'inquiries' | 'import_export' | 'database'>('overview');
+
+  // Inquiries Search & Filter
+  const [inquirySearch, setInquirySearch] = useState<string>('');
+  const [inquiryStatusFilter, setInquiryStatusFilter] = useState<'all' | 'new' | 'in_progress' | 'contacted' | 'completed'>('all');
+
+  const newInquiriesCount = useMemo(() => {
+    return inquiries.filter(i => i.status === 'new').length;
+  }, [inquiries]);
+
+  const filteredInquiries = useMemo(() => {
+    return inquiries.filter(inq => {
+      // Status filter
+      if (inquiryStatusFilter !== 'all' && inq.status !== inquiryStatusFilter) {
+        return false;
+      }
+      // Search query
+      const q = inquirySearch.toLowerCase().trim();
+      if (!q) return true;
+      return (
+        inq.name.toLowerCase().includes(q) ||
+        inq.phone.toLowerCase().includes(q) ||
+        inq.email.toLowerCase().includes(q) ||
+        (inq.company && inq.company.toLowerCase().includes(q)) ||
+        (inq.productName && inq.productName.toLowerCase().includes(q)) ||
+        (inq.productCode && inq.productCode.toLowerCase().includes(q)) ||
+        inq.message.toLowerCase().includes(q)
+      );
+    });
+  }, [inquiries, inquiryStatusFilter, inquirySearch]);
 
   // Import / Export states
   const [importJsonText, setImportJsonText] = useState<string>('');
@@ -517,7 +550,13 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               { id: 'products', label: t.tabs.products, count: products.length, icon: Layers },
               { id: 'blog', label: t.tabs.blog, count: blogPosts.length, icon: FileText },
               { id: 'projects', label: t.tabs.projects, count: projects.length, icon: Briefcase },
-              { id: 'inquiries', label: t.tabs.inquiries, count: inquiries.length, icon: Mail },
+              { 
+                id: 'inquiries', 
+                label: t.tabs.inquiries, 
+                count: inquiries.length, 
+                highlightCount: newInquiriesCount, 
+                icon: Mail 
+              },
               ...(userRole === 'admin' ? [
                 { id: 'users', label: t.tabs.users, icon: Users },
                 { id: 'import_export', label: t.tabs.import_export, icon: UploadCloud },
@@ -540,9 +579,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   <span>{tab.label}</span>
                   {tab.count !== undefined && (
                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono leading-none flex items-center justify-center min-w-[20px] ${
-                      isActive ? 'bg-black/20 text-black' : 'bg-white/5 text-gray-500 group-hover:bg-white/10 group-hover:text-gray-400'
+                      tab.highlightCount && tab.highlightCount > 0
+                        ? 'bg-amber-400 text-black font-bold animate-pulse shadow-[0_0_10px_rgba(251,191,36,0.5)]'
+                        : isActive ? 'bg-black/20 text-black' : 'bg-white/5 text-gray-500 group-hover:bg-white/10 group-hover:text-gray-400'
                     }`}>
-                      {tab.count}
+                      {tab.highlightCount && tab.highlightCount > 0 ? `+${tab.highlightCount}` : tab.count}
                     </span>
                   )}
                 </button>
@@ -1068,23 +1109,91 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         {/* ========================================================================= */}
         {activeTab === 'inquiries' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between bg-[#101115] p-4 rounded-2xl border border-white/10">
+            {/* Header with live status */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#101115] p-5 rounded-2xl border border-white/10 shadow-lg">
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-white">{t.inquiries.heading}</h3>
-                <p className="text-xs text-gray-400">{t.inquiries.subheading}</p>
+                <div className="flex items-center gap-2.5">
+                  <h3 className="text-base font-bold uppercase tracking-wider text-white">{t.inquiries.heading}</h3>
+                  {newInquiriesCount > 0 && (
+                    <span className="flex items-center gap-1 text-[11px] font-mono font-bold bg-amber-400 text-black px-2 py-0.5 rounded-full animate-pulse shadow-[0_0_10px_rgba(251,191,36,0.5)]">
+                      <Flame className="w-3 h-3" />
+                      {newInquiriesCount} Yeni
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400 mt-1">{t.inquiries.subheading}</p>
               </div>
-              <span className="text-xs font-mono px-3 py-1 bg-[#FFD21A]/10 text-[#FFD21A] rounded-lg border border-[#FFD21A]/30">
-                {t.inquiries.totalLabel}: {inquiries.length}
-              </span>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-mono text-gray-300">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                  <span className="text-gray-400">Canlı Əlaqə:</span>
+                  <span className="text-emerald-400 font-bold">Realtime Aktiv</span>
+                </div>
+                <span className="text-xs font-mono px-3 py-1.5 bg-[#FFD21A]/10 text-[#FFD21A] rounded-lg border border-[#FFD21A]/30">
+                  {t.inquiries.totalLabel}: {inquiries.length}
+                </span>
+              </div>
             </div>
 
-            {inquiries.length === 0 ? (
+            {/* Filter & Search Bar */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#101115] p-3 rounded-xl border border-white/10">
+              {/* Search */}
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={inquirySearch}
+                  onChange={(e) => setInquirySearch(e.target.value)}
+                  placeholder="Müştəri adı, telefon, email, məhsul kodu üzrə axtar..."
+                  className="w-full bg-[#16181F] border border-white/10 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#FFD21A] transition-colors"
+                />
+              </div>
+
+              {/* Status Filter Pills */}
+              <div className="flex overflow-x-auto no-scrollbar gap-1.5 flex-shrink-0">
+                {[
+                  { id: 'all', label: 'Hamısı', count: inquiries.length },
+                  { id: 'new', label: '🟡 Yeni', count: inquiries.filter(i => i.status === 'new').length },
+                  { id: 'in_progress', label: '🔵 Baxılır', count: inquiries.filter(i => i.status === 'in_progress').length },
+                  { id: 'contacted', label: '🟣 Əlaqə saxlanıldı', count: inquiries.filter(i => i.status === 'contacted').length },
+                  { id: 'completed', label: '🟢 Tamamlandı', count: inquiries.filter(i => i.status === 'completed').length },
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setInquiryStatusFilter(f.id as any)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-colors whitespace-nowrap flex items-center gap-1.5 border ${
+                      inquiryStatusFilter === f.id
+                        ? 'bg-[#FFD21A] text-black font-bold border-[#FFD21A]'
+                        : 'bg-[#16181F] text-gray-400 hover:text-white border-white/5 hover:border-white/15'
+                    }`}
+                  >
+                    <span>{f.label}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded ${inquiryStatusFilter === f.id ? 'bg-black/20 text-black' : 'bg-white/10 text-gray-400'}`}>
+                      {f.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {filteredInquiries.length === 0 ? (
               <div className="bg-[#101115] border border-white/10 rounded-2xl p-12 text-center text-gray-400 space-y-3">
                 <Mail className="w-12 h-12 mx-auto text-gray-600" />
-                <h4 className="text-base font-bold text-white">{t.inquiries.noInquiriesTitle}</h4>
+                <h4 className="text-base font-bold text-white">
+                  {inquirySearch || inquiryStatusFilter !== 'all' ? 'Axtarışa uyğun sorğu tapılmadı' : t.inquiries.noInquiriesTitle}
+                </h4>
                 <p className="text-xs text-gray-500 max-w-sm mx-auto">
-                  {t.inquiries.noInquiriesDesc}
+                  {inquirySearch || inquiryStatusFilter !== 'all' ? 'Filtrləri sıfırlayaraq bütün müştəri sorğularını görə bilərsiniz.' : t.inquiries.noInquiriesDesc}
                 </p>
+                {(inquirySearch || inquiryStatusFilter !== 'all') && (
+                  <button
+                    onClick={() => { setInquirySearch(''); setInquiryStatusFilter('all'); }}
+                    className="px-4 py-2 text-xs font-bold bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+                  >
+                    Filtrləri Sıfırla
+                  </button>
+                )}
               </div>
             ) : (
               <div className="bg-[#101115] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
@@ -1094,71 +1203,158 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                       <tr>
                         <th className="px-4 py-3.5">{t.inquiries.tableDate}</th>
                         <th className="px-4 py-3.5">{t.inquiries.tableCustomer}</th>
-                        <th className="px-4 py-3.5">{t.inquiries.tableContact}</th>
+                        <th className="px-4 py-3.5">Sorğu Edilən Məhsul</th>
                         <th className="px-4 py-3.5">{t.inquiries.tableMessage}</th>
                         <th className="px-4 py-3.5">{t.inquiries.tableStatus}</th>
                         <th className="px-4 py-3.5 text-right">{t.inquiries.tableActions}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                      {inquiries.map((inq) => (
-                        <tr key={inq.id} className="hover:bg-white/5 transition-colors">
-                          <td className="px-4 py-3 font-mono text-[10px] text-gray-400 whitespace-nowrap">
-                            {new Date(inq.createdAt).toLocaleDateString()}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="font-bold text-white">{inq.name}</div>
-                            {inq.company && <div className="text-[10px] text-gray-400">{inq.company}</div>}
-                          </td>
-                          <td className="px-4 py-3 font-mono text-[11px]">
-                            <div className="text-[#FFD21A]">{inq.phone}</div>
-                            <div className="text-gray-400">{inq.email}</div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="line-clamp-2 max-w-sm text-xs text-gray-200">{inq.message}</div>
-                            {(inq.productCode || inq.productName) && (
-                              <div className="text-[10px] font-mono text-emerald-400 mt-0.5">
-                                {inq.productName || inq.productCode}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            <select
-                              value={inq.status}
-                              onChange={(e) => updateInquiryStatus(inq.id, e.target.value as any)}
-                              className="bg-[#16181F] border border-white/10 rounded px-2 py-1 text-[11px] font-mono text-white focus:outline-none focus:border-[#FFD21A]"
-                            >
-                              <option value="new">🟡 {t.inquiries.statusNew}</option>
-                              <option value="in_progress">🔵 {t.inquiries.statusInProgress}</option>
-                              <option value="contacted">🟣 {t.inquiries.statusContacted}</option>
-                              <option value="completed">🟢 {t.inquiries.statusCompleted}</option>
-                            </select>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={() => setViewingInquiry(inq)}
-                                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 transition-colors"
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                              </button>
-                              {userRole === 'admin' && (
-                                <button
-                                  onClick={async () => {
-                                    if (window.confirm(t.inquiries.deleteConfirm)) {
-                                      await deleteInquiry(inq.id);
-                                      showToast(t.inquiries.deletedSuccess);
-                                    }
-                                  }}
-                                  className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                      {filteredInquiries.map((inq) => {
+                        const cleanPhone = inq.phone?.replace(/[^0-9+]/g, '') || '';
+                        const waNumber = cleanPhone.replace(/^\+/, '');
+                        const isNew = inq.status === 'new';
+
+                        return (
+                          <tr 
+                            key={inq.id} 
+                            className={`hover:bg-white/5 transition-colors ${isNew ? 'bg-amber-500/[0.04]' : ''}`}
+                          >
+                            {/* Date */}
+                            <td className="px-4 py-3 font-mono text-[10px] text-gray-400 whitespace-nowrap align-top">
+                              <div>{new Date(inq.createdAt).toLocaleDateString('az-AZ')}</div>
+                              <div className="text-gray-500 text-[9px]">{new Date(inq.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                              {isNew && (
+                                <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                                  YENİ
+                                </span>
                               )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+
+                            {/* Customer */}
+                            <td className="px-4 py-3 align-top min-w-[180px]">
+                              <div className="font-bold text-white flex items-center gap-1.5">
+                                <span>{inq.name}</span>
+                              </div>
+                              {inq.company && <div className="text-[10px] text-gray-400 font-medium">{inq.company}</div>}
+                              
+                              {/* Quick contact buttons */}
+                              <div className="flex items-center gap-2 mt-1 text-[11px] font-mono">
+                                <a
+                                  href={`tel:${cleanPhone}`}
+                                  className="text-[#FFD21A] hover:underline flex items-center gap-0.5"
+                                  title="Zəng et"
+                                >
+                                  <Phone className="w-3 h-3" />
+                                  <span>{inq.phone}</span>
+                                </a>
+                              </div>
+                              <div className="text-gray-400 text-[10px] font-mono mt-0.5">{inq.email}</div>
+                            </td>
+
+                            {/* Product Info */}
+                            <td className="px-4 py-3 align-top min-w-[200px]">
+                              {(inq.productName || inq.productCode || inq.productImage) ? (
+                                <div className="flex items-center gap-2.5 bg-black/40 p-2 rounded-lg border border-white/5">
+                                  {inq.productImage && (
+                                    <img
+                                      src={inq.productImage}
+                                      alt={inq.productName || 'Məhsul'}
+                                      className="w-10 h-10 object-cover rounded bg-black/60 border border-white/10 flex-shrink-0"
+                                      onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                                    />
+                                  )}
+                                  <div className="min-w-0">
+                                    <div className="font-bold text-white text-xs truncate uppercase">
+                                      {inq.productName || 'Məhsul'}
+                                    </div>
+                                    {inq.productCode && (
+                                      <div className="text-[10px] font-mono text-[#FFD21A]">
+                                        {inq.productCode}
+                                      </div>
+                                    )}
+                                    {inq.productCategory && (
+                                      <div className="text-[9px] text-gray-400 truncate">
+                                        {inq.productCategory}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : inq.configSummary ? (
+                                <div className="bg-emerald-500/10 text-emerald-400 text-[10px] font-mono p-2 rounded border border-emerald-500/20 max-w-[220px] truncate">
+                                  Konfiqurator Sorğusu
+                                </div>
+                              ) : (
+                                <span className="text-[11px] text-gray-500 italic">Ümumi Əlaqə</span>
+                              )}
+                            </td>
+
+                            {/* Message */}
+                            <td className="px-4 py-3 align-top min-w-[220px]">
+                              <div className="line-clamp-2 text-xs text-gray-200 leading-relaxed">
+                                {inq.message}
+                              </div>
+                            </td>
+
+                            {/* Status */}
+                            <td className="px-4 py-3 align-top whitespace-nowrap">
+                              <select
+                                value={inq.status}
+                                onChange={(e) => updateInquiryStatus(inq.id, e.target.value as any)}
+                                className="bg-[#16181F] border border-white/15 rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-[#FFD21A] transition-colors"
+                              >
+                                <option value="new">🟡 {t.inquiries.statusNew}</option>
+                                <option value="in_progress">🔵 {t.inquiries.statusInProgress}</option>
+                                <option value="contacted">🟣 {t.inquiries.statusContacted}</option>
+                                <option value="completed">🟢 {t.inquiries.statusCompleted}</option>
+                              </select>
+                            </td>
+
+                            {/* Actions */}
+                            <td className="px-4 py-3 text-right align-top whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {/* Quick WhatsApp */}
+                                {cleanPhone && (
+                                  <a
+                                    href={`https://wa.me/${waNumber}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-2 rounded-lg bg-green-600/10 hover:bg-green-600/20 text-green-400 border border-green-600/20 transition-colors"
+                                    title="WhatsApp ilə yaz"
+                                  >
+                                    <MessageSquare className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
+
+                                {/* Detailed View Modal */}
+                                <button
+                                  onClick={() => setViewingInquiry(inq)}
+                                  className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors"
+                                  title="Ətraflı Bax"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+
+                                {/* Delete */}
+                                {userRole === 'admin' && (
+                                  <button
+                                    onClick={async () => {
+                                      if (window.confirm(t.inquiries.deleteConfirm)) {
+                                        await deleteInquiry(inq.id);
+                                        showToast(t.inquiries.deletedSuccess);
+                                      }
+                                    }}
+                                    className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                                    title="Sorğunu Sil"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
