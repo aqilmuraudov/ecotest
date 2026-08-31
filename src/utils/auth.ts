@@ -40,19 +40,6 @@ export async function signInWithEmail(
 
   const cleanMail = email.trim().toLowerCase();
 
-  // 1. Master Admin / Fallback Access Check (Avtomatik və ya Offline/Lokal rejim üçün)
-  const isMasterAuth = 
-    (cleanMail === 'admin@ecolife.az' || cleanMail === 'admin' || cleanMail === 'admin@ecolife.com') &&
-    (password === 'ecolife2026!' || password === 'ecolife2026' || password === 'admin123456' || password === 'admin');
-
-  if (isMasterAuth) {
-    sessionStorage.setItem(SESSION_STORAGE_KEY, '1');
-    try {
-      localStorage.setItem('ecolife_admin_user', JSON.stringify({ email: cleanMail, role: 'admin', loggedAt: Date.now() }));
-    } catch {}
-    return { success: true };
-  }
-
   // Brute-force qarşısının alınması
   if (!checkRateLimit('admin_login', MAX_LOGIN_ATTEMPTS, LOGIN_WINDOW_MS)) {
     return {
@@ -70,7 +57,7 @@ export async function signInWithEmail(
     if (error) {
       return { 
         success: false, 
-        error: `Giriş xətası: ${error.message}. (Master Giriş üçün: admin@ecolife.az / ecolife2026!)` 
+        error: `Giriş xətası: ${error.message}` 
       };
     }
 
@@ -100,7 +87,7 @@ export async function signInWithEmail(
   } catch (err: any) {
     return {
       success: false,
-      error: err?.message || 'Gözlənilməz xəta baş verdi. Master girişdən istifadə edin: admin@ecolife.az / ecolife2026!',
+      error: err?.message || 'Giriş zamanı gözlənilməz xəta baş verdi.',
     };
   }
 }
