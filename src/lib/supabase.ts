@@ -107,9 +107,13 @@ export async function uploadFileToSupabase(
       return { success: false, error: 'Şəkil üçün Public URL əldə edilə bilmədi.' };
     }
 
+    const finalUrl = (bucket === DEFAULT_STORAGE_BUCKET)
+      ? `/storage/${data.path}`
+      : publicData.publicUrl;
+
     return { 
       success: true, 
-      url: publicData.publicUrl,
+      url: finalUrl,
       path: data.path
     };
   } catch (err: any) {
