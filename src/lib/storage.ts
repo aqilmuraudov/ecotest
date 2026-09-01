@@ -6,8 +6,8 @@ export type StorageProviderType = 'r2' | 'supabase';
 const ACTIVE_STORAGE_PROVIDER_KEY = 'ecolife_active_storage_provider';
 
 /**
- * Get currently active storage provider ('r2' or 'supabase')
- * Defaults to 'r2' if R2 is configured, otherwise 'supabase'
+ * Get currently active storage provider ('supabase' or 'r2')
+ * Defaults to 'supabase'
  */
 export function getActiveStorageProvider(): StorageProviderType {
   try {
@@ -17,10 +17,6 @@ export function getActiveStorageProvider(): StorageProviderType {
     }
   } catch {}
 
-  // Auto-detect: If R2 is configured, prefer R2
-  if (isR2Configured()) {
-    return 'r2';
-  }
   return 'supabase';
 }
 

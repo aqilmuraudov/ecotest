@@ -1448,7 +1448,56 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Cloudflare R2 Card */}
+                {/* Supabase Storage Card (Primary) */}
+                <div
+                  onClick={() => handleSwitchStorageProvider('supabase')}
+                  className={`p-5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                    activeStorage === 'supabase'
+                      ? 'border-[#FFD21A] bg-[#FFD21A]/5 shadow-[0_0_20px_rgba(255,210,26,0.1)]'
+                      : 'border-white/10 bg-[#16181F] hover:border-white/20'
+                  }`}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center font-black text-sm">
+                          SB
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-white flex items-center gap-2">
+                            Supabase Storage
+                            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-mono font-normal">
+                              Əsas / Aktiv
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-400 font-mono">Daxili PostgreSQL Bucket • Dərhal İşləyir</p>
+                        </div>
+                      </div>
+
+                      {activeStorage === 'supabase' ? (
+                        <span className="flex items-center gap-1 text-[11px] font-bold text-[#FFD21A] bg-[#FFD21A]/10 border border-[#FFD21A]/30 px-2.5 py-1 rounded-full">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Aktiv
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-mono text-gray-400 bg-white/5 px-2.5 py-1 rounded-full">
+                          Seçmək üçün klikləyin
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-gray-300 leading-relaxed">
+                      Supabase verilənlər bazası ilə tam inteqrasiya olunmuş, birbaşa və problemsiz işləyən fayl anbarı.
+                    </p>
+                  </div>
+
+                  <div className="pt-4 mt-2 border-t border-white/5 flex items-center justify-between text-xs font-mono">
+                    <span className="text-gray-400">Status:</span>
+                    <span className="text-emerald-400 font-bold">✓ Hazırdır ({bucketNameInput})</span>
+                  </div>
+                </div>
+
+                {/* Cloudflare R2 Card (Alternative) */}
                 <div
                   onClick={() => handleSwitchStorageProvider('r2')}
                   className={`p-5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
@@ -1466,8 +1515,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                         <div>
                           <div className="text-sm font-bold text-white flex items-center gap-2">
                             Cloudflare R2 Storage
-                            <span className="text-[10px] bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded font-mono font-normal">
-                              Tövsiyə olunur
+                            <span className="text-[10px] bg-white/10 text-gray-300 px-2 py-0.5 rounded font-mono font-normal">
+                              Alternativ
                             </span>
                           </div>
                           <p className="text-[11px] text-gray-400 font-mono">0$ Egress • S3-API • Qlobal CDN</p>
@@ -1496,50 +1545,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                     <span className={isR2Configured() ? 'text-emerald-400 flex items-center gap-1 font-bold' : 'text-amber-400'}>
                       {isR2Configured() ? '✓ Tokenlər Tənzimlənib' : '⚠️ API Tokenləri daxil edin'}
                     </span>
-                  </div>
-                </div>
-
-                {/* Supabase Storage Card */}
-                <div
-                  onClick={() => handleSwitchStorageProvider('supabase')}
-                  className={`p-5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
-                    activeStorage === 'supabase'
-                      ? 'border-[#FFD21A] bg-[#FFD21A]/5 shadow-[0_0_20px_rgba(255,210,26,0.1)]'
-                      : 'border-white/10 bg-[#16181F] hover:border-white/20'
-                  }`}
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center font-black text-sm">
-                          SB
-                        </div>
-                        <div>
-                          <div className="text-sm font-bold text-white">Supabase Storage</div>
-                          <p className="text-[11px] text-gray-400 font-mono">Standart Daxili Bucket</p>
-                        </div>
-                      </div>
-
-                      {activeStorage === 'supabase' ? (
-                        <span className="flex items-center gap-1 text-[11px] font-bold text-[#FFD21A] bg-[#FFD21A]/10 border border-[#FFD21A]/30 px-2.5 py-1 rounded-full">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          Aktiv
-                        </span>
-                      ) : (
-                        <span className="text-[11px] font-mono text-gray-400 bg-white/5 px-2.5 py-1 rounded-full">
-                          Seçmək üçün klikləyin
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="text-xs text-gray-300 leading-relaxed">
-                      Supabase PostgreSQL verilənlər bazası ilə birbaşa əlaqəli standart fayl anbarı.
-                    </p>
-                  </div>
-
-                  <div className="pt-4 mt-2 border-t border-white/5 flex items-center justify-between text-xs font-mono">
-                    <span className="text-gray-400">Status:</span>
-                    <span className="text-emerald-400 font-bold">✓ Hazırdır ({bucketNameInput})</span>
                   </div>
                 </div>
               </div>
