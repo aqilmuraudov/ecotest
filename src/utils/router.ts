@@ -3,17 +3,46 @@ export interface RouteState {
   param?: string;
 }
 
+const KNOWN_ROUTES = [
+  'home', 'ana-sehife', 'glavnaya',
+  'catalog', 'kataloq', 'katalog', 'product', 'mehsul', 'tovar',
+  'projects', 'layiheler', 'proekty',
+  'solutions', 'heller', 'resheniya',
+  'configurator', 'konfiqurator', 'konfigurator',
+  'blog', 'xeberler', 'novosti', 'news', 'articles',
+  'manage', 'admin',
+  'about', 'haqqimizda', 'o-nas',
+  'contact', 'elaqe', 'kontakty'
+];
+
 /**
  * Normalizes pathname and maps it to internal state
- * Supports Azerbaijani, English and Russian path variations
+ * Supports Azerbaijani, English and Russian path variations,
+ * GitHub Pages repository subpaths, and hash routing.
  */
 export function parseUrlToRoute(pathname: string): RouteState {
+  let path = pathname;
+
+  // Check if hash-based routing is present (e.g. /#/catalog)
+  if (typeof window !== 'undefined' && window.location.hash) {
+    const hash = window.location.hash.replace(/^#\/?/, '');
+    if (hash) {
+      path = `/${hash}`;
+    }
+  }
+
   // Clean pathname (remove trailing slashes and decode URI)
-  const cleanPath = decodeURIComponent(pathname.replace(/\/+$/, '') || '/');
-  const segments = cleanPath.split('/').filter(Boolean);
+  const cleanPath = decodeURIComponent(path.replace(/\/+$/, '') || '/');
+  let segments = cleanPath.split('/').filter(Boolean);
 
   if (segments.length === 0) {
     return { page: 'home', param: undefined };
+  }
+
+  // If first segment is a GitHub Pages repository name (e.g. /ecotest-main/catalog), find known route
+  const knownIndex = segments.findIndex(s => KNOWN_ROUTES.includes(s.toLowerCase()));
+  if (knownIndex > 0) {
+    segments = segments.slice(knownIndex);
   }
 
   const root = segments[0].toLowerCase();
@@ -28,8 +57,6 @@ export function parseUrlToRoute(pathname: string): RouteState {
     case 'catalog':
     case 'kataloq':
     case 'katalog':
-      return { page: 'catalog', param: subParam };
-
     case 'product':
     case 'mehsul':
     case 'tovar':
@@ -58,6 +85,7 @@ export function parseUrlToRoute(pathname: string): RouteState {
       return { page: 'blog', param: subParam };
 
     case 'manage':
+    case 'admin':
       return { page: 'admin', param: subParam };
 
     case 'about':
@@ -71,10 +99,6 @@ export function parseUrlToRoute(pathname: string): RouteState {
       return { page: 'contact', param: undefined };
 
     default:
-      // If root matches any page directly
-      if (['home', 'catalog', 'projects', 'solutions', 'configurator', 'blog', 'about', 'contact'].includes(root)) {
-        return { page: root, param: subParam };
-      }
       return { page: 'home', param: undefined };
   }
 }

@@ -1,9 +1,5 @@
-{
+﻿{
   "rewrites": [
-    {
-      "source": "/storage/:path*",
-      "destination": "https://ijorncdyzoxkiyxslxkf.supabase.co/storage/v1/object/public/ecolife/:path*"
-    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
