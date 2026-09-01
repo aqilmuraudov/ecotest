@@ -4,6 +4,7 @@ import { products as initialProducts, productCategoriesList } from '../data/prod
 import { blogPosts as initialBlogPosts } from '../data/blog';
 import { projects as initialProjects } from '../data/projects';
 import { supabase } from '../lib/supabase';
+import { idbStorage } from '../utils/indexedDBStorage';
 
 // Convert productCategoriesList to CategoryItem array (excluding 'all')
 const defaultCategories: CategoryItem[] = productCategoriesList
@@ -71,7 +72,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [products, setProducts] = useState<Product[]>(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_PRODUCTS);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
     } catch {}
     return initialProducts;
   });
@@ -113,13 +117,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [supabaseConnected, setSupabaseConnected] = useState<boolean>(false);
   const [supabaseError, setSupabaseError] = useState<string | null>(null);
 
-  // Helper to persist local fallback
-  const saveToLocal = (key: string, data: any) => {
+  // Unified persistent storage: IndexedDB (unlimited) + LocalStorage (fast sync)
+  const saveToStorage = async (key: string, data: any) => {
+    try {
+      await idbStorage.setItem(key, data);
+    } catch (e) {
+      console.warn(`[Storage] idbStorage error for "${key}":`, e);
+    }
     try {
       localStorage.setItem(key, JSON.stringify(data));
     } catch (e) {
-      console.warn('LocalStorage save error:', e);
+      // LocalStorage 5MB quota exceeded, safe because IndexedDB holds all data
     }
+  };
+
+  const saveToLocal = (key: string, data: any) => {
+    void saveToStorage(key, data);
   };
 
   // Convert DB product record to Product interface
@@ -127,55 +140,65 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const rawCategories: string[] = Array.isArray(dbRow.categories) && dbRow.categories.length > 0
       ? dbRow.categories
       : (dbRow.category ? [dbRow.category] : []);
+    const catNameObj = (dbRow.category_name && typeof dbRow.category_name === 'object')
+      ? dbRow.category_name
+      : { az: dbRow.category || 'Məhsul', en: dbRow.category || 'Product', ru: dbRow.category || 'Продукт' };
+    const catNamesList = Array.isArray(dbRow.category_names) && dbRow.category_names.length > 0
+      ? dbRow.category_names
+      : [catNameObj];
+
     return {
-      id: dbRow.id,
-      slug: dbRow.slug,
-      name: dbRow.name,
-      category: dbRow.category,
+      id: String(dbRow.id),
+      slug: String(dbRow.slug || dbRow.id),
+      name: dbRow.name || 'Məhsul',
+      category: dbRow.category || 'linear-profiles',
       categories: rawCategories,
-      categoryName: dbRow.category_name || { az: dbRow.category, en: dbRow.category, ru: dbRow.category },
-      categoryNames: Array.isArray(dbRow.category_names) && dbRow.category_names.length > 0
-        ? dbRow.category_names
-        : [{ az: dbRow.category, en: dbRow.category, ru: dbRow.category }],
+      categoryName: catNameObj,
+      categoryNames: catNamesList,
       subtitle: dbRow.subtitle || { az: '', en: '', ru: '' },
-      code: dbRow.code,
-      image: dbRow.image,
-      gallery: dbRow.gallery || [dbRow.image],
+      code: dbRow.code || dbRow.id,
+      image: dbRow.image || '',
+      gallery: Array.isArray(dbRow.gallery) && dbRow.gallery.length > 0 ? dbRow.gallery : (dbRow.image ? [dbRow.image] : []),
       description: dbRow.description || { az: '', en: '', ru: '' },
-      specs: dbRow.specs || { material: 'Aluminium', dimensions: '', ipRating: 'IP20', mounting: 'Surface' },
-      files: dbRow.files || [],
-      featured: dbRow.featured || false,
-      isNew: dbRow.is_new || false,
-      applications: dbRow.applications || []
+      specs: dbRow.specs || { material: 'Alüminium', dimensions: '', ipRating: 'IP20', mounting: 'Səthə' },
+      files: Array.isArray(dbRow.files) ? dbRow.files : [],
+      featured: Boolean(dbRow.featured),
+      isNew: Boolean(dbRow.is_new ?? dbRow.isNew),
+      applications: Array.isArray(dbRow.applications) ? dbRow.applications : []
     };
   };
 
   // Convert Product interface to DB product record
   const mapProductToDb = (p: any) => {
+    const safeCategory = p.category || 'linear-profiles';
     const cats: string[] = Array.isArray(p.categories) && p.categories.length > 0
       ? p.categories
-      : (p.category ? [p.category] : []);
+      : [safeCategory];
+    const safeCatName = (p.categoryName && typeof p.categoryName === 'object')
+      ? p.categoryName
+      : { az: safeCategory, en: safeCategory, ru: safeCategory };
     const catNames = Array.isArray(p.categoryNames) && p.categoryNames.length > 0
       ? p.categoryNames
-      : (p.categoryName ? [p.categoryName] : []);
+      : [safeCatName];
+
     return {
-      id: p.id,
-      slug: p.slug,
-      name: p.name,
-      category: p.category,
+      id: String(p.id),
+      slug: String(p.slug || p.id),
+      name: String(p.name || 'Məhsul'),
+      category: safeCategory,
       categories: cats,
-      category_name: p.categoryName,
+      category_name: safeCatName,
       category_names: catNames,
-      subtitle: p.subtitle,
-      code: p.code,
-      image: p.image,
-      gallery: p.gallery,
-      description: p.description,
-      specs: p.specs,
-      files: p.files,
-      featured: p.featured || false,
-      is_new: p.isNew || false,
-      applications: p.applications || [],
+      subtitle: (p.subtitle && typeof p.subtitle === 'object') ? p.subtitle : { az: '', en: '', ru: '' },
+      code: String(p.code || p.id),
+      image: String(p.image || ''),
+      gallery: Array.isArray(p.gallery) && p.gallery.length > 0 ? p.gallery : (p.image ? [p.image] : []),
+      description: (p.description && typeof p.description === 'object') ? p.description : { az: '', en: '', ru: '' },
+      specs: (p.specs && typeof p.specs === 'object' && !Array.isArray(p.specs)) ? p.specs : {},
+      files: Array.isArray(p.files) ? p.files : [],
+      featured: Boolean(p.featured),
+      is_new: Boolean(p.isNew ?? p.is_new),
+      applications: Array.isArray(p.applications) ? p.applications : [],
       updated_at: new Date().toISOString()
     };
   };
@@ -253,41 +276,74 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     featured: pr.featured || false
   });
 
-  // Fetch all data from Supabase
+  // Load full data from IndexedDB on initial mount
+  useEffect(() => {
+    const initFromIndexedDB = async () => {
+      try {
+        const idbProds = await idbStorage.getItem<Product[]>(LOCAL_STORAGE_PRODUCTS);
+        if (Array.isArray(idbProds) && idbProds.length > 0) {
+          setProducts((prev) => (prev.length <= 10 && idbProds.length > 10 ? idbProds : (prev.length > 0 ? prev : idbProds)));
+        }
+
+        const idbCats = await idbStorage.getItem<CategoryItem[]>(LOCAL_STORAGE_CATEGORIES);
+        if (Array.isArray(idbCats) && idbCats.length > 0) setCategories(idbCats);
+
+        const idbBlog = await idbStorage.getItem<BlogPost[]>(LOCAL_STORAGE_BLOG);
+        if (Array.isArray(idbBlog) && idbBlog.length > 0) setBlogPosts(idbBlog);
+
+        const idbProj = await idbStorage.getItem<Project[]>(LOCAL_STORAGE_PROJECTS);
+        if (Array.isArray(idbProj) && idbProj.length > 0) setProjects(idbProj);
+
+        const idbInq = await idbStorage.getItem<Inquiry[]>(LOCAL_STORAGE_INQUIRIES);
+        if (Array.isArray(idbInq) && idbInq.length > 0) setInquiries(idbInq);
+      } catch (err) {
+        console.warn('Initial IndexedDB restore error:', err);
+      }
+    };
+    initFromIndexedDB();
+  }, []);
+
+  // Fetch all data from Supabase with smart non-destructive sync
   const refreshData = useCallback(async () => {
     setIsLoading(true);
     setSupabaseError(null);
 
+    // 1. Read existing local products from IndexedDB (first priority) and localStorage
+    let localProducts: Product[] = [];
     try {
-      // 1. Fetch Products
+      const idbSaved = await idbStorage.getItem<Product[]>(LOCAL_STORAGE_PRODUCTS);
+      if (Array.isArray(idbSaved) && idbSaved.length > 0) {
+        localProducts = idbSaved;
+      } else {
+        const localSaved = localStorage.getItem(LOCAL_STORAGE_PRODUCTS);
+        if (localSaved) {
+          const parsed = JSON.parse(localSaved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            localProducts = parsed;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Local product baseline read warning:', err);
+    }
+
+    try {
+      // 2. Fetch Products from Supabase
       const { data: prodData, error: prodError } = await supabase
         .from('products')
         .select('*')
+        .range(0, 9999)
         .order('created_at', { ascending: false });
 
       if (prodError) {
         throw prodError;
       }
 
-      // Read current local products directly from localStorage as a protective baseline
-      let localProducts: Product[] = [];
-      try {
-        const savedLocal = localStorage.getItem(LOCAL_STORAGE_PRODUCTS);
-        if (savedLocal) {
-          const parsed = JSON.parse(savedLocal);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            localProducts = parsed;
-          }
-        }
-      } catch (err) {
-        console.warn('LocalStorage read error in refreshData:', err);
-      }
-
       if (prodData) {
         const dbProducts = prodData.map(mapDbToProduct);
 
-        // AĞILLI SİNXRONİZASİYA (Smart Sync):
-        // Heç vaxt lokalda olan (idxal edilmiş yüzlərlə) məhsulları bazadakı köhnə 10 məhsulla məhv etmə!
+        // SMART NON-DESTRUCTIVE MERGE:
+        // Lokal yaddaşda olan (idxal edilmiş yüzlərlə) məhsullar heç vaxt bazadakı köhnə 10 məhsulla silinmir!
         const mergedMap = new Map<string, Product>();
 
         // Əvvəlcə lokal məhsulları xəritəyə əlavə et (idxal olunanlar qorunur)
@@ -297,7 +353,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
 
-        // Sonra Supabase-dən gələnləri əlavə/yenilə et (Supabase məhsulları ən son versiyadır)
+        // Sonra Supabase-dən gələnləri əlavə/yenilə et
         for (const dp of dbProducts) {
           if (dp && dp.id) {
             mergedMap.set(dp.id, dp);
@@ -310,7 +366,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         setProducts(finalProducts);
-        saveToLocal(LOCAL_STORAGE_PRODUCTS, finalProducts);
+        await saveToStorage(LOCAL_STORAGE_PRODUCTS, finalProducts);
 
         // Arxa fonda sinxronizasiya: Əgər lokalda olub Supabase-də hələ olmayan məhsullar varsa, onları hissə-hissə Supabase-ə yaz
         const missingInDb = localProducts.filter(lp => !dbProducts.some(dp => dp.id === lp.id));
@@ -570,7 +626,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Update local state immediately for responsive UI
     const updated = [newProduct, ...products];
     setProducts(updated);
-    saveToLocal(LOCAL_STORAGE_PRODUCTS, updated);
+    await saveToStorage(LOCAL_STORAGE_PRODUCTS, updated);
 
     // Sync to Supabase
     try {
@@ -589,7 +645,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProduct = async (id: string, updatedFields: Partial<Product>): Promise<{ success: boolean; error?: string }> => {
     const updated = products.map(p => p.id === id ? { ...p, ...updatedFields } : p);
     setProducts(updated);
-    saveToLocal(LOCAL_STORAGE_PRODUCTS, updated);
+    await saveToStorage(LOCAL_STORAGE_PRODUCTS, updated);
 
     try {
       const target = updated.find(p => p.id === id);
@@ -609,7 +665,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const deleteProduct = async (id: string): Promise<{ success: boolean; error?: string }> => {
     const updated = products.filter(p => p.id !== id);
     setProducts(updated);
-    saveToLocal(LOCAL_STORAGE_PRODUCTS, updated);
+    await saveToStorage(LOCAL_STORAGE_PRODUCTS, updated);
 
     try {
       const { error } = await supabase.from('products').delete().eq('id', id);
@@ -624,7 +680,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deleteAllProducts = async (): Promise<{ success: boolean; error?: string }> => {
     setProducts([]);
-    saveToLocal(LOCAL_STORAGE_PRODUCTS, []);
+    await idbStorage.removeItem(LOCAL_STORAGE_PRODUCTS);
+    try {
+      localStorage.removeItem(LOCAL_STORAGE_PRODUCTS);
+    } catch {}
 
     try {
       const { error } = await supabase.from('products').delete().neq('id', '___none___');
@@ -684,33 +743,56 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const combined = Array.from(existingMap.values());
-      setProducts(combined);
-      saveToLocal(LOCAL_STORAGE_PRODUCTS, combined);
 
-      // Supabase-ə hissə-hissə (chunking: 25 məhsul) göndər ki, payload limitinə düşməsin
+      // Supabase-ə birbaşa bazaya yaz (chunking: 50 məhsul)
       const dbRows = combined.map(mapProductToDb);
       let supabaseErrorNotice = '';
-      for (let i = 0; i < dbRows.length; i += 25) {
-        const chunk = dbRows.slice(i, i + 25);
+      let savedToDbCount = 0;
+
+      for (let i = 0; i < dbRows.length; i += 50) {
+        const chunk = dbRows.slice(i, i + 50);
         try {
-          const { error } = await supabase.from('products').upsert(chunk);
+          const { error } = await supabase.from('products').upsert(chunk, { onConflict: 'id' });
           if (error) {
             console.warn(`Supabase upsert chunk (${i}-${i + chunk.length}) xətası:`, error.message);
-            supabaseErrorNotice = error.message;
+            // Əgər batch xəta verərsə, tək-tək yoxla ki, xətasız olanlar mütləq bazaya yazılsın
+            for (const singleRow of chunk) {
+              const { error: singleErr } = await supabase.from('products').upsert([singleRow], { onConflict: 'id' });
+              if (!singleErr) {
+                savedToDbCount++;
+              } else {
+                supabaseErrorNotice = singleErr.message;
+              }
+            }
+          } else {
+            savedToDbCount += chunk.length;
           }
         } catch (err: any) {
           supabaseErrorNotice = err?.message || 'Network error';
         }
       }
 
-      if (supabaseErrorNotice) {
+      // Həm IndexedDB, həm də React state-i yenilə və birbaşa Supabase bazasından ən son məlumatı çək
+      setProducts(combined);
+      await saveToStorage(LOCAL_STORAGE_PRODUCTS, combined);
+      
+      try {
+        await refreshData();
+      } catch {}
+
+      if (supabaseErrorNotice && savedToDbCount === 0) {
         return { 
           success: true, 
           count: stamped.length, 
-          error: `Məhsullar brauzerə yazıldı. (Supabase bildirişi: ${supabaseErrorNotice})` 
+          error: `Məhsullar yerli yaddaşa yazıldı. (Supabase bağlantısı: ${supabaseErrorNotice})` 
         };
       }
-      return { success: true, count: stamped.length };
+
+      return { 
+        success: true, 
+        count: stamped.length,
+        error: supabaseErrorNotice ? `Bəzi məhsullar yükləndi, bildiriş: ${supabaseErrorNotice}` : undefined 
+      };
     } catch (e: any) {
       return { success: false, count: 0, error: e?.message };
     }
