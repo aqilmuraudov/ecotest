@@ -263,19 +263,7 @@ CREATE TABLE IF NOT EXISTS public.admin_users (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Helper function: cari istifadəçinin master admin olub-olmadığını yoxlayır
-CREATE OR REPLACE FUNCTION public.is_master_admin()
-RETURNS BOOLEAN AS $$
-BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM public.admin_users
-    WHERE user_id = auth.uid() AND role = 'admin'
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
-
--- Helper function: cari istifadəçinin ən azı moderator olub-olmadığını yoxlayır
-CREATE OR REPLACE FUNCTION public.is_admin_or_moder-- ==========================================
+-- ==========================================
 -- ROW LEVEL SECURITY (RLS) & ACCESS POLICIES
 -- ==========================================
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
@@ -292,38 +280,62 @@ DROP POLICY IF EXISTS "Moderator Update Products" ON public.products;
 DROP POLICY IF EXISTS "Admin Delete Products" ON public.products;
 DROP POLICY IF EXISTS "Public Insert/Update Products" ON public.products;
 DROP POLICY IF EXISTS "Allow All Products" ON public.products;
+DROP POLICY IF EXISTS "Allow All Select Products" ON public.products;
+DROP POLICY IF EXISTS "Allow All Insert Products" ON public.products;
+DROP POLICY IF EXISTS "Allow All Update Products" ON public.products;
+DROP POLICY IF EXISTS "Allow All Delete Products" ON public.products;
 
 DROP POLICY IF EXISTS "Public Read Articles" ON public.articles;
 DROP POLICY IF EXISTS "Moderator Insert Articles" ON public.articles;
 DROP POLICY IF EXISTS "Moderator Update Articles" ON public.articles;
 DROP POLICY IF EXISTS "Admin Delete Articles" ON public.articles;
 DROP POLICY IF EXISTS "Allow All Articles" ON public.articles;
+DROP POLICY IF EXISTS "Allow All Select Articles" ON public.articles;
+DROP POLICY IF EXISTS "Allow All Insert Articles" ON public.articles;
+DROP POLICY IF EXISTS "Allow All Update Articles" ON public.articles;
+DROP POLICY IF EXISTS "Allow All Delete Articles" ON public.articles;
 
 DROP POLICY IF EXISTS "Public Read Projects" ON public.projects;
 DROP POLICY IF EXISTS "Moderator Insert Projects" ON public.projects;
 DROP POLICY IF EXISTS "Moderator Update Projects" ON public.projects;
 DROP POLICY IF EXISTS "Admin Delete Projects" ON public.projects;
 DROP POLICY IF EXISTS "Allow All Projects" ON public.projects;
+DROP POLICY IF EXISTS "Allow All Select Projects" ON public.projects;
+DROP POLICY IF EXISTS "Allow All Insert Projects" ON public.projects;
+DROP POLICY IF EXISTS "Allow All Update Projects" ON public.projects;
+DROP POLICY IF EXISTS "Allow All Delete Projects" ON public.projects;
 
 DROP POLICY IF EXISTS "Public Insert Inquiries" ON public.inquiries;
 DROP POLICY IF EXISTS "Moderator Read/Update Inquiries" ON public.inquiries;
 DROP POLICY IF EXISTS "Moderator Update Inquiries" ON public.inquiries;
 DROP POLICY IF EXISTS "Admin Delete Inquiries" ON public.inquiries;
 DROP POLICY IF EXISTS "Allow All Inquiries" ON public.inquiries;
+DROP POLICY IF EXISTS "Allow All Select Inquiries" ON public.inquiries;
+DROP POLICY IF EXISTS "Allow All Insert Inquiries" ON public.inquiries;
+DROP POLICY IF EXISTS "Allow All Update Inquiries" ON public.inquiries;
+DROP POLICY IF EXISTS "Allow All Delete Inquiries" ON public.inquiries;
 
 DROP POLICY IF EXISTS "Public Read Categories" ON public.categories;
 DROP POLICY IF EXISTS "Moderator Insert Categories" ON public.categories;
 DROP POLICY IF EXISTS "Moderator Update Categories" ON public.categories;
 DROP POLICY IF EXISTS "Admin Delete Categories" ON public.categories;
 DROP POLICY IF EXISTS "Allow All Categories" ON public.categories;
+DROP POLICY IF EXISTS "Allow All Select Categories" ON public.categories;
+DROP POLICY IF EXISTS "Allow All Insert Categories" ON public.categories;
+DROP POLICY IF EXISTS "Allow All Update Categories" ON public.categories;
+DROP POLICY IF EXISTS "Allow All Delete Categories" ON public.categories;
 
 DROP POLICY IF EXISTS "Admin Self Read" ON public.admin_users;
 DROP POLICY IF EXISTS "Master Admin Read All" ON public.admin_users;
 DROP POLICY IF EXISTS "Master Admin Insert" ON public.admin_users;
 DROP POLICY IF EXISTS "Master Admin Delete" ON public.admin_users;
 DROP POLICY IF EXISTS "Allow All Admin Users" ON public.admin_users;
+DROP POLICY IF EXISTS "Allow All Select Admin Users" ON public.admin_users;
+DROP POLICY IF EXISTS "Allow All Insert Admin Users" ON public.admin_users;
+DROP POLICY IF EXISTS "Allow All Update Admin Users" ON public.admin_users;
+DROP POLICY IF EXISTS "Allow All Delete Admin Users" ON public.admin_users;
 
--- 1. PRODUCTS: Hamı oxuya bilər, tam idarəetmə və toplu idxal aktivdir
+-- 1. PRODUCTS: Tam oxuma, yazma, yeniləmə və silmə aktivdir
 CREATE POLICY "Allow All Select Products" ON public.products FOR SELECT USING (true);
 CREATE POLICY "Allow All Insert Products" ON public.products FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow All Update Products" ON public.products FOR UPDATE USING (true) WITH CHECK (true);
@@ -372,6 +384,10 @@ DROP POLICY IF EXISTS "Public Read Storage" ON storage.objects;
 DROP POLICY IF EXISTS "Admin Upload Storage" ON storage.objects;
 DROP POLICY IF EXISTS "Admin Update Storage" ON storage.objects;
 DROP POLICY IF EXISTS "Admin Delete Storage" ON storage.objects;
+DROP POLICY IF EXISTS "Allow All Select Storage" ON storage.objects;
+DROP POLICY IF EXISTS "Allow All Insert Storage" ON storage.objects;
+DROP POLICY IF EXISTS "Allow All Update Storage" ON storage.objects;
+DROP POLICY IF EXISTS "Allow All Delete Storage" ON storage.objects;
 
 CREATE POLICY "Allow All Select Storage" ON storage.objects FOR SELECT USING (bucket_id = 'ecolife');
 CREATE POLICY "Allow All Insert Storage" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'ecolife');

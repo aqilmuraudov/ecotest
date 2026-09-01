@@ -74,7 +74,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const saved = localStorage.getItem(LOCAL_STORAGE_PRODUCTS);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {}
     return initialProducts;
@@ -127,7 +127,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       localStorage.setItem(key, JSON.stringify(data));
     } catch (e) {
-      // LocalStorage 5MB quota exceeded, safe because IndexedDB holds all data
+      // LocalStorage quota exceeded, IndexedDB is safe
     }
   };
 
@@ -276,13 +276,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     featured: pr.featured || false
   });
 
-  // Load full data from IndexedDB on initial mount
+  // Load cached data from IndexedDB on initial mount if available
   useEffect(() => {
     const initFromIndexedDB = async () => {
       try {
         const idbProds = await idbStorage.getItem<Product[]>(LOCAL_STORAGE_PRODUCTS);
         if (Array.isArray(idbProds) && idbProds.length > 0) {
-          setProducts((prev) => (prev.length <= 10 && idbProds.length > 10 ? idbProds : (prev.length > 0 ? prev : idbProds)));
+          setProducts(idbProds);
         }
 
         const idbCats = await idbStorage.getItem<CategoryItem[]>(LOCAL_STORAGE_CATEGORIES);
@@ -303,32 +303,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initFromIndexedDB();
   }, []);
 
-  // Fetch all data from Supabase with smart non-destructive sync
+  // Fetch all data from Supabase (Single authoritative source of truth)
   const refreshData = useCallback(async () => {
     setIsLoading(true);
     setSupabaseError(null);
 
-    // 1. Read existing local products from IndexedDB (first priority) and localStorage
-    let localProducts: Product[] = [];
     try {
-      const idbSaved = await idbStorage.getItem<Product[]>(LOCAL_STORAGE_PRODUCTS);
-      if (Array.isArray(idbSaved) && idbSaved.length > 0) {
-        localProducts = idbSaved;
-      } else {
-        const localSaved = localStorage.getItem(LOCAL_STORAGE_PRODUCTS);
-        if (localSaved) {
-          const parsed = JSON.parse(localSaved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            localProducts = parsed;
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('Local product baseline read warning:', err);
-    }
-
-    try {
-      // 2. Fetch Products from Supabase
+      // 1. Fetch Products from Supabase
       const { data: prodData, error: prodError } = await supabase
         .from('products')
         .select('*')
@@ -341,42 +322,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (prodData) {
         const dbProducts = prodData.map(mapDbToProduct);
-
-        // SMART NON-DESTRUCTIVE MERGE:
-        // Lokal yaddaşda olan (idxal edilmiş yüzlərlə) məhsullar heç vaxt bazadakı köhnə 10 məhsulla silinmir!
-        const mergedMap = new Map<string, Product>();
-
-        // Əvvəlcə lokal məhsulları xəritəyə əlavə et (idxal olunanlar qorunur)
-        for (const lp of localProducts) {
-          if (lp && lp.id) {
-            mergedMap.set(lp.id, lp);
-          }
-        }
-
-        // Sonra Supabase-dən gələnləri əlavə/yenilə et
-        for (const dp of dbProducts) {
-          if (dp && dp.id) {
-            mergedMap.set(dp.id, dp);
-          }
-        }
-
-        let finalProducts: Product[] = Array.from(mergedMap.values());
-        if (finalProducts.length === 0) {
-          finalProducts = dbProducts.length > 0 ? dbProducts : (localProducts.length > 0 ? localProducts : initialProducts);
-        }
-
-        setProducts(finalProducts);
-        await saveToStorage(LOCAL_STORAGE_PRODUCTS, finalProducts);
-
-        // Arxa fonda sinxronizasiya: Əgər lokalda olub Supabase-də hələ olmayan məhsullar varsa, onları hissə-hissə Supabase-ə yaz
-        const missingInDb = localProducts.filter(lp => !dbProducts.some(dp => dp.id === lp.id));
-        if (missingInDb.length > 0) {
-          const dbRowsToSync = missingInDb.map(mapProductToDb);
-          for (let i = 0; i < dbRowsToSync.length; i += 25) {
-            const chunk = dbRowsToSync.slice(i, i + 25);
-            void supabase.from('products').upsert(chunk);
-          }
-        }
+        setProducts(dbProducts);
+        await saveToStorage(LOCAL_STORAGE_PRODUCTS, dbProducts);
       }
 
       // 2. Fetch Blog Articles
@@ -385,7 +332,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (!blogErr && blogData && blogData.length > 0) {
+      if (!blogErr && blogData) {
         const loadedBlog = blogData.map(mapDbToBlog);
         setBlogPosts(loadedBlog);
         saveToLocal(LOCAL_STORAGE_BLOG, loadedBlog);
@@ -397,7 +344,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (!projErr && projData && projData.length > 0) {
+      if (!projErr && projData) {
         const loadedProjects = projData.map(mapDbToProject);
         setProjects(loadedProjects);
         saveToLocal(LOCAL_STORAGE_PROJECTS, loadedProjects);
@@ -455,8 +402,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSupabaseConnected(true);
     } catch (err: any) {
       console.warn('Supabase fetch notice:', err?.message || err);
-      // If table does not exist or connection failed, keep fallback
-      setSupabaseError(err?.message || 'Supabase cədvəlləri hazırda aktivləşdirilməyib');
+      setSupabaseError(err?.message || 'Supabase cədvəlləri aktivləşdirilməyib və ya xəta baş verdi');
       setSupabaseConnected(false);
     } finally {
       setIsLoading(false);
@@ -702,7 +648,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, count: 0, error: 'Heç bir məhsul tapılmadı.' };
       }
 
-      // QORUMA: id/slug olmayan məhsullara unikal id + slug ver.
+      // QORUMA: id/slug olmayan məhsullara unikal id + slug ver
       const seenBatch = new Set<string>();
       const stamped = newProducts.map((p, i) => {
         let id = typeof p?.id === 'string' && p.id.trim() ? p.id.trim() : '';
@@ -717,35 +663,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { ...p, id, slug };
       });
 
-      // Cari məhsullarla birləşdir: eyni id və ya eyni code olanları yenilə, yeniləri əlavə et
-      const existingMap = new Map<string, Product>();
-      const codeToIdMap = new Map<string, string>();
-      for (const p of products) {
-        if (p && p.id) {
-          existingMap.set(p.id, p);
-          if (p.code) {
-            codeToIdMap.set(p.code.trim().toUpperCase(), p.id);
-          }
-        }
-      }
-
-      for (const p of stamped) {
-        const cleanCode = p.code ? p.code.trim().toUpperCase() : '';
-        if (cleanCode && codeToIdMap.has(cleanCode)) {
-          const existingId = codeToIdMap.get(cleanCode)!;
-          existingMap.set(existingId, { ...existingMap.get(existingId)!, ...p, id: existingId });
-        } else {
-          existingMap.set(p.id, p);
-          if (cleanCode) {
-            codeToIdMap.set(cleanCode, p.id);
-          }
-        }
-      }
-
-      const combined = Array.from(existingMap.values());
-
       // Supabase-ə birbaşa bazaya yaz (chunking: 50 məhsul)
-      const dbRows = combined.map(mapProductToDb);
+      const dbRows = stamped.map(mapProductToDb);
       let supabaseErrorNotice = '';
       let savedToDbCount = 0;
 
@@ -772,19 +691,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // Həm IndexedDB, həm də React state-i yenilə və birbaşa Supabase bazasından ən son məlumatı çək
-      setProducts(combined);
-      await saveToStorage(LOCAL_STORAGE_PRODUCTS, combined);
-      
-      try {
-        await refreshData();
-      } catch {}
+      // Supabase bazasından ən son məlumatı birbaşa çəkərək yerli yaddaşı və state-i tam sinxronlaşdır
+      await refreshData();
 
       if (supabaseErrorNotice && savedToDbCount === 0) {
         return { 
-          success: true, 
-          count: stamped.length, 
-          error: `Məhsullar yerli yaddaşa yazıldı. (Supabase bağlantısı: ${supabaseErrorNotice})` 
+          success: false, 
+          count: 0, 
+          error: `Supabase xətası: ${supabaseErrorNotice}` 
         };
       }
 
