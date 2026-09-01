@@ -269,10 +269,58 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw prodError;
       }
 
-      if (prodData && prodData.length > 0) {
-        const loadedProducts = prodData.map(mapDbToProduct);
-        setProducts(loadedProducts);
-        saveToLocal(LOCAL_STORAGE_PRODUCTS, loadedProducts);
+      // Read current local products directly from localStorage as a protective baseline
+      let localProducts: Product[] = [];
+      try {
+        const savedLocal = localStorage.getItem(LOCAL_STORAGE_PRODUCTS);
+        if (savedLocal) {
+          const parsed = JSON.parse(savedLocal);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            localProducts = parsed;
+          }
+        }
+      } catch (err) {
+        console.warn('LocalStorage read error in refreshData:', err);
+      }
+
+      if (prodData) {
+        const dbProducts = prodData.map(mapDbToProduct);
+
+        // AĞILLI SİNXRONİZASİYA (Smart Sync):
+        // Heç vaxt lokalda olan (idxal edilmiş yüzlərlə) məhsulları bazadakı köhnə 10 məhsulla məhv etmə!
+        const mergedMap = new Map<string, Product>();
+
+        // Əvvəlcə lokal məhsulları xəritəyə əlavə et (idxal olunanlar qorunur)
+        for (const lp of localProducts) {
+          if (lp && lp.id) {
+            mergedMap.set(lp.id, lp);
+          }
+        }
+
+        // Sonra Supabase-dən gələnləri əlavə/yenilə et (Supabase məhsulları ən son versiyadır)
+        for (const dp of dbProducts) {
+          if (dp && dp.id) {
+            mergedMap.set(dp.id, dp);
+          }
+        }
+
+        let finalProducts: Product[] = Array.from(mergedMap.values());
+        if (finalProducts.length === 0) {
+          finalProducts = dbProducts.length > 0 ? dbProducts : (localProducts.length > 0 ? localProducts : initialProducts);
+        }
+
+        setProducts(finalProducts);
+        saveToLocal(LOCAL_STORAGE_PRODUCTS, finalProducts);
+
+        // Arxa fonda sinxronizasiya: Əgər lokalda olub Supabase-də hələ olmayan məhsullar varsa, onları hissə-hissə Supabase-ə yaz
+        const missingInDb = localProducts.filter(lp => !dbProducts.some(dp => dp.id === lp.id));
+        if (missingInDb.length > 0) {
+          const dbRowsToSync = missingInDb.map(mapProductToDb);
+          for (let i = 0; i < dbRowsToSync.length; i += 25) {
+            const chunk = dbRowsToSync.slice(i, i + 25);
+            void supabase.from('products').upsert(chunk);
+          }
+        }
       }
 
       // 2. Fetch Blog Articles
@@ -591,11 +639,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const bulkImportProducts = async (newProducts: Product[]): Promise<{ success: boolean; count: number; error?: string }> => {
     try {
-      // QORUMA: id/slug olmayan (xam JSON) məhsullara unikal id + slug ver.
-      // Əks halda aşağıdakı Map birləşməsində bütün məhsullar eyni (undefined) açara
-      // düşür və hamısı son məhsulla əvəz olunaraq 1-ə enir.
+      if (!Array.isArray(newProducts) || newProducts.length === 0) {
+        return { success: false, count: 0, error: 'Heç bir məhsul tapılmadı.' };
+      }
+
+      // QORUMA: id/slug olmayan məhsullara unikal id + slug ver.
       const seenBatch = new Set<string>();
-      const stamped = (newProducts || []).map((p, i) => {
+      const stamped = newProducts.map((p, i) => {
         let id = typeof p?.id === 'string' && p.id.trim() ? p.id.trim() : '';
         if (!id) {
           id = `imported-${Date.now()}-${i}`;
@@ -608,18 +658,57 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { ...p, id, slug };
       });
 
-      const existingMap = new Map(products.map(p => [p.id, p]));
-      for (const p of stamped) {
-        existingMap.set(p.id, p);
+      // Cari məhsullarla birləşdir: eyni id və ya eyni code olanları yenilə, yeniləri əlavə et
+      const existingMap = new Map<string, Product>();
+      const codeToIdMap = new Map<string, string>();
+      for (const p of products) {
+        if (p && p.id) {
+          existingMap.set(p.id, p);
+          if (p.code) {
+            codeToIdMap.set(p.code.trim().toUpperCase(), p.id);
+          }
+        }
       }
+
+      for (const p of stamped) {
+        const cleanCode = p.code ? p.code.trim().toUpperCase() : '';
+        if (cleanCode && codeToIdMap.has(cleanCode)) {
+          const existingId = codeToIdMap.get(cleanCode)!;
+          existingMap.set(existingId, { ...existingMap.get(existingId)!, ...p, id: existingId });
+        } else {
+          existingMap.set(p.id, p);
+          if (cleanCode) {
+            codeToIdMap.set(cleanCode, p.id);
+          }
+        }
+      }
+
       const combined = Array.from(existingMap.values());
       setProducts(combined);
       saveToLocal(LOCAL_STORAGE_PRODUCTS, combined);
 
+      // Supabase-ə hissə-hissə (chunking: 25 məhsul) göndər ki, payload limitinə düşməsin
       const dbRows = combined.map(mapProductToDb);
-      const { error } = await supabase.from('products').upsert(dbRows);
-      if (error) {
-        return { success: true, count: stamped.length, error: `Lokal yaddaşa yazıldı, Supabase xətası: ${error.message}` };
+      let supabaseErrorNotice = '';
+      for (let i = 0; i < dbRows.length; i += 25) {
+        const chunk = dbRows.slice(i, i + 25);
+        try {
+          const { error } = await supabase.from('products').upsert(chunk);
+          if (error) {
+            console.warn(`Supabase upsert chunk (${i}-${i + chunk.length}) xətası:`, error.message);
+            supabaseErrorNotice = error.message;
+          }
+        } catch (err: any) {
+          supabaseErrorNotice = err?.message || 'Network error';
+        }
+      }
+
+      if (supabaseErrorNotice) {
+        return { 
+          success: true, 
+          count: stamped.length, 
+          error: `Məhsullar brauzerə yazıldı. (Supabase bildirişi: ${supabaseErrorNotice})` 
+        };
       }
       return { success: true, count: stamped.length };
     } catch (e: any) {
@@ -811,18 +900,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const seedAllToSupabase = async (): Promise<{ success: boolean; message: string }> => {
     setIsSyncing(true);
     try {
-      // 1. Seed Products
-      const prodRows = initialProducts.map(mapProductToDb);
-      const { error: prodErr } = await supabase.from('products').upsert(prodRows);
-      if (prodErr) throw new Error(`Products xətası: ${prodErr.message}`);
+      // 1. Seed Products (current products or initialProducts)
+      const productsToSeed = products.length > 0 ? products : initialProducts;
+      const prodRows = productsToSeed.map(mapProductToDb);
+      for (let i = 0; i < prodRows.length; i += 25) {
+        const chunk = prodRows.slice(i, i + 25);
+        const { error: prodErr } = await supabase.from('products').upsert(chunk);
+        if (prodErr) throw new Error(`Products xətası (${i}-${i + chunk.length}): ${prodErr.message}`);
+      }
 
       // 2. Seed Articles
-      const blogRows = initialBlogPosts.map(mapBlogToDb);
+      const blogRows = (blogPosts.length > 0 ? blogPosts : initialBlogPosts).map(mapBlogToDb);
       const { error: blogErr } = await supabase.from('articles').upsert(blogRows);
       if (blogErr) throw new Error(`Articles xətası: ${blogErr.message}`);
 
       // 3. Seed Projects
-      const projRows = initialProjects.map(mapProjectToDb);
+      const projRows = (projects.length > 0 ? projects : initialProjects).map(mapProjectToDb);
       const { error: projErr } = await supabase.from('projects').upsert(projRows);
       if (projErr) throw new Error(`Projects xətası: ${projErr.message}`);
 
@@ -843,7 +936,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSupabaseConnected(true);
       return { 
         success: true, 
-        message: `Uğurla tamamlandı! ${initialProducts.length} məhsul, ${categories.length} kateqoriya, ${initialProjects.length} layihə və ${initialBlogPosts.length} məqalə Supabase bazasına yükləndi.` 
+        message: `Uğurla tamamlandı! ${productsToSeed.length} məhsul, ${categories.length} kateqoriya, ${projRows.length} layihə və ${blogRows.length} məqalə Supabase bazasına yükləndi.` 
       };
     } catch (err: any) {
       console.error('Seed error:', err);

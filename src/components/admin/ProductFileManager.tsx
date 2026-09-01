@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { FileText, Box, Layers, FileText as File, UploadCloud, Trash2, Loader2, AlertCircle, Download } from 'lucide-react';
 import { Language, ProductFile } from '../../types';
-import { uploadFileToSupabase } from '../../lib/supabase';
+import { uploadFile, getStorageDisplayInfo } from '../../lib/storage';
 import { formatFileSize, guessProductFileType } from '../../utils/productFiles';
 
 interface ProductFileManagerProps {
@@ -22,11 +22,12 @@ export const ProductFileManager: React.FC<ProductFileManagerProps> = ({ files, o
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const storageInfo = getStorageDisplayInfo();
 
   const T = {
     az: {
       title: 'Texniki Fayllar (Datasheet, IES/LDT, CAD)',
-      hint: 'PDF, IES, LDT, DWG, DOC, ZIP faylları yükləyə bilərsiniz. Fayllar Supabase Storage-a yüklənir və məhsul səhifəsində dərhal görünür.',
+      hint: `PDF, IES, LDT, DWG, DOC, ZIP faylları yükləyə bilərsiniz. Fayllar ${storageInfo.providerName}-a yüklənir və məhsul səhifəsində dərhal görünür.`,
       upload: 'Fayl Yüklə',
       uploading: 'Yüklənir...',
       empty: 'Hələ fayl yüklənməyib. "Fayl Yüklə" düyməsi ilə əlavə edin.',
@@ -34,7 +35,7 @@ export const ProductFileManager: React.FC<ProductFileManagerProps> = ({ files, o
     },
     en: {
       title: 'Technical Files (Datasheet, IES/LDT, CAD)',
-      hint: 'You can upload PDF, IES, LDT, DWG, DOC, ZIP files. Files are stored in Supabase Storage and appear on the product page instantly.',
+      hint: `You can upload PDF, IES, LDT, DWG, DOC, ZIP files. Files are stored in ${storageInfo.providerName} and appear on the product page instantly.`,
       upload: 'Upload File',
       uploading: 'Uploading...',
       empty: 'No files uploaded yet. Use the "Upload File" button to add.',
@@ -42,7 +43,7 @@ export const ProductFileManager: React.FC<ProductFileManagerProps> = ({ files, o
     },
     ru: {
       title: 'Технические файлы (Datasheet, IES/LDT, CAD)',
-      hint: 'Можно загружать файлы PDF, IES, LDT, DWG, DOC, ZIP. Файлы сохраняются в Supabase Storage и сразу появляются на странице товара.',
+      hint: `Можно загружать файлы PDF, IES, LDT, DWG, DOC, ZIP. Файлы сохраняются в ${storageInfo.providerName} и сразу появляются на странице товара.`,
       upload: 'Загрузить файл',
       uploading: 'Загрузка...',
       empty: 'Файлы ещё не загружены. Нажмите «Загрузить файл», чтобы добавить.',
@@ -58,7 +59,7 @@ export const ProductFileManager: React.FC<ProductFileManagerProps> = ({ files, o
 
     try {
       for (const file of Array.from(selected)) {
-        const res = await uploadFileToSupabase(file, 'product-files');
+        const res = await uploadFile(file, 'product-files');
         if (res.success && res.url) {
           added.push({
             name: file.name,

@@ -130,21 +130,37 @@ export function normalizeImportedProduct(raw: any, index: number, categories?: C
   const code = String(item.code ?? '').trim() || `ECL-IMP-${Date.now()}-${index + 1}`;
   const cat = resolveImportedCategory(item.category, categories);
 
-  // id: JSON-da varsa saxla (yenidən idxal idempotent olur), yoxdursa unikal generasiya et
+  // id: JSON-da varsa saxla, yoxdursa unikal generasiya et
   const id =
     typeof item.id === 'string' && item.id.trim()
       ? item.id.trim()
-      : `imported-${slugifyId(code) || slugifyId(name) || 'urun'}-${index + 1}`;
-  const slug = typeof item.slug === 'string' && item.slug.trim() ? item.slug.trim() : id;
+      : `imported-${slugifyId(code) || slugifyId(name) || 'product'}-${Date.now()}-${index + 1}`;
+  
+  const slug =
+    typeof item.slug === 'string' && item.slug.trim()
+      ? item.slug.trim()
+      : `${slugifyId(name) || 'product'}-${slugifyId(code) || (index + 1)}`;
 
   const image = typeof item.image === 'string' && item.image.trim() ? item.image.trim() : FALLBACK_IMAGE;
-  const galleryRaw = Array.isArray(item.gallery)
+  const galleryRaw = Array.isArray(item.gallery) && item.gallery.length > 0
     ? item.gallery.filter((g: any) => typeof g === 'string' && g.trim())
-    : [];
+    : [image];
 
   const rawSpecs = item.specs && typeof item.specs === 'object' && !Array.isArray(item.specs) ? item.specs : {};
   // Ad/təsvirdən REAL göstəricilər (W, V, K, IP) — defolt dəyərləri real məlumatla əvəz edir
   const parsedSpecs = extractSpecsFromName(`${name} ${typeof item.description === 'string' ? item.description : ''}`);
+
+  const categoriesList: string[] = Array.isArray(item.categories) && item.categories.length > 0
+    ? item.categories
+    : [cat.id];
+
+  const categoryNameObj = (item.categoryName && typeof item.categoryName === 'object')
+    ? toLocalized(item.categoryName, cat.az)
+    : { az: cat.az, en: cat.en, ru: cat.ru };
+
+  const categoryNamesList = Array.isArray(item.categoryNames) && item.categoryNames.length > 0
+    ? item.categoryNames
+    : [categoryNameObj];
 
   return {
     id,
@@ -152,12 +168,12 @@ export function normalizeImportedProduct(raw: any, index: number, categories?: C
     name,
     code,
     category: cat.id,
-    categories: [cat.id],
-    categoryName: { az: cat.az, en: cat.en, ru: cat.ru },
-    categoryNames: [{ az: cat.az, en: cat.en, ru: cat.ru }],
+    categories: categoriesList,
+    categoryName: categoryNameObj,
+    categoryNames: categoryNamesList,
     subtitle: toLocalized(item.subtitle, cat.az),
     image,
-    gallery: galleryRaw.length ? galleryRaw : [image],
+    gallery: galleryRaw,
     description: toLocalized(item.description, `${name} — Ecolife | Kod: ${code}`),
     specs: {
       material: 'Alüminium',

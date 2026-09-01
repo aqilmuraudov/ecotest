@@ -10,6 +10,20 @@ import {
   getStorageBucketName,
   setStorageBucketName
 } from '../lib/supabase';
+import {
+  getR2Config,
+  saveR2Config,
+  testR2Connection,
+  isR2Configured,
+  R2_CORS_POLICY_JSON,
+  R2Config
+} from '../lib/r2';
+import {
+  getActiveStorageProvider,
+  setActiveStorageProvider,
+  getStorageDisplayInfo,
+  StorageProviderType
+} from '../lib/storage';
 import { signInWithEmail, signOut, hasAdminSessionMarker, getCurrentAdmin } from '../utils/auth';
 import { sanitizeEmail, sanitizeText } from '../utils/sanitize';
 import { normalizeImportedProducts } from '../utils/importProducts';
@@ -287,6 +301,14 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   // Storage bucket config state
   const [bucketNameInput, setBucketNameInput] = useState<string>(() => getStorageBucketName());
 
+  // Cloudflare R2 Storage State
+  const [activeStorage, setActiveStorage] = useState<StorageProviderType>(() => getActiveStorageProvider());
+  const [r2Config, setR2Config] = useState<R2Config>(() => getR2Config());
+  const [showR2Secret, setShowR2Secret] = useState<boolean>(false);
+  const [isTestingR2, setIsTestingR2] = useState<boolean>(false);
+  const [r2TestStatus, setR2TestStatus] = useState<{ success: boolean; message: string } | null>(null);
+  const [copiedCors, setCopiedCors] = useState<boolean>(false);
+
   // Status feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [copiedSql, setCopiedSql] = useState<boolean>(false);
@@ -294,6 +316,42 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const handleSaveR2Config = () => {
+    saveR2Config(r2Config);
+    showToast('Cloudflare R2 parametrləri yadda saxlanıldı!');
+  };
+
+  const handleTestR2 = async () => {
+    setIsTestingR2(true);
+    setR2TestStatus(null);
+    try {
+      const res = await testR2Connection(r2Config);
+      setR2TestStatus(res);
+      showToast(res.message);
+    } catch (e: any) {
+      setR2TestStatus({ success: false, message: e?.message || 'Xəta baş verdi' });
+    } finally {
+      setIsTestingR2(false);
+    }
+  };
+
+  const handleSwitchStorageProvider = (provider: StorageProviderType) => {
+    setActiveStorageProvider(provider);
+    setActiveStorage(provider);
+    showToast(
+      provider === 'r2'
+        ? 'Aktiv Yaddaş Provayderi Cloudflare R2 olaraq seçildi!'
+        : 'Aktiv Yaddaş Provayderi Supabase Storage olaraq seçildi!'
+    );
+  };
+
+  const handleCopyCors = () => {
+    navigator.clipboard.writeText(R2_CORS_POLICY_JSON);
+    setCopiedCors(true);
+    showToast('Cloudflare R2 CORS konfiqurasiya JSON kodu kopyalandı!');
+    setTimeout(() => setCopiedCors(false), 3000);
   };
 
   // Login handler - Supabase Auth ilə təhlükəsiz giriş
@@ -1373,14 +1431,312 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 5: DATABASE & SUPABASE SETTINGS */}
+        {/* TAB 5: DATABASE & STORAGE (CLOUDFLARE R2 + SUPABASE) */}
         {/* ========================================================================= */}
         {activeTab === 'database' && (
           <div className="space-y-8">
+            {/* Storage Provider Selection Card */}
+            <div className="bg-[#101115] border border-white/10 rounded-2xl p-6 sm:p-8 space-y-6">
+              <div className="border-b border-white/10 pb-4">
+                <h3 className="text-base font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                  <UploadCloud className="w-5 h-5 text-[#FFD21A]" />
+                  Fayl Yaddaşı Provayderi (File Storage Engine)
+                </h3>
+                <p className="text-xs text-gray-400 mt-1">
+                  Şəkillər, məhsul qalereyaları və texniki sənədlərin hansı bulud serverinə yüklənəcəyini seçin.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Cloudflare R2 Card */}
+                <div
+                  onClick={() => handleSwitchStorageProvider('r2')}
+                  className={`p-5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                    activeStorage === 'r2'
+                      ? 'border-[#FFD21A] bg-[#FFD21A]/5 shadow-[0_0_20px_rgba(255,210,26,0.1)]'
+                      : 'border-white/10 bg-[#16181F] hover:border-white/20'
+                  }`}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-lg bg-orange-500/10 border border-orange-500/30 text-orange-400 flex items-center justify-center font-black text-sm">
+                          R2
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-white flex items-center gap-2">
+                            Cloudflare R2 Storage
+                            <span className="text-[10px] bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded font-mono font-normal">
+                              Tövsiyə olunur
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-400 font-mono">0$ Egress • S3-API • Qlobal CDN</p>
+                        </div>
+                      </div>
+
+                      {activeStorage === 'r2' ? (
+                        <span className="flex items-center gap-1 text-[11px] font-bold text-[#FFD21A] bg-[#FFD21A]/10 border border-[#FFD21A]/30 px-2.5 py-1 rounded-full">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Aktiv
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-mono text-gray-400 bg-white/5 px-2.5 py-1 rounded-full">
+                          Seçmək üçün klikləyin
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-gray-300 leading-relaxed">
+                      Sürətli qlobal Cloudflare CDN şəbəkəsi vasitəsilə şəkillərin dərhal açılması və limitsiz trafik.
+                    </p>
+                  </div>
+
+                  <div className="pt-4 mt-2 border-t border-white/5 flex items-center justify-between text-xs font-mono">
+                    <span className="text-gray-400">Status:</span>
+                    <span className={isR2Configured() ? 'text-emerald-400 flex items-center gap-1 font-bold' : 'text-amber-400'}>
+                      {isR2Configured() ? '✓ Tokenlər Tənzimlənib' : '⚠️ API Tokenləri daxil edin'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Supabase Storage Card */}
+                <div
+                  onClick={() => handleSwitchStorageProvider('supabase')}
+                  className={`p-5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                    activeStorage === 'supabase'
+                      ? 'border-[#FFD21A] bg-[#FFD21A]/5 shadow-[0_0_20px_rgba(255,210,26,0.1)]'
+                      : 'border-white/10 bg-[#16181F] hover:border-white/20'
+                  }`}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center font-black text-sm">
+                          SB
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-white">Supabase Storage</div>
+                          <p className="text-[11px] text-gray-400 font-mono">Standart Daxili Bucket</p>
+                        </div>
+                      </div>
+
+                      {activeStorage === 'supabase' ? (
+                        <span className="flex items-center gap-1 text-[11px] font-bold text-[#FFD21A] bg-[#FFD21A]/10 border border-[#FFD21A]/30 px-2.5 py-1 rounded-full">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Aktiv
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-mono text-gray-400 bg-white/5 px-2.5 py-1 rounded-full">
+                          Seçmək üçün klikləyin
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-gray-300 leading-relaxed">
+                      Supabase PostgreSQL verilənlər bazası ilə birbaşa əlaqəli standart fayl anbarı.
+                    </p>
+                  </div>
+
+                  <div className="pt-4 mt-2 border-t border-white/5 flex items-center justify-between text-xs font-mono">
+                    <span className="text-gray-400">Status:</span>
+                    <span className="text-emerald-400 font-bold">✓ Hazırdır ({bucketNameInput})</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Cloudflare R2 Credentials & Setup Panel */}
+            <div className="bg-[#101115] border border-white/10 rounded-2xl p-6 sm:p-8 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-orange-500/20 text-orange-400 text-[10px] font-mono font-bold uppercase">
+                      Konfiqurasiya
+                    </span>
+                    <h3 className="text-base font-bold uppercase tracking-wider text-white">
+                      Cloudflare R2 Tənzimləmələri
+                    </h3>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    Cloudflare Dashboard-dan aldığınız R2 API Token və Bucket məlumatlarını bura daxil edin.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleTestR2}
+                    disabled={isTestingR2}
+                    className="flex items-center gap-1.5 bg-white/10 hover:bg-white/15 text-white px-4 py-2.5 rounded-xl text-xs font-mono transition-colors cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 text-[#FFD21A] ${isTestingR2 ? 'animate-spin' : ''}`} />
+                    <span>{isTestingR2 ? 'Yoxlanılır...' : 'Bağlantını Yoxla'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveR2Config}
+                    className="flex items-center gap-1.5 bg-[#FFD21A] hover:bg-[#F0C413] text-black font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer"
+                  >
+                    <span>Yadda Saxla</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* R2 Test Result Status Banner */}
+              {r2TestStatus && (
+                <div
+                  className={`p-4 rounded-xl border flex items-start gap-3 text-xs font-mono leading-relaxed ${
+                    r2TestStatus.success
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                      : 'bg-red-500/10 border-red-500/30 text-red-300'
+                  }`}
+                >
+                  {r2TestStatus.success ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                  )}
+                  <div>
+                    <strong className="font-bold">{r2TestStatus.success ? 'Uğurlu Bağlantı:' : 'Bağlantı Xətası:'}</strong> {r2TestStatus.message}
+                  </div>
+                </div>
+              )}
+
+              {/* Form Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Account ID */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300">
+                    Cloudflare Account ID <span className="text-[#FFD21A]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={r2Config.accountId}
+                    onChange={(e) => setR2Config({ ...r2Config, accountId: e.target.value.trim() })}
+                    placeholder="məs: a1b2c3d4e5f67890abcdef1234567890"
+                    className="w-full bg-[#16181F] border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono focus:border-[#FFD21A] focus:outline-none"
+                  />
+                  <p className="text-[10px] text-gray-400 font-mono">
+                    Cloudflare Dashboard-da sağ sütundan və ya URL-dən əldə edilən 32 simvollu ID.
+                  </p>
+                </div>
+
+                {/* Bucket Name */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300">
+                    R2 Bucket Adı <span className="text-[#FFD21A]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={r2Config.bucketName}
+                    onChange={(e) => setR2Config({ ...r2Config, bucketName: e.target.value.trim() })}
+                    placeholder="ecolife"
+                    className="w-full bg-[#16181F] border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono focus:border-[#FFD21A] focus:outline-none"
+                  />
+                  <p className="text-[10px] text-gray-400 font-mono">
+                    Cloudflare R2-də yaratdığınız Bucket-in dəqiq adı (məs: <code>ecolife</code>).
+                  </p>
+                </div>
+
+                {/* Access Key ID */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300">
+                    Access Key ID <span className="text-[#FFD21A]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={r2Config.accessKeyId}
+                    onChange={(e) => setR2Config({ ...r2Config, accessKeyId: e.target.value.trim() })}
+                    placeholder="məs: 7a8b9c0d1e2f3a4b..."
+                    className="w-full bg-[#16181F] border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono focus:border-[#FFD21A] focus:outline-none"
+                  />
+                  <p className="text-[10px] text-gray-400 font-mono">
+                    R2 API Token yaradarkən verilən Access Key ID.
+                  </p>
+                </div>
+
+                {/* Secret Access Key */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300">
+                    Secret Access Key <span className="text-[#FFD21A]">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showR2Secret ? 'text' : 'password'}
+                      value={r2Config.secretAccessKey}
+                      onChange={(e) => setR2Config({ ...r2Config, secretAccessKey: e.target.value.trim() })}
+                      placeholder="••••••••••••••••••••••••••••••••"
+                      className="w-full bg-[#16181F] border border-white/15 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-white font-mono focus:border-[#FFD21A] focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowR2Secret(!showR2Secret)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-xs font-mono"
+                    >
+                      {showR2Secret ? 'Gizlət' : 'Göstər'}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-gray-400 font-mono">
+                    R2 API Token-in gizli açarı (Secret Access Key).
+                  </p>
+                </div>
+
+                {/* Public Domain / Custom Domain */}
+                <div className="md:col-span-2 space-y-1.5">
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300">
+                    İctimai URL və ya Xüsusi Domen (Public Domain / R2.dev)
+                  </label>
+                  <input
+                    type="text"
+                    value={r2Config.publicDomain || ''}
+                    onChange={(e) => setR2Config({ ...r2Config, publicDomain: e.target.value.trim() })}
+                    placeholder="https://pub-xxxxxxxx.r2.dev və ya https://media.ecolife.az"
+                    className="w-full bg-[#16181F] border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono focus:border-[#FFD21A] focus:outline-none"
+                  />
+                  <p className="text-[10px] text-gray-400 font-mono">
+                    Cloudflare R2 Bucket parametrlərində <strong>"Public Development R2.dev URL"</strong>-i aktiv edin və ya öz <strong>media.ecolife.az</strong> subdomenini bağlayın.
+                  </p>
+                </div>
+              </div>
+
+              {/* R2 CORS Policy Guide */}
+              <div className="pt-4 border-t border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono uppercase tracking-wider text-amber-300 font-bold flex items-center gap-1.5">
+                    ⚠️ Vacib addım: Cloudflare R2 CORS Quraşdırılması
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyCors}
+                    className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white font-mono text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Copy className="w-3.5 h-3.5 text-[#FFD21A]" />
+                    <span>{copiedCors ? 'Kopyalandı!' : 'CORS JSON Kopyala'}</span>
+                  </button>
+                </div>
+
+                <p className="text-xs text-gray-300 leading-relaxed">
+                  Brauzerdən birbaşa Cloudflare R2-yə fayl yüklənə bilməsi üçün Cloudflare Dashboard-da: 
+                  <strong className="text-white"> R2 → Sizin Bucket (ecolife) → Settings → CORS Policy → Edit</strong> bölməsinə keçin və aşağıdakı JSON kodunu yapışdırın:
+                </p>
+
+                <div className="relative">
+                  <pre className="bg-[#08090A] border border-white/10 rounded-xl p-4 text-[11px] font-mono text-emerald-400 overflow-x-auto max-h-48">
+                    {R2_CORS_POLICY_JSON}
+                  </pre>
+                </div>
+              </div>
+            </div>
+
+            {/* Supabase Database Connection & Migration */}
             <div className="bg-[#101115] border border-white/10 rounded-2xl p-6 sm:p-8 space-y-6">
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
                 <div className="space-y-1">
-                  <h3 className="text-base font-bold uppercase tracking-wider text-white">{t.database.heading}</h3>
+                  <h3 className="text-base font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                    <Database className="w-5 h-5 text-[#FFD21A]" />
+                    Supabase PostgreSQL Verilənlər Bazası
+                  </h3>
                   <p className="text-xs text-gray-400">{t.database.subheading}</p>
                 </div>
                 <button
@@ -1410,7 +1766,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                 </div>
               </div>
 
-              {/* Storage Bucket Settings */}
+              {/* Supabase Storage Bucket Settings */}
               <div className="bg-[#16181F] p-5 rounded-xl border border-[#FFD21A]/20 space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="space-y-0.5">

@@ -16,7 +16,7 @@ import {
   Sparkles,
   Layers
 } from 'lucide-react';
-import { uploadFileToSupabase, getStorageBucketName } from '../../lib/supabase';
+import { uploadFile, getStorageDisplayInfo } from '../../lib/storage';
 import { Language } from '../../types';
 import { adminTranslations } from '../../data/adminTranslations';
 
@@ -70,7 +70,7 @@ export const ProductGalleryManager: React.FC<ProductGalleryManagerProps> = ({
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const bucketName = getStorageBucketName();
+  const storageInfo = getStorageDisplayInfo();
 
   const showStatus = (type: 'success' | 'error', text: string) => {
     setStatusMessage({ type, text });
@@ -86,13 +86,13 @@ export const ProductGalleryManager: React.FC<ProductGalleryManagerProps> = ({
       showStatus('error', uploadT.errorInvalidType);
       return;
     }
-    if (file.size > 15 * 1024 * 1024) {
+    if (file.size > 50 * 1024 * 1024) {
       showStatus('error', uploadT.errorTooLarge);
       return;
     }
 
     setIsUploadingMain(true);
-    const res = await uploadFileToSupabase(file, folder);
+    const res = await uploadFile(file, folder);
     setIsUploadingMain(false);
 
     if (res.success && res.url) {
@@ -131,7 +131,7 @@ export const ProductGalleryManager: React.FC<ProductGalleryManagerProps> = ({
       const file = fileList[i];
       setGalleryUploadProgress({ current: i + 1, total: fileList.length });
       
-      const res = await uploadFileToSupabase(file, folder);
+      const res = await uploadFile(file, folder);
       if (res.success && res.url) {
         newUrls.push(res.url);
       } else {
@@ -311,7 +311,7 @@ export const ProductGalleryManager: React.FC<ProductGalleryManagerProps> = ({
                     <div className="flex flex-col items-center gap-2 py-1">
                       <RefreshCw className="w-5 h-5 text-[#FFD21A] animate-spin" />
                       <span className="text-xs font-mono text-gray-300">
-                        Əsas şəkil Supabase-ə yüklənir...
+                        Əsas şəkil {storageInfo.providerName}-a yüklənir...
                       </span>
                     </div>
                   ) : (
@@ -324,7 +324,7 @@ export const ProductGalleryManager: React.FC<ProductGalleryManagerProps> = ({
                           Əsas şəkli buraxın və ya <span className="text-[#FFD21A] underline font-bold">kompüterdən seçin</span>
                         </p>
                         <p className="text-[10px] font-mono text-gray-400">
-                          PNG, JPG, WEBP, SVG • Supabase ({bucketName})
+                          PNG, JPG, WEBP, SVG • {storageInfo.providerName} ({storageInfo.bucketName})
                         </p>
                       </div>
                     </div>

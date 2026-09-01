@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, Image as ImageIcon, Link as LinkIcon, Check, AlertCircle, RefreshCw, X, Eye } from 'lucide-react';
-import { uploadFileToSupabase, getStorageBucketName } from '../lib/supabase';
+import { uploadFile, getStorageDisplayInfo } from '../lib/storage';
 import { Language } from '../types';
 import { adminTranslations } from '../data/adminTranslations';
 
@@ -34,7 +34,7 @@ export const ImageUploadWidget: React.FC<ImageUploadWidgetProps> = ({
   const [showPreviewModal, setShowPreviewModal] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const bucketName = getStorageBucketName();
+  const storageInfo = getStorageDisplayInfo();
 
   const handleFileUpload = async (file: File) => {
     if (!file) return;
@@ -44,7 +44,7 @@ export const ImageUploadWidget: React.FC<ImageUploadWidgetProps> = ({
       return;
     }
 
-    if (file.size > 15 * 1024 * 1024) {
+    if (file.size > 50 * 1024 * 1024) {
       setUploadError(t.errorTooLarge);
       return;
     }
@@ -53,7 +53,7 @@ export const ImageUploadWidget: React.FC<ImageUploadWidgetProps> = ({
     setUploadError(null);
     setUploadSuccess(false);
 
-    const result = await uploadFileToSupabase(file, folder);
+    const result = await uploadFile(file, folder);
 
     setIsUploading(false);
 
@@ -159,7 +159,7 @@ export const ImageUploadWidget: React.FC<ImageUploadWidgetProps> = ({
               <div className="flex flex-col items-center gap-2 py-2">
                 <RefreshCw className="w-6 h-6 text-[#FFD21A] animate-spin" />
                 <span className="text-xs font-mono text-gray-300">
-                  {t.uploading} ({bucketName})
+                  {t.uploading} ({storageInfo.providerName})
                 </span>
               </div>
             ) : (
@@ -172,7 +172,7 @@ export const ImageUploadWidget: React.FC<ImageUploadWidgetProps> = ({
                     {t.dragPrompt} <span className="text-[#FFD21A] underline">{t.browseBtn}</span>
                   </p>
                   <p className="text-[10px] font-mono text-gray-400">
-                    {t.fileLimit} • Supabase Storage ({bucketName})
+                    {t.fileLimit} • {storageInfo.providerName} ({storageInfo.bucketName})
                   </p>
                 </div>
               </>
