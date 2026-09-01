@@ -1,24 +1,16 @@
-import { uploadFileToSupabase, getStorageBucketName } from './supabase';
+﻿import { uploadFileToSupabase, getStorageBucketName } from './supabase';
+import { uploadFileToCloudinary, isCloudinaryConfigured, CLOUDINARY_CLOUD_NAME } from './cloudinary';
 
-export type StorageProviderType = 'supabase';
+export type StorageProviderType = 'supabase' | 'cloudinary';
 
-/**
- * Get currently active storage provider ('supabase')
- */
 export function getActiveStorageProvider(): StorageProviderType {
-  return 'supabase';
+  return isCloudinaryConfigured() ? 'cloudinary' : 'supabase';
 }
 
-/**
- * Set active storage provider
- */
 export function setActiveStorageProvider(_provider: StorageProviderType): void {
-  // Pure Supabase setup
+  // handled by configuration
 }
 
-/**
- * Unified file upload function that sends file to Supabase Storage
- */
 export async function uploadFile(
   file: File,
   folder: string = 'products'
@@ -29,6 +21,14 @@ export async function uploadFile(
   provider: StorageProviderType;
   error?: string;
 }> {
+  if (isCloudinaryConfigured()) {
+    const res = await uploadFileToCloudinary(file, folder);
+    return {
+      ...res,
+      provider: 'cloudinary'
+    };
+  }
+
   const supRes = await uploadFileToSupabase(file, folder);
   return {
     ...supRes,
@@ -36,15 +36,21 @@ export async function uploadFile(
   };
 }
 
-/**
- * Helper to display current active storage badge/info in UI
- */
 export function getStorageDisplayInfo(): {
   provider: StorageProviderType;
   providerName: string;
   bucketName: string;
   isReady: boolean;
 } {
+  if (isCloudinaryConfigured()) {
+    return {
+      provider: 'cloudinary',
+      providerName: 'Cloudinary CDN',
+      bucketName: CLOUDINARY_CLOUD_NAME,
+      isReady: true
+    };
+  }
+
   return {
     provider: 'supabase',
     providerName: 'Supabase Storage',
@@ -52,4 +58,3 @@ export function getStorageDisplayInfo(): {
     isReady: true
   };
 }
-
