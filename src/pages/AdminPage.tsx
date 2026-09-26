@@ -9,6 +9,12 @@ import {
   getStorageBucketName,
   setStorageBucketName
 } from '../lib/supabase';
+import {
+  StorageProviderType,
+  getActiveStorageProvider,
+  setActiveStorageProvider
+} from '../lib/storage';
+import { getCloudinaryConfig, setCloudinaryConfig } from '../lib/cloudinary';
 import { signInWithEmail, signOut, hasAdminSessionMarker, getCurrentAdmin } from '../utils/auth';
 import { sanitizeEmail, sanitizeText } from '../utils/sanitize';
 import { normalizeImportedProducts } from '../utils/importProducts';
@@ -286,6 +292,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   // Storage bucket config state
   const [bucketNameInput, setBucketNameInput] = useState<string>(() => getStorageBucketName());
 
+  // Storage provider (Cloudinary / Supabase) config state
+  const [storageProvider, setStorageProviderState] = useState<StorageProviderType>(() => getActiveStorageProvider());
+  const [cloudNameInput, setCloudNameInput] = useState<string>(() => getCloudinaryConfig().cloudName);
+  const [uploadPresetInput, setUploadPresetInput] = useState<string>(() => getCloudinaryConfig().uploadPreset);
+
   // Status feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [copiedSql, setCopiedSql] = useState<boolean>(false);
@@ -345,6 +356,19 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     if (!window.confirm(t.overview.seedConfirm)) return;
     const res = await seedAllToSupabase();
     showToast(res.message);
+  };
+
+  // Storage provider switch handler
+  const handleProviderSelect = (provider: StorageProviderType) => {
+    setActiveStorageProvider(provider);
+    setStorageProviderState(provider);
+    showToast(`${t.database.providerUpdatedToast} ${provider === 'cloudinary' ? t.database.providerCloudinary : t.database.providerSupabase}`);
+  };
+
+  // Cloudinary config save handler
+  const handleSaveCloudinaryConfig = () => {
+    setCloudinaryConfig({ cloudName: cloudNameInput.trim(), uploadPreset: uploadPresetInput.trim() });
+    showToast(t.database.cloudinaryConfigUpdatedToast);
   };
 
   // Language Switcher Helper
@@ -1413,41 +1437,105 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                 </div>
               </div>
 
-              {/* Supabase Storage Bucket Settings */}
-              <div className="bg-[#16181F] p-5 rounded-xl border border-[#FFD21A]/20 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <UploadCloud className="w-4 h-4 text-[#FFD21A]" />
-                      <span className="text-xs font-bold text-white uppercase tracking-wider">
-                        {t.database.storageBucketTitle}
+              {/* Storage Provider Switcher (Cloudinary / Supabase) */}
+              <div className="bg-[#16181F] p-5 rounded-xl border border-[#FFD21A]/20 space-y-4">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <UploadCloud className="w-4 h-4 text-[#FFD21A]" />
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">
+                      {t.database.storageProviderTitle}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400">
+                    {t.database.storageProviderDesc}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleProviderSelect('cloudinary')}
+                    className={`flex-1 text-xs font-bold px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                      storageProvider === 'cloudinary'
+                        ? 'bg-[#FFD21A] text-black'
+                        : 'bg-[#0E0F14] text-gray-400 border border-white/10 hover:text-white'
+                    }`}
+                  >
+                    {t.database.providerCloudinary}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleProviderSelect('supabase')}
+                    className={`flex-1 text-xs font-bold px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                      storageProvider === 'supabase'
+                        ? 'bg-[#FFD21A] text-black'
+                        : 'bg-[#0E0F14] text-gray-400 border border-white/10 hover:text-white'
+                    }`}
+                  >
+                    {t.database.providerSupabase}
+                  </button>
+                </div>
+
+                {storageProvider === 'cloudinary' ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-mono uppercase text-gray-400">{t.database.cloudNameLabel}</span>
+                      <input
+                        type="text"
+                        value={cloudNameInput}
+                        onChange={(e) => setCloudNameInput(e.target.value)}
+                        placeholder="sdektval"
+                        className="w-full bg-[#0E0F14] border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:border-[#FFD21A] focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-mono uppercase text-gray-400">{t.database.uploadPresetLabel}</span>
+                      <input
+                        type="text"
+                        value={uploadPresetInput}
+                        onChange={(e) => setUploadPresetInput(e.target.value)}
+                        placeholder="ecolife_preset"
+                        className="w-full bg-[#0E0F14] border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:border-[#FFD21A] focus:outline-none"
+                      />
+                    </div>
+                    <div className="sm:col-span-2 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleSaveCloudinaryConfig}
+                        className="bg-[#FFD21A] text-black font-bold text-xs px-4 py-1.5 rounded-lg hover:bg-[#F0C413] transition-colors whitespace-nowrap cursor-pointer"
+                      >
+                        {t.database.applyBtn}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                    <div className="space-y-0.5">
+                      <span className="text-[11px] text-gray-400">
+                        {t.database.storageBucketDesc}
                       </span>
                     </div>
-                    <p className="text-[11px] text-gray-400">
-                      {t.database.storageBucketDesc}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={bucketNameInput}
+                        onChange={(e) => setBucketNameInput(e.target.value)}
+                        placeholder="ecolife"
+                        className="bg-[#0E0F14] border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:border-[#FFD21A] focus:outline-none w-32"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStorageBucketName(bucketNameInput);
+                          showToast(`${t.database.bucketUpdatedToast} "${bucketNameInput}"`);
+                        }}
+                        className="bg-[#FFD21A] text-black font-bold text-xs px-3 py-1.5 rounded-lg hover:bg-[#F0C413] transition-colors whitespace-nowrap cursor-pointer"
+                      >
+                        {t.database.applyBtn}
+                      </button>
+                    </div>
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={bucketNameInput}
-                      onChange={(e) => setBucketNameInput(e.target.value)}
-                      placeholder="ecolife"
-                      className="bg-[#0E0F14] border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:border-[#FFD21A] focus:outline-none w-32"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStorageBucketName(bucketNameInput);
-                        showToast(`${t.database.bucketUpdatedToast} "${bucketNameInput}"`);
-                      }}
-                      className="bg-[#FFD21A] text-black font-bold text-xs px-3 py-1.5 rounded-lg hover:bg-[#F0C413] transition-colors whitespace-nowrap cursor-pointer"
-                    >
-                      {t.database.applyBtn}
-                    </button>
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* SQL Migration Script Copy Area */}
