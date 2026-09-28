@@ -52,11 +52,11 @@ export const SolutionsPage: React.FC<SolutionsPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#08090A] text-[#F5F5F5] pt-24 pb-20">
+    <div className="liquid-page min-h-screen text-[#F5F5F5] pt-28 pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Page Header */}
-        <div className="bg-[#0E1013] border border-white/10 p-6 sm:p-10 mb-10 shadow-2xl">
+        <div className="liquid-surface p-6 sm:p-10 mb-10">
           <div className="flex items-center space-x-2 text-xs font-mono uppercase text-gray-400 mb-3">
             <button onClick={() => onNavigate('home')} className="hover:text-[#FFD21A] transition-colors">
               {t.nav.home}
@@ -82,7 +82,7 @@ export const SolutionsPage: React.FC<SolutionsPageProps> = ({
                 <button
                   key={sol.id}
                   onClick={() => setActiveSolutionId(sol.id)}
-                  className={`p-4 text-left border transition-all flex flex-col justify-between rounded-none ${
+                  className={`flex flex-col justify-between rounded-2xl border p-4 text-left transition-all ${
                     isActive 
                       ? 'bg-[#18191E] border-[#FFD21A] ring-1 ring-[#FFD21A] shadow-[0_0_20px_rgba(255,210,26,0.2)]' 
                       : 'bg-black/40 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
@@ -103,7 +103,7 @@ export const SolutionsPage: React.FC<SolutionsPageProps> = ({
         </div>
 
         {/* Main Solution Showcase */}
-        <div className="bg-[#0E1013] border border-white/10 overflow-hidden shadow-2xl p-6 sm:p-10 mb-12">
+        <div className="liquid-surface overflow-hidden p-6 sm:p-10 mb-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             
             {/* Left Content */}
@@ -131,7 +131,7 @@ export const SolutionsPage: React.FC<SolutionsPageProps> = ({
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {currentSolution.keyFeatures[currentLang].map((feat, idx) => (
-                    <div key={idx} className="flex items-start gap-2.5 p-3 bg-black/40 border border-white/5 text-xs text-gray-300 font-mono">
+                    <div key={idx} className="liquid-card flex items-start gap-2.5 p-3 text-xs text-gray-300">
                       <CheckCircle2 className="w-4 h-4 text-[#FFD21A] flex-shrink-0 mt-0.5" />
                       <span>{feat}</span>
                     </div>
@@ -185,7 +185,7 @@ export const SolutionsPage: React.FC<SolutionsPageProps> = ({
                 <div
                   key={prod.id}
                   onClick={() => onNavigate('catalog', prod.slug)}
-                  className="group bg-[#0E1013] border border-white/10 overflow-hidden cursor-pointer hover:border-[#FFD21A] transition-all p-4 flex flex-col justify-between"
+                  className="liquid-card group overflow-hidden cursor-pointer hover:border-[#FFD21A] transition-all p-4 flex flex-col justify-between hover:-translate-y-1"
                 >
                   <div className="aspect-[4/3] bg-[#08090A] overflow-hidden mb-3">
                     <img src={prod.image} alt={prod.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
@@ -215,7 +215,7 @@ export const SolutionsPage: React.FC<SolutionsPageProps> = ({
                 <div
                   key={proj.id}
                   onClick={() => onNavigate('projects', proj.slug)}
-                  className="group bg-[#0E1013] border border-white/10 overflow-hidden cursor-pointer hover:border-[#FFD21A] transition-all p-6 flex flex-col sm:flex-row gap-6 items-center"
+                  className="liquid-card group overflow-hidden cursor-pointer hover:border-[#FFD21A] transition-all p-6 flex flex-col sm:flex-row gap-6 items-center hover:-translate-y-1"
                 >
                   <div className="w-full sm:w-48 aspect-[4/3] overflow-hidden flex-shrink-0 bg-black/40">
                     <img src={proj.coverImage} alt={proj.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />

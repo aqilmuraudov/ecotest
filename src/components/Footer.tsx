@@ -107,7 +107,7 @@ export const Footer: React.FC<FooterProps> = ({ currentLang, onNavigate, onOpenC
                 href={SITE_CONFIG.social.instagram} 
                 target="_blank" 
                 rel="noreferrer"
-                className="w-8 h-8 rounded-none bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:text-black hover:bg-[#FFD21A] hover:border-[#FFD21A] transition-all"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/[.07] text-gray-300 shadow-[inset_0_1px_rgba(255,255,255,.12)] transition-all hover:-translate-y-0.5 hover:border-[#FFD21A] hover:bg-[#FFD21A] hover:text-black"
                 aria-label="Instagram"
               >
                 <Instagram className="w-4 h-4" />
@@ -116,7 +116,7 @@ export const Footer: React.FC<FooterProps> = ({ currentLang, onNavigate, onOpenC
                 href={SITE_CONFIG.social.facebook} 
                 target="_blank" 
                 rel="noreferrer"
-                className="w-8 h-8 rounded-none bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:text-black hover:bg-[#FFD21A] hover:border-[#FFD21A] transition-all"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/[.07] text-gray-300 shadow-[inset_0_1px_rgba(255,255,255,.12)] transition-all hover:-translate-y-0.5 hover:border-[#FFD21A] hover:bg-[#FFD21A] hover:text-black"
                 aria-label="Facebook"
               >
                 <Facebook className="w-4 h-4" />
@@ -125,7 +125,7 @@ export const Footer: React.FC<FooterProps> = ({ currentLang, onNavigate, onOpenC
                 href={SITE_CONFIG.social.linkedin} 
                 target="_blank" 
                 rel="noreferrer"
-                className="w-8 h-8 rounded-none bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:text-black hover:bg-[#FFD21A] hover:border-[#FFD21A] transition-all"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/[.07] text-gray-300 shadow-[inset_0_1px_rgba(255,255,255,.12)] transition-all hover:-translate-y-0.5 hover:border-[#FFD21A] hover:bg-[#FFD21A] hover:text-black"
                 aria-label="LinkedIn"
               >
                 <Linkedin className="w-4 h-4" />

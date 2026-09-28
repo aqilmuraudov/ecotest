@@ -96,14 +96,14 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Zone 1: Single Brand Lockup */}
           <button 
             onClick={() => handleNavClick('home')}
-            className="group focus:outline-none focus:ring-1 focus:ring-[#FFD21A] p-0.5 rounded-none"
+            className="group rounded-full p-1 focus:outline-none focus:ring-1 focus:ring-[#FFD21A]/70"
             aria-label="Ecolife Architectural Lighting Home"
           >
             <Logo size="md" />
           </button>
 
           {/* Zone 2: Editorial Navigation Links (Desktop) */}
-          <nav className="hidden lg:flex items-center space-x-7" aria-label="Main Navigation">
+          <nav className="hidden items-center gap-1.5 lg:flex" aria-label="Main Navigation">
             {navItems.filter(item => item.id !== 'contact').map((item) => {
               const isActive = activePage === item.id || (item.id === 'catalog' && activePage.startsWith('catalog-'));
               
@@ -117,9 +117,9 @@ export const Header: React.FC<HeaderProps> = ({
                   >
                     <button
                       onClick={() => handleNavClick(item.id)}
-                      className={`flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest transition-colors py-2 ${
+                      className={`flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-mono uppercase tracking-widest transition-all ${
                         isActive 
-                          ? 'text-[#FFD21A] font-bold' 
+                          ? 'bg-white/15 text-[#FFD21A] font-bold shadow-[inset_0_1px_rgba(255,255,255,.18)]'
                           : 'text-[#F5F5F5]/70 hover:text-white'
                       }`}
                     >
@@ -129,37 +129,39 @@ export const Header: React.FC<HeaderProps> = ({
 
                     {/* Solutions Dropdown Menu */}
                     {isSolutionsDropdownOpen && (
-                      <div className="absolute top-full left-0 w-64 bg-[#0E1013] border border-white/10 shadow-2xl py-1 z-50 animate-fadeIn rounded-none">
+                      <div className="absolute left-0 top-full z-50 w-64 pt-2 animate-fadeIn">
+                        <div className="space-y-1 rounded-2xl border border-white/20 bg-[#38271f]/88 p-2 shadow-[inset_0_1px_rgba(255,255,255,.18),0_24px_60px_rgba(0,0,0,.34)] backdrop-blur-2xl">
                         <button
                           onClick={() => { handleNavClick('solutions'); }}
-                          className="w-full text-left px-4 py-2.5 text-[11px] font-mono font-bold text-[#FFD21A] tracking-widest uppercase border-b border-white/5 hover:bg-white/5"
+                          className="w-full rounded-xl px-4 py-2.5 text-left text-[11px] font-mono font-bold uppercase tracking-widest text-[#FFD21A] hover:bg-white/10"
                         >
                           {t.solutions.exploreAll} →
                         </button>
                         <button
                           onClick={() => { onNavigate('solutions', 'commercial-lighting'); setIsSolutionsDropdownOpen(false); }}
-                          className="w-full text-left px-4 py-2.5 text-xs text-[#F5F5F5] hover:text-[#FFD21A] hover:bg-white/5 transition-colors border-b border-white/5"
+                          className="w-full rounded-xl px-4 py-2.5 text-left text-xs text-[#F5F5F5] transition-colors hover:bg-white/10 hover:text-[#FFD21A]"
                         >
                           {currentLang === 'az' ? 'Ticarət və İctimai Məkanlar' : currentLang === 'ru' ? 'Торговые пространства' : 'Commercial & Retail'}
                         </button>
                         <button
                           onClick={() => { onNavigate('solutions', 'office-lighting'); setIsSolutionsDropdownOpen(false); }}
-                          className="w-full text-left px-4 py-2.5 text-xs text-[#F5F5F5] hover:text-[#FFD21A] hover:bg-white/5 transition-colors border-b border-white/5"
+                          className="w-full rounded-xl px-4 py-2.5 text-left text-xs text-[#F5F5F5] transition-colors hover:bg-white/10 hover:text-[#FFD21A]"
                         >
                           {currentLang === 'az' ? 'Ofis və Biznes Mərkəzləri' : currentLang === 'ru' ? 'Офисы и бизнес-центры' : 'Office & Corporate'}
                         </button>
                         <button
                           onClick={() => { onNavigate('solutions', 'hospitality-lighting'); setIsSolutionsDropdownOpen(false); }}
-                          className="w-full text-left px-4 py-2.5 text-xs text-[#F5F5F5] hover:text-[#FFD21A] hover:bg-white/5 transition-colors border-b border-white/5"
+                          className="w-full rounded-xl px-4 py-2.5 text-left text-xs text-[#F5F5F5] transition-colors hover:bg-white/10 hover:text-[#FFD21A]"
                         >
                           {currentLang === 'az' ? 'Otel və Restoranlar' : currentLang === 'ru' ? 'Отели и рестораны' : 'Hospitality & Dining'}
                         </button>
                         <button
                           onClick={() => { onNavigate('solutions', 'residential-lighting'); setIsSolutionsDropdownOpen(false); }}
-                          className="w-full text-left px-4 py-2.5 text-xs text-[#F5F5F5] hover:text-[#FFD21A] hover:bg-white/5 transition-colors"
+                          className="w-full rounded-xl px-4 py-2.5 text-left text-xs text-[#F5F5F5] transition-colors hover:bg-white/10 hover:text-[#FFD21A]"
                         >
                           {currentLang === 'az' ? 'Fərdi Yaşayış və Villalar' : currentLang === 'ru' ? 'Элитное жилье' : 'Luxury Residential'}
                         </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -170,16 +172,13 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item.id)}
-                  className={`relative text-xs font-mono uppercase tracking-widest transition-colors py-1 flex items-center gap-1.5 ${
+                  className={`flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-mono uppercase tracking-widest transition-all ${
                     isActive 
-                      ? 'text-[#FFD21A] font-bold' 
+                      ? 'bg-white/15 text-[#FFD21A] font-bold shadow-[inset_0_1px_rgba(255,255,255,.18)]'
                       : 'text-[#F5F5F5]/70 hover:text-white'
                   }`}
                 >
                   <span>{item.label}</span>
-                  {isActive && (
-                    <span className="absolute -bottom-1 left-0 right-0 h-[1.5px] bg-[#FFD21A]" />
-                  )}
                 </button>
               );
             })}
@@ -190,7 +189,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Search Trigger */}
             <button 
               onClick={() => onOpenSearch ? onOpenSearch() : onNavigate('catalog')}
-              className="text-gray-400 hover:text-[#FFD21A] transition-colors p-2 hover:bg-white/5 border border-white/10 rounded-none"
+              className="rounded-full border border-white/15 bg-white/[.07] p-2.5 text-gray-300 shadow-[inset_0_1px_rgba(255,255,255,.12)] transition-all hover:border-[#FFD21A]/40 hover:bg-white/15 hover:text-[#FFD21A]"
               aria-label="Search Catalog"
               title={t.catalog.searchPlaceholder}
             >
@@ -201,14 +200,14 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="relative">
               <button
                 onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
-                className="flex items-center gap-1 text-[11px] font-mono uppercase tracking-widest text-[#F5F5F5] hover:text-[#FFD21A] px-2.5 py-1.5 border border-white/10 hover:border-[#FFD21A]/40 transition-colors rounded-none"
+                className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[.07] px-3 py-2 text-[11px] font-mono uppercase tracking-widest text-[#F5F5F5] shadow-[inset_0_1px_rgba(255,255,255,.12)] transition-all hover:border-[#FFD21A]/40 hover:bg-white/15 hover:text-[#FFD21A]"
               >
                 <span>{currentLang.toUpperCase()}</span>
                 <ChevronDown className="w-3 h-3 text-[#FFD21A]" />
               </button>
 
               {isLangDropdownOpen && (
-                <div className="absolute right-0 mt-1 w-24 bg-[#0E1013] border border-white/10 shadow-xl py-1 z-50 rounded-none">
+                <div className="absolute right-0 z-50 mt-2 w-28 space-y-1 rounded-2xl border border-white/15 bg-[#201713]/90 p-2 shadow-xl backdrop-blur-2xl">
                   {(['az', 'en', 'ru'] as Language[]).map((lang) => (
                     <button
                       key={lang}
@@ -216,10 +215,10 @@ export const Header: React.FC<HeaderProps> = ({
                         onLanguageChange(lang);
                         setIsLangDropdownOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-1.5 text-[11px] font-mono uppercase transition-colors ${
+                      className={`w-full rounded-xl px-3 py-2 text-left text-[11px] font-mono uppercase transition-all ${
                         currentLang === lang 
-                          ? 'text-[#FFD21A] bg-white/10 font-bold' 
-                          : 'text-gray-400 hover:text-white hover:bg-white/5'
+                          ? 'bg-white/15 text-[#FFD21A] font-bold shadow-inner'
+                          : 'text-gray-400 hover:bg-white/10 hover:text-white'
                       }`}
                     >
                       {lang === 'az' ? 'AZ' : lang === 'en' ? 'EN' : 'RU'}
@@ -232,7 +231,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Primary Action Button */}
             <button
               onClick={onOpenContact}
-              className="flex items-center gap-2 bg-[#FFD21A] hover:bg-[#F0C413] text-black font-bold text-xs uppercase tracking-wider px-4 py-2 transition-all duration-200 shadow-[0_0_15px_rgba(255,210,26,0.2)] rounded-none"
+              className="flex items-center gap-2 rounded-full border border-[#ffe778]/70 bg-[linear-gradient(135deg,#ffe36c,#ffd21a)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-black shadow-[inset_0_1px_rgba(255,255,255,.65),0_0_22px_rgba(255,210,26,.24)] transition-all duration-200 hover:-translate-y-0.5 hover:brightness-105"
             >
               <MessageSquare className="w-3.5 h-3.5" />
               <span>{t.nav.writeUs}</span>
@@ -243,7 +242,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center space-x-2 lg:hidden">
             <button 
               onClick={() => onOpenSearch ? onOpenSearch() : onNavigate('catalog')}
-              className="p-2 text-gray-300 hover:text-[#FFD21A] rounded-lg hover:bg-white/5 transition-colors"
+              className="rounded-full border border-transparent p-2.5 text-gray-300 transition-all hover:border-white/15 hover:bg-white/10 hover:text-[#FFD21A]"
               aria-label="Search"
             >
               <Search className="w-5 h-5" />
@@ -251,7 +250,7 @@ export const Header: React.FC<HeaderProps> = ({
             
             <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="p-2 text-white hover:text-[#FFD21A] rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 focus:outline-none transition-colors"
+              className="rounded-full border border-white/15 bg-white/10 p-2.5 text-white shadow-[inset_0_1px_rgba(255,255,255,.14)] transition-all hover:bg-white/15 hover:text-[#FFD21A] focus:outline-none"
               aria-label="Open Navigation Menu"
             >
               <Menu className="w-6 h-6" />
@@ -263,11 +262,11 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Full-Screen Mobile & Tablet Menu Modal */}
       {isMobileMenuOpen && (
         <div 
-          className="fixed inset-0 z-[100] bg-[#08090A] flex flex-col h-screen w-screen overflow-hidden animate-fadeIn text-[#F5F5F5]"
+          className="fixed inset-0 z-[100] flex h-screen w-screen flex-col overflow-hidden bg-[#08090A] text-[#F5F5F5] animate-fadeIn"
           id="ecolife-mobile-nav-modal"
         >
           {/* Top Bar inside Menu */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-[#0E1013] flex-shrink-0">
+          <div className="flex flex-shrink-0 items-center justify-between rounded-3xl border border-white/15 bg-[#0E1013] px-5 py-4 shadow-[inset_0_1px_rgba(255,255,255,.14),0_16px_50px_rgba(0,0,0,.28)]">
             <button 
               onClick={() => handleNavClick('home')}
               className="focus:outline-none"
@@ -281,7 +280,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setIsMobileMenuOpen(false);
                   if (onOpenSearch) onOpenSearch();
                 }}
-                className="p-2.5 text-gray-400 hover:text-[#FFD21A] hover:bg-white/5 border border-white/10"
+                className="rounded-full border border-white/15 bg-white/[.06] p-2.5 text-gray-300 transition-all hover:bg-white/15 hover:text-[#FFD21A]"
                 aria-label="Search"
               >
                 <Search className="w-4 h-4" />
@@ -289,7 +288,7 @@ export const Header: React.FC<HeaderProps> = ({
 
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="p-2.5 text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 focus:outline-none transition-colors"
+                className="rounded-full border border-white/15 bg-white/10 p-2.5 text-gray-300 transition-all hover:bg-white/15 hover:text-white focus:outline-none"
                 aria-label="Close Navigation Menu"
               >
                 <X className="w-5 h-5 text-[#FFD21A]" />
@@ -302,19 +301,19 @@ export const Header: React.FC<HeaderProps> = ({
             
             {/* Language Switcher */}
             <div>
-              <div className="flex items-center justify-between p-3 bg-[#0E1013] border border-white/10">
+              <div className="flex items-center justify-between rounded-2xl border border-white/15 bg-[#0E1013] p-3 shadow-[inset_0_1px_rgba(255,255,255,.12)]">
                 <span className="text-xs font-mono uppercase tracking-widest text-gray-400">
                   DİL:
                 </span>
-                <div className="flex space-x-1">
+                <div className="flex space-x-1 rounded-full border border-white/10 bg-black/15 p-1">
                   {(['az', 'en', 'ru'] as Language[]).map((lang) => (
                     <button
                       key={lang}
                       onClick={() => onLanguageChange(lang)}
-                      className={`px-3 py-1.5 text-xs font-mono uppercase transition-all ${
+                      className={`rounded-full px-3 py-1.5 text-xs font-mono uppercase transition-all ${
                         currentLang === lang 
-                          ? 'bg-[#FFD21A] text-black font-bold' 
-                          : 'bg-white/5 text-gray-300 hover:text-white hover:bg-white/10'
+                          ? 'bg-[#FFD21A] text-black font-bold shadow-[0_0_16px_rgba(255,210,26,.22)]'
+                          : 'text-gray-300 hover:bg-white/10 hover:text-white'
                       }`}
                     >
                       {lang}
@@ -325,17 +324,17 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* Prominent Large Mobile Navigation Links List */}
-            <div className="space-y-1 bg-[#0E1013] border border-white/10 p-2 sm:p-3">
+            <div className="space-y-1.5 rounded-3xl border border-white/15 bg-[#0E1013] p-2.5 shadow-[inset_0_1px_rgba(255,255,255,.12)] sm:p-3">
               {navItems.map((item) => {
                 const isActive = activePage === item.id;
                 
                 if (item.id === 'solutions') {
                   return (
-                    <div key={item.id} className="border-b border-white/5 last:border-none">
+                    <div key={item.id} className="rounded-2xl">
                       <button
                         type="button"
                         onClick={() => setIsMobileSolutionsOpen(!isMobileSolutionsOpen)}
-                        className="w-full flex items-center justify-between py-3.5 px-3 rounded-lg hover:bg-white/5 transition-colors group"
+                        className={`group flex w-full items-center justify-between rounded-2xl px-3 py-3.5 transition-all ${isActive ? 'bg-white/15 shadow-inner' : 'hover:bg-white/10'}`}
                         aria-expanded={isMobileSolutionsOpen}
                       >
                         <div className="flex items-center gap-3.5 text-left">
@@ -354,35 +353,35 @@ export const Header: React.FC<HeaderProps> = ({
                         <div className="pl-6 sm:pl-10 pr-3 pb-4 space-y-2">
                           <button
                             onClick={() => handleNavClick('solutions')}
-                            className="w-full text-left py-2 px-2 text-sm sm:text-base font-semibold text-[#FFD21A] hover:bg-white/5 rounded flex items-center justify-between border-b border-white/5"
+                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[#FFD21A] hover:bg-white/10 sm:text-base"
                           >
                             <span>{currentLang === 'az' ? 'Bütün Həllər' : currentLang === 'ru' ? 'Все решения' : 'All Solutions'}</span>
                             <ChevronRight className="w-4 h-4 text-[#FFD21A]" />
                           </button>
                           <button
                             onClick={() => handleNavClick('solutions', 'commercial-lighting')}
-                            className="w-full text-left py-2 px-2 text-sm sm:text-base text-gray-300 hover:text-[#FFD21A] hover:bg-white/5 rounded flex items-center justify-between border-b border-white/5"
+                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-[#FFD21A] sm:text-base"
                           >
                             <span>• {currentLang === 'az' ? 'Ticarət və İctimai Məkanlar' : currentLang === 'ru' ? 'Торговые пространства' : 'Commercial & Retail'}</span>
                             <ChevronRight className="w-4 h-4 text-gray-500" />
                           </button>
                           <button
                             onClick={() => handleNavClick('solutions', 'office-lighting')}
-                            className="w-full text-left py-2 px-2 text-sm sm:text-base text-gray-300 hover:text-[#FFD21A] hover:bg-white/5 rounded flex items-center justify-between border-b border-white/5"
+                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-[#FFD21A] sm:text-base"
                           >
                             <span>• {currentLang === 'az' ? 'Ofis və Biznes Mərkəzləri' : currentLang === 'ru' ? 'Офисы и бизнес-центры' : 'Office & Corporate'}</span>
                             <ChevronRight className="w-4 h-4 text-gray-500" />
                           </button>
                           <button
                             onClick={() => handleNavClick('solutions', 'hospitality-lighting')}
-                            className="w-full text-left py-2 px-2 text-sm sm:text-base text-gray-300 hover:text-[#FFD21A] hover:bg-white/5 rounded flex items-center justify-between border-b border-white/5"
+                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-[#FFD21A] sm:text-base"
                           >
                             <span>• {currentLang === 'az' ? 'Otel və Restoranlar' : currentLang === 'ru' ? 'Отели и рестораны' : 'Hospitality & Dining'}</span>
                             <ChevronRight className="w-4 h-4 text-gray-500" />
                           </button>
                           <button
                             onClick={() => handleNavClick('solutions', 'residential-lighting')}
-                            className="w-full text-left py-2 px-2 text-sm sm:text-base text-gray-300 hover:text-[#FFD21A] hover:bg-white/5 rounded flex items-center justify-between"
+                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-[#FFD21A] sm:text-base"
                           >
                             <span>• {currentLang === 'az' ? 'Fərdi Yaşayış və Villalar' : currentLang === 'ru' ? 'Элитное жилье' : 'Luxury Residential'}</span>
                             <ChevronRight className="w-4 h-4 text-gray-500" />
@@ -397,10 +396,10 @@ export const Header: React.FC<HeaderProps> = ({
                   <button
                     key={item.id}
                     onClick={() => handleNavClick(item.id)}
-                    className={`w-full flex items-center justify-between py-3.5 px-3 rounded-none text-left transition-all border-b border-white/5 last:border-none ${
+                    className={`flex w-full items-center justify-between rounded-2xl px-3 py-3.5 text-left transition-all ${
                       isActive 
-                        ? 'bg-[#FFD21A]/10 text-[#FFD21A] font-extrabold shadow-sm' 
-                        : 'text-white hover:bg-white/5 hover:text-[#FFD21A]'
+                        ? 'bg-white/15 text-[#FFD21A] font-extrabold shadow-[inset_0_1px_rgba(255,255,255,.14)]'
+                        : 'text-white hover:bg-white/10 hover:text-[#FFD21A]'
                     }`}
                   >
                     <div className="flex items-center gap-3.5">

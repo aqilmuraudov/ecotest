@@ -3,12 +3,14 @@ import { Language, Product } from './types';
 import { parseUrlToRoute, buildRoutePath } from './utils/router';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
+import { AmbientLightingBackdrop } from './components/AmbientLightingBackdrop';
 import { ContactModal } from './components/ContactModal';
 import { SearchModal } from './components/SearchModal';
 import { Toast } from './components/Toast';
+import { SeoManager } from './components/SeoManager';
 
 // Pages
-import { HomePage } from './pages/HomePage';
+import { HomePageLiquid as HomePage } from './pages/HomePageLiquid';
 import { CatalogPage } from './pages/CatalogPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
 import { ProjectsPage } from './pages/ProjectsPage';
@@ -43,6 +45,9 @@ export default function App() {
     }
     return undefined;
   });
+  const seoProduct = activePage === 'catalog' && pageParam
+    ? products.find(product => !product.archived && (product.slug === pageParam || product.id === pageParam))
+    : undefined;
 
   // Listen to Browser Back / Forward buttons (popstate)
   useEffect(() => {
@@ -62,6 +67,7 @@ export default function App() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState<boolean>(false);
   const [selectedProductForInquiry, setSelectedProductForInquiry] = useState<Product | null>(null);
   const [configSummaryForInquiry, setConfigSummaryForInquiry] = useState<string | null>(null);
+  const [configPdfForInquiry, setConfigPdfForInquiry] = useState<File | null>(null);
 
   // Download Toast State
   const [toastMessage, setToastMessage] = useState<string>('');
@@ -100,18 +106,21 @@ export default function App() {
   const handleOpenContact = () => {
     setSelectedProductForInquiry(null);
     setConfigSummaryForInquiry(null);
+    setConfigPdfForInquiry(null);
     setIsContactModalOpen(true);
   };
 
   const handleRequestProductQuote = (product: Product) => {
     setSelectedProductForInquiry(product);
     setConfigSummaryForInquiry(null);
+    setConfigPdfForInquiry(null);
     setIsContactModalOpen(true);
   };
 
-  const handleOpenInquiryWithSummary = (summary: string) => {
+  const handleOpenInquiryWithSummary = (summary: string, pdfFile?: File) => {
     setSelectedProductForInquiry(null);
     setConfigSummaryForInquiry(summary);
+    setConfigPdfForInquiry(pdfFile || null);
     setIsContactModalOpen(true);
   };
 
@@ -133,7 +142,7 @@ export default function App() {
         );
 
       case 'catalog': {
-        const isProduct = pageParam && products.some(p => p.slug === pageParam || p.id === pageParam);
+        const isProduct = pageParam && products.some(p => !p.archived && (p.slug === pageParam || p.id === pageParam));
         if (isProduct) {
           return (
             <ProductDetailPage
@@ -240,7 +249,9 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#08090A] text-[#F5F5F5] selection:bg-[#FFD21A] selection:text-black font-['Montserrat',sans-serif]">
+    <div className="ecolife-liquid-canvas min-h-screen text-[#F5F5F5] selection:bg-[#FFD21A] selection:text-black font-['Montserrat',sans-serif]">
+      <SeoManager page={activePage} param={pageParam} language={currentLang} product={seoProduct} />
+      {activePage !== 'admin' && <AmbientLightingBackdrop />}
       {/* Global Header */}
       <Header
         currentLang={currentLang}
@@ -252,7 +263,7 @@ export default function App() {
       />
 
       {/* Main Routed Page Content */}
-      <main className="min-h-screen">
+      <main className={`relative min-h-screen ${activePage === 'admin' ? '' : 'z-10 liquid-public-pages'}`}>
         {renderPage()}
       </main>
 
@@ -274,6 +285,7 @@ export default function App() {
         currentLang={currentLang}
         prefilledProduct={selectedProductForInquiry}
         configSummary={configSummaryForInquiry}
+        configPdf={configPdfForInquiry}
       />
 
       {/* Global Search Modal */}

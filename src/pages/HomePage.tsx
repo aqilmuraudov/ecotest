@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Language } from '../types';
 import { translations } from '../data/translations';
 import { useData } from '../context/DataContext';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useMotionValue, useSpring } from 'motion/react';
 import { 
   ArrowRight, 
   ArrowUpRight,
@@ -18,6 +18,11 @@ import {
 } from 'lucide-react';
 import { LightKelvinPreview } from '../components/ui/LightKelvinPreview';
 import { ExplodedProfileViewer } from '../components/ui/ExplodedProfileViewer';
+import type { LightingSceneMode } from '../components/hero/LiquidLightingScene';
+
+const LiquidLightingScene = React.lazy(() =>
+  import('../components/hero/LiquidLightingScene').then((module) => ({ default: module.LiquidLightingScene }))
+);
 
 interface HomePageProps {
   currentLang: Language;
@@ -34,15 +39,43 @@ export const HomePage: React.FC<HomePageProps> = ({
   const { products, projects } = useData();
 
   // Curated flagship architectural products
-  const displayProducts = products.filter(p => p.featured).slice(0, 4).length >= 4
-    ? products.filter(p => p.featured).slice(0, 4)
-    : products.slice(0, 4);
+  const activeProducts = products.filter(p => !p.archived);
+  const displayProducts = activeProducts.filter(p => p.featured).slice(0, 4).length >= 4
+    ? activeProducts.filter(p => p.featured).slice(0, 4)
+    : activeProducts.slice(0, 4);
 
   // Top 3 architectural case studies
   const caseStudies = projects.slice(0, 3);
 
   // Interactive CRI material demonstration state
   const [criMode, setCriMode] = useState<'cri95' | 'cri80'>('cri95');
+  const [sceneMode, setSceneMode] = useState<LightingSceneMode>('focus');
+  const [canRender3d, setCanRender3d] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
+  );
+  const heroParallaxX = useSpring(useMotionValue(0), { stiffness: 55, damping: 20, mass: 0.45 });
+  const heroParallaxY = useSpring(useMotionValue(0), { stiffness: 55, damping: 20, mass: 0.45 });
+
+  const handleHeroPointerMove = (event: React.PointerEvent<HTMLElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const offsetX = (event.clientX - bounds.left) / bounds.width - 0.5;
+    const offsetY = (event.clientY - bounds.top) / bounds.height - 0.5;
+    heroParallaxX.set(offsetX * -22);
+    heroParallaxY.set(offsetY * -14);
+  };
+
+  const resetHeroParallax = () => {
+    heroParallaxX.set(0);
+    heroParallaxY.set(0);
+  };
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 1024px)');
+    const updateCapability = () => setCanRender3d(mediaQuery.matches);
+    updateCapability();
+    mediaQuery.addEventListener('change', updateCapability);
+    return () => mediaQuery.removeEventListener('change', updateCapability);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#08090A] text-[#F4F4F2] selection:bg-[#FFD21A] selection:text-black overflow-x-hidden">
@@ -50,25 +83,62 @@ export const HomePage: React.FC<HomePageProps> = ({
       {/* ========================================================================= */}
       {/* 01. MONUMENTAL ARCHITECTURAL HERO: LIGHT AS STRUCTURE                    */}
       {/* ========================================================================= */}
-      <section className="relative min-h-[92vh] lg:min-h-screen flex flex-col justify-between pt-24 pb-12 px-4 sm:px-6 lg:px-12 border-b border-white/10 overflow-hidden">
-        
-        {/* Architectural Grid & Ambient Atmosphere */}
-        <div className="absolute inset-0 architectural-grid opacity-30 pointer-events-none" />
-        
-        {/* Dynamic Architectural Backdrop Image with Physical Light Influence */}
+      <section
+        className="relative min-h-[92vh] lg:min-h-screen flex flex-col justify-between pt-24 pb-12 px-4 sm:px-6 lg:px-12 border-b border-white/10 overflow-hidden"
+        onPointerMove={handleHeroPointerMove}
+        onPointerLeave={resetHeroParallax}
+      >
+
+        {/* Full-colour architectural backdrop */}
         <div className="absolute inset-0 z-0 overflow-hidden">
-          <motion.img 
-            initial={{ scale: 1.08, opacity: 0.7 }}
-            animate={{ scale: 1, opacity: 0.85 }}
+          <motion.img
+            initial={{ scale: 1.08, opacity: 1 }}
+            animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 1.8, ease: [0.16, 1, 0.3, 1] }}
-            src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2200&q=85" 
-            alt="Ecolife Architectural Linear Lighting Pavilion" 
-            className="w-full h-full object-cover object-center filter grayscale-[15%] brightness-[0.75] contrast-[1.1]"
+            src="/hero-led-systems.png"
+            alt="Ecolife LED lighting systems in a premium architectural interior"
+            className="w-[calc(100%+48px)] h-[calc(100%+32px)] -ml-6 -mt-4 max-w-none object-cover object-center will-change-transform"
+            style={{ x: heroParallaxX, y: heroParallaxY }}
           />
-          {/* Spatial Dark Gradients for Controlled Depth */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#08090A] via-[#08090A]/70 to-transparent lg:w-3/5" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#08090A] via-[#08090A]/40 to-transparent" />
-          <div className="absolute inset-0 bg-radial-gradient from-transparent via-[#08090A]/50 to-[#08090A]" />
+        </div>
+
+        {/* Interactive WebGL light object. It stays behind the editorial content, but follows the visitor's pointer. */}
+        {canRender3d && (
+          <div className="absolute inset-y-20 right-0 left-[34%] z-[1] hidden lg:block">
+            <React.Suspense fallback={null}>
+              <LiquidLightingScene mode={sceneMode} />
+            </React.Suspense>
+          </div>
+        )}
+
+        <div className="absolute right-4 bottom-8 z-20 hidden lg:block w-64 rounded-[26px] border border-white/20 bg-[linear-gradient(135deg,rgba(255,255,255,0.20),rgba(255,255,255,0.055)_45%,rgba(255,255,255,0.10))] p-4 shadow-[0_18px_70px_rgba(0,0,0,0.34)] backdrop-blur-2xl">
+          <div className="flex items-center justify-between gap-3 border-b border-white/15 pb-3">
+            <div>
+              <p className="text-[9px] font-mono uppercase tracking-[0.18em] text-[#FFD21A]">Liquid glass / 01</p>
+              <p className="mt-1 text-xs font-semibold tracking-wide text-white">CANLI 3D İŞIQ MODULU</p>
+            </div>
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#FFD21A] opacity-60" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#FFD21A]" />
+            </span>
+          </div>
+          <p className="py-3 text-[11px] leading-relaxed text-white/65">Səhnəni hərəkət etdirmək üçün kursoru işıq modulu üzərində gəzdirməyiniz kifayətdir.</p>
+          <div className="grid grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-black/15 p-1">
+            {([
+              ['ambient', 'SOYUQ'],
+              ['focus', 'FOKUS'],
+              ['warm', 'İSTİ'],
+            ] as const).map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setSceneMode(mode)}
+                className={`rounded-xl px-2 py-2 text-[9px] font-bold tracking-wide transition-all ${sceneMode === mode ? 'bg-white/20 text-[#FFD21A] shadow-inner' : 'text-white/50 hover:bg-white/10 hover:text-white'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Top Edge: Linear LED Profile Beam Ignition */}
@@ -89,7 +159,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 
           {/* Physical LED Beam Ignition Sweep */}
           <div className="relative w-full h-[2px] bg-white/10 overflow-hidden mt-1">
-            <motion.div 
+            <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: '100%' }}
               transition={{ repeat: Infinity, duration: 4.5, ease: 'linear' }}
@@ -99,9 +169,16 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
 
         {/* Hero Narrative: Monumental Typography */}
-        <div className="relative z-10 max-w-4xl space-y-8 my-auto">
-          {/* Editorial Technical Kicker */}
-          <motion.div 
+        <div className="relative z-10 max-w-4xl my-auto isolate">
+          {/* Keeps the photograph vivid while giving the copy a premium, readable base. */}
+          <div
+            aria-hidden="true"
+            className="absolute -inset-y-12 -left-8 w-[calc(100%+4rem)] max-w-3xl bg-gradient-to-r from-[#050607]/90 via-[#050607]/65 to-transparent blur-[1px] [mask-image:linear-gradient(to_bottom,transparent,black_12%,black_88%,transparent)] pointer-events-none"
+          />
+
+          <div className="relative z-10 space-y-8">
+            {/* Editorial Technical Kicker */}
+            <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
@@ -111,10 +188,10 @@ export const HomePage: React.FC<HomePageProps> = ({
             <span>
               {currentLang === 'az' ? 'MEMARLIQ VƏ MÜHƏNDİSLİK İŞIĞI' : currentLang === 'ru' ? 'АРХИТЕКТУРНОЕ И ИНЖЕНЕРНОЕ ОСВЕЩЕНИЕ' : 'ARCHITECTURAL & ENGINEERING LIGHT'}
             </span>
-          </motion.div>
+            </motion.div>
 
           {/* Structural Display Statement */}
-          <motion.h1 
+            <motion.h1
             initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
@@ -139,20 +216,20 @@ export const HomePage: React.FC<HomePageProps> = ({
                 ARCHITECTURE.
               </>
             )}
-          </motion.h1>
+            </motion.h1>
 
           {/* Restrained Architectural Prose */}
-          <motion.p 
+            <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.35 }}
             className="text-sm sm:text-base lg:text-lg text-[#9E9EA4] max-w-xl font-normal leading-relaxed"
           >
             {t.hero.subtitle}
-          </motion.p>
+            </motion.p>
 
           {/* Primary & Secondary Architectural Actions */}
-          <motion.div 
+            <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.45 }}
@@ -173,33 +250,10 @@ export const HomePage: React.FC<HomePageProps> = ({
               <span>{t.hero.ctaSecondary}</span>
               <ArrowUpRight className="w-4 h-4 text-[#FFD21A]" />
             </button>
-          </motion.div>
+            </motion.div>
+          </div>
         </div>
 
-        {/* Bottom Technical Specifications Strip (Replacing floating icons) */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="relative z-10 pt-8 hairline-t mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono text-[#8E929B]"
-        >
-          <div>
-            <span className="block text-[10px] text-gray-500 uppercase tracking-widest">GÖVDƏ MATERİALI</span>
-            <span className="text-white font-semibold uppercase">6063-T5 ALÜMİNİUM</span>
-          </div>
-          <div>
-            <span className="block text-[10px] text-gray-500 uppercase tracking-widest">RƏNGÖTÜRMƏ DƏQİQLİYİ</span>
-            <span className="text-[#FFD21A] font-semibold uppercase">CRI &gt; 95 (R9 &gt; 85)</span>
-          </div>
-          <div>
-            <span className="block text-[10px] text-gray-500 uppercase tracking-widest">OPTİK PARILTI NƏZARƏTİ</span>
-            <span className="text-white font-semibold uppercase">UGR &lt; 16 STANDART</span>
-          </div>
-          <div>
-            <span className="block text-[10px] text-gray-500 uppercase tracking-widest">MÜHƏNDİSLİK PROTOKOLU</span>
-            <span className="text-white font-semibold uppercase">DALI-2 / 0-10V / TRIAC</span>
-          </div>
-        </motion.div>
       </section>
 
       {/* ========================================================================= */}

@@ -2,10 +2,10 @@
 
 @layer base {
   :root {
-    --bg-primary: #08090A;
-    --bg-surface: #101114;
-    --bg-surface-elevated: #16181D;
-    --bg-surface-card: #0E0F12;
+    --bg-primary: #17100d;
+    --bg-surface: #2c1f19;
+    --bg-surface-elevated: #3a281f;
+    --bg-surface-card: #261a15;
     --accent-yellow: #FFD21A;
     --accent-yellow-hover: #F0C413;
     --text-primary: #F5F5F5;
@@ -17,7 +17,7 @@
 
   body {
     font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background-color: #08090A;
+    background-color: #17100d;
     color: #F5F5F5;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
@@ -28,16 +28,467 @@
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #08090A;
+    background: #17100d;
   }
   ::-webkit-scrollbar-thumb {
-    background: #23242A;
+    background: #6d4b36;
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
     background: #FFD21A;
   }
 
+}
+
+/* -------------------------------------------------------------------------- */
+/* Ecolife Liquid Glass design system                                          */
+/* -------------------------------------------------------------------------- */
+.ecolife-liquid-canvas {
+  background:
+    radial-gradient(circle at 58% -8%, rgba(255, 178, 91, .30), transparent 34rem),
+    radial-gradient(circle at 8% 42%, rgba(245, 184, 117, .18), transparent 29rem),
+    radial-gradient(circle at 88% 72%, rgba(204, 118, 60, .20), transparent 35rem),
+    linear-gradient(135deg, #211610 0%, #302017 42%, #1b120f 100%);
+  isolation: isolate;
+  position: relative;
+  overflow: clip;
+}
+
+.ecolife-liquid-canvas::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .78;
+  background-image:
+    radial-gradient(circle at 18% 20%, rgba(255, 218, 143, .8) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 80% 68%, rgba(255, 218, 143, .55) 0 1px, transparent 1.5px),
+    linear-gradient(90deg, transparent 49.85%, rgba(255,255,255,.045) 50%, transparent 50.15%);
+  background-size: 190px 154px, 270px 215px, 330px 100%;
+}
+
+.ecolife-liquid-canvas::after {
+  content: '';
+  position: fixed;
+  z-index: 0;
+  left: -8vw;
+  top: 24vh;
+  width: 58vw;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(255,188,105,.75), #fff0c0, rgba(255,188,105,.35), transparent);
+  box-shadow: 0 0 28px rgba(255,164,67,.35), 0 0 90px rgba(255,145,38,.17);
+  transform: rotate(9deg);
+  opacity: .28;
+  pointer-events: none;
+}
+
+/* Shared warm architectural scene — inspired by suspended linear luminaires,
+   never by generic sci-fi grids. It stays behind content on every public page. */
+.ecolife-ambient-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+  perspective: 1100px;
+  transform-style: preserve-3d;
+}
+
+.ambient-haze {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: .46;
+  animation: ambient-haze-drift 16s ease-in-out infinite alternate;
+}
+
+.ambient-haze--amber {
+  left: 30%;
+  top: 20%;
+  width: 44vw;
+  height: 42vh;
+  background: rgba(225, 131, 61, .38);
+}
+
+.ambient-haze--cream {
+  right: -8%;
+  bottom: 7%;
+  width: 36vw;
+  height: 38vh;
+  background: rgba(255, 206, 139, .22);
+  animation-delay: -7s;
+}
+
+.ambient-wire {
+  position: absolute;
+  top: -4vh;
+  width: 1px;
+  height: 74vh;
+  background: linear-gradient(rgba(0,0,0,.9), rgba(16,10,7,.72), rgba(255,255,255,.06));
+  box-shadow: 1px 0 rgba(255,255,255,.035);
+  opacity: .74;
+}
+
+.ambient-wire--one { left: 11%; }
+.ambient-wire--two { left: 31%; height: 51vh; }
+.ambient-wire--three { left: 58%; height: 86vh; }
+.ambient-wire--four { left: 78%; height: 58vh; }
+.ambient-wire--five { right: 9%; height: 82vh; }
+
+.ambient-fixture {
+  --fixture-angle: 0deg;
+  --fixture-delay: 0s;
+  position: absolute;
+  display: block;
+  height: 62px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 5px 5px 9px 9px;
+  background: linear-gradient(180deg, #0a0807 0 19%, #3b281d 20% 78%, #67442d 100%);
+  box-shadow: 0 22px 45px rgba(0,0,0,.30), inset 0 1px rgba(255,255,255,.08);
+  transform: rotate(var(--fixture-angle)) translateZ(0);
+  transform-origin: center;
+  animation: ambient-fixture-float 10s ease-in-out var(--fixture-delay) infinite;
+}
+
+.ambient-fixture::before {
+  content: '';
+  position: absolute;
+  inset: -10px 3% auto;
+  height: 15px;
+  border-radius: 4px 4px 1px 1px;
+  background: linear-gradient(180deg, #050403, #17110e);
+  box-shadow: inset 0 1px rgba(255,255,255,.04);
+}
+
+.ambient-fixture::after {
+  content: '';
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  bottom: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, #ffb667 10%, #fff0bd 48%, #ffc16f 90%, transparent);
+  box-shadow: 0 3px 18px rgba(255,177,91,.88), 0 13px 65px rgba(255,139,48,.50);
+}
+
+.ambient-fixture i {
+  position: absolute;
+  inset: 52% -4% auto;
+  height: 115px;
+  clip-path: polygon(5% 0, 95% 0, 100% 100%, 0 100%);
+  background: linear-gradient(180deg, rgba(255,176,91,.25), transparent 78%);
+  filter: blur(8px);
+  opacity: .72;
+}
+
+.ambient-fixture--one { --fixture-angle: 8deg; --fixture-delay: -2s; left: -8%; top: 18%; width: 39vw; }
+.ambient-fixture--two { --fixture-angle: -5deg; --fixture-delay: -6s; right: -7%; top: 34%; width: 42vw; }
+.ambient-fixture--three { --fixture-angle: 1deg; --fixture-delay: -4s; left: 20%; top: 55%; width: 31vw; }
+.ambient-fixture--four { --fixture-angle: 7deg; --fixture-delay: -8s; right: 9%; top: 72%; width: 30vw; }
+.ambient-fixture--five { --fixture-angle: -9deg; --fixture-delay: -1s; left: -7%; top: 83%; width: 31vw; }
+
+@keyframes ambient-fixture-float {
+  0%, 100% { margin-top: 0; filter: brightness(.92); }
+  50% { margin-top: 9px; filter: brightness(1.08); }
+}
+
+@keyframes ambient-haze-drift {
+  from { transform: translate3d(-3%, -2%, 0) scale(.92); }
+  to { transform: translate3d(5%, 4%, 0) scale(1.08); }
+}
+
+.liquid-page {
+  min-height: 100%;
+  background: transparent !important;
+}
+
+.liquid-surface {
+  border: 1px solid rgba(255, 242, 224, .48) !important;
+  border-radius: 28px !important;
+  background:
+    radial-gradient(circle at 22% 0%, rgba(255,186,105,.29), transparent 42%),
+    linear-gradient(135deg, rgba(255,255,255,.23), rgba(126,75,44,.38) 48%, rgba(255,255,255,.11)) !important;
+  box-shadow: inset 0 1px rgba(255,255,255,.35), 0 28px 80px rgba(20,8,2,.25), 0 0 48px rgba(255,162,72,.08) !important;
+  backdrop-filter: blur(26px) saturate(132%);
+}
+
+.liquid-card {
+  border: 1px solid rgba(255, 242, 224, .40) !important;
+  border-radius: 24px !important;
+  background:
+    radial-gradient(circle at 35% 18%, rgba(255,185,102,.24), transparent 43%),
+    linear-gradient(145deg, rgba(255,255,255,.18), rgba(116,67,38,.38)) !important;
+  box-shadow: inset 0 1px rgba(255,255,255,.28), 0 18px 52px rgba(27,10,2,.23) !important;
+  backdrop-filter: blur(20px) saturate(128%);
+}
+
+.liquid-card:hover {
+  border-color: rgba(255,220,149,.68) !important;
+  box-shadow: inset 0 1px rgba(255,255,255,.34), 0 24px 70px rgba(30,11,2,.28), 0 0 42px rgba(255,165,73,.15) !important;
+}
+
+.liquid-pill {
+  border: 1px solid rgba(255, 238, 217, .32) !important;
+  border-radius: 999px !important;
+  background: rgba(255,255,255,.13) !important;
+  backdrop-filter: blur(16px) saturate(125%);
+}
+
+.liquid-public-pages [class*="bg-[#08090A]"],
+.liquid-public-pages [class*="bg-[#0E1013]"],
+.liquid-public-pages [class*="bg-[#101114]"],
+.liquid-public-pages [class*="bg-[#0E0F12]"],
+.liquid-public-pages [class*="bg-[#16181D]"] {
+  background-color: transparent !important;
+}
+
+.liquid-public-pages [class*="bg-[#0E1013]"][class*="border"],
+.liquid-public-pages [class*="bg-[#101114]"][class*="border"],
+.liquid-public-pages [class*="bg-[#0E0F12]"][class*="border"],
+.liquid-public-pages [class*="bg-[#16181D]"][class*="border"] {
+  border-color: rgba(255,242,224,.38) !important;
+  border-radius: 22px !important;
+  background: linear-gradient(145deg, rgba(255,255,255,.17), rgba(116,67,38,.34)) !important;
+  box-shadow: inset 0 1px rgba(255,255,255,.25), 0 18px 52px rgba(25,9,2,.20) !important;
+  backdrop-filter: blur(22px) saturate(126%);
+}
+
+.liquid-public-pages [class*="bg-black/"][class*="border"] {
+  border-color: rgba(255,242,224,.28) !important;
+  background: rgba(68,43,30,.30) !important;
+  backdrop-filter: blur(15px) saturate(120%);
+}
+
+.liquid-card [class*="bg-[#08090A]"],
+.liquid-card [class*="bg-black/"] {
+  background-color: rgba(31,20,15,.48) !important;
+}
+
+.liquid-public-pages :where(h1, h2, h3, h4) {
+  text-transform: none !important;
+  letter-spacing: -.035em !important;
+}
+
+.liquid-public-pages .text-gray-300 { color: rgba(255,248,240,.78) !important; }
+.liquid-public-pages .text-gray-400 { color: rgba(255,246,235,.63) !important; }
+.liquid-public-pages .text-gray-500 { color: rgba(255,240,224,.48) !important; }
+
+.liquid-public-pages input,
+.liquid-public-pages select,
+.liquid-public-pages textarea {
+  border-radius: 16px !important;
+  border-color: rgba(255,238,217,.22) !important;
+  background: rgba(58,38,28,.58) !important;
+  backdrop-filter: blur(12px);
+}
+
+.liquid-public-pages button[class*="border"]:not([class*="rounded-full"]) {
+  border-radius: 14px !important;
+}
+
+/* Public UI geometry: interactive controls and bordered surfaces share one soft,
+   continuous radius language. Decorative lighting geometry is intentionally
+   excluded so profiles and light beams keep their engineered shapes. */
+.liquid-public-pages :where(button, a[role="button"], a[class*="border"]):not(.liquid-card) {
+  border-radius: 16px !important;
+}
+
+.liquid-public-pages :where(button, a)[class*="rounded-full"] {
+  border-radius: 999px !important;
+}
+
+.liquid-public-pages :where(div, article, aside, form)[class*="border"][class*="bg-"] {
+  border-radius: 22px !important;
+}
+
+.liquid-public-pages :where(span)[class*="border"][class*="bg-"] {
+  border-radius: 999px !important;
+}
+
+.liquid-public-pages :where(img)[class*="border"] {
+  border-radius: 18px !important;
+}
+
+.liquid-public-pages [class*="rounded-none"] {
+  border-radius: 16px !important;
+}
+
+#ecolife-global-header {
+  padding: 16px 18px !important;
+  border: 0 !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+}
+
+#ecolife-global-header > div {
+  max-width: 1280px !important;
+  min-height: 58px;
+  padding: 8px 14px !important;
+  border: 1px solid rgba(255, 242, 224, .46);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 82% 0%, rgba(255,190,112,.20), transparent 34%),
+    linear-gradient(110deg, rgba(69,50,41,.83), rgba(112,75,51,.74), rgba(53,41,36,.84));
+  box-shadow: inset 0 1px rgba(255,255,255,.34), 0 16px 42px rgba(28,10,2,.24), 0 0 34px rgba(255,171,82,.06);
+  backdrop-filter: blur(25px) saturate(132%);
+}
+
+#ecolife-global-header button[aria-label="Ecolife Architectural Lighting Home"] {
+  flex: 0 0 auto;
+}
+
+#ecolife-global-header nav button {
+  border-radius: 999px;
+  padding: 8px 11px !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+}
+
+#ecolife-global-header nav button:hover,
+#ecolife-global-header nav button.text-\[\#FFD21A\] {
+  background: rgba(255,255,255,.13);
+}
+
+#ecolife-global-header nav button::after {
+  display: none !important;
+}
+
+#ecolife-global-header nav {
+  gap: 6px;
+}
+
+#ecolife-global-header nav button,
+#ecolife-global-header > div > div:last-child button {
+  box-shadow: inset 0 1px rgba(255,255,255,.10);
+}
+
+#ecolife-mobile-nav-modal {
+  background:
+    radial-gradient(circle at 20% 10%, rgba(181,103,43,.24), transparent 22rem),
+    #090706 !important;
+  padding: 12px;
+}
+
+#ecolife-mobile-nav-modal > div:first-child,
+#ecolife-mobile-nav-modal [class*="bg-[#0E1013]"] {
+  border-color: rgba(255,238,217,.22) !important;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(255,255,255,.13), rgba(90,49,27,.22)) !important;
+  backdrop-filter: blur(18px);
+}
+
+#ecolife-mobile-nav-modal button {
+  border-radius: 18px;
+}
+
+#ecolife-mobile-nav-modal button[class*="rounded-full"] {
+  border-radius: 999px;
+}
+
+#ecolife-global-search-modal,
+#ecolife-inquiry-modal {
+  border-radius: 28px !important;
+  background: linear-gradient(145deg, rgba(255,255,255,.14), rgba(72,43,28,.54)) !important;
+  box-shadow: inset 0 1px rgba(255,255,255,.20), 0 30px 90px rgba(0,0,0,.46) !important;
+  backdrop-filter: blur(24px) saturate(125%);
+}
+
+#ecolife-global-search-modal button,
+#ecolife-inquiry-modal button,
+#ecolife-inquiry-modal input,
+#ecolife-inquiry-modal select,
+#ecolife-inquiry-modal textarea {
+  border-radius: 16px !important;
+}
+
+#ecolife-global-search-modal button[class*="rounded-full"],
+#ecolife-inquiry-modal button[class*="rounded-full"] {
+  border-radius: 999px !important;
+}
+
+#ecolife-inquiry-modal :where(div, span)[class*="border"][class*="bg-"] {
+  border-radius: 18px !important;
+}
+
+#ecolife-global-footer {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 32px 18px !important;
+  position: relative;
+  z-index: 10;
+}
+
+#ecolife-global-footer > div {
+  max-width: 1280px !important;
+  padding: 28px !important;
+  border: 1px solid rgba(255,242,224,.40);
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(255,255,255,.18), rgba(112,67,40,.37));
+  box-shadow: inset 0 1px rgba(255,255,255,.27), 0 20px 65px rgba(25,9,2,.23);
+  backdrop-filter: blur(24px) saturate(126%);
+}
+
+.product-spec-list > div {
+  display: grid !important;
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.25fr);
+  align-items: start;
+  gap: 24px;
+}
+
+.product-spec-list > div > :last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+  line-height: 1.65;
+}
+
+@media (max-width: 639px) {
+  .product-spec-list > div {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .product-spec-list > div > :last-child {
+    text-align: left;
+  }
+}
+
+.hero-live-light {
+  background: radial-gradient(
+    circle 340px at var(--light-x, 72%) var(--light-y, 42%),
+    color-mix(in srgb, var(--hero-light-color, #ffd21a) 36%, transparent),
+    transparent 72%
+  );
+  mix-blend-mode: screen;
+  filter: saturate(125%);
+  transition: opacity 300ms ease;
+}
+
+.hero-light-vignette {
+  background:
+    radial-gradient(circle at 75% 40%, transparent 0 18%, rgba(27,15,9,.03) 45%, rgba(31,18,12,.46) 100%),
+    linear-gradient(90deg, rgba(31,18,12,.88), rgba(49,28,17,.34) 49%, rgba(48,27,17,.08) 76%, rgba(31,18,12,.22));
+}
+
+.hero-light-scan {
+  background: linear-gradient(105deg, transparent 35%, rgba(255,244,205,.20) 48%, rgba(255,210,26,.08) 52%, transparent 66%);
+  filter: blur(10px);
+  mix-blend-mode: screen;
+}
+
+@media (max-width: 1023px) {
+  #ecolife-global-header { padding: 10px 12px !important; }
+  #ecolife-global-header > div { min-height: 52px; }
+  #ecolife-global-footer { padding: 20px 12px !important; }
+  .ambient-fixture--one { width: 68vw; left: -25%; }
+  .ambient-fixture--two { width: 65vw; right: -28%; }
+  .ambient-fixture--three { left: 8%; width: 58vw; }
+  .ambient-fixture--four { right: -13%; width: 54vw; }
 }
 
 /* Custom helper classes */
@@ -47,6 +498,28 @@
 
 .glow-yellow-sm {
   box-shadow: 0 0 15px -3px rgba(255, 210, 26, 0.2);
+}
+
+@keyframes ecolife-logo-breathe {
+  0%, 100% {
+    opacity: 0.68;
+    filter: drop-shadow(0 0 0 rgba(255, 210, 26, 0));
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px rgba(255, 210, 26, 0.22));
+  }
+}
+
+.ecolife-logo-breathe {
+  animation: ecolife-logo-breathe 8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ecolife-logo-breathe {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 .architectural-grid {

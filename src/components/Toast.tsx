@@ -27,7 +27,7 @@ export const Toast: React.FC<ToastProps> = ({
 
   return (
     <div className="fixed bottom-6 right-6 z-50 animate-slideUp">
-      <div className="flex items-center gap-3 bg-[#0E1013] border border-[#FFD21A]/50 text-white px-5 py-3.5 shadow-[0_10px_30px_rgba(0,0,0,0.8)] glow-yellow-sm">
+      <div className="glow-yellow-sm flex items-center gap-3 rounded-2xl border border-[#FFD21A]/50 bg-[#0E1013]/90 px-5 py-3.5 text-white shadow-[inset_0_1px_rgba(255,255,255,.14),0_10px_30px_rgba(0,0,0,0.8)] backdrop-blur-xl">
         {type === 'download' ? (
           <Download className="w-4 h-4 text-[#FFD21A] flex-shrink-0 animate-bounce" />
         ) : (

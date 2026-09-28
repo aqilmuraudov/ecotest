@@ -12,13 +12,15 @@ import {
   Box,
   Layers,
   Check,
-  Eye
+  Eye,
+  Download
 } from 'lucide-react';
+import { createConfiguratorPdf, downloadConfiguratorPdf } from '../utils/configuratorPdf';
 
 interface ConfiguratorPageProps {
   currentLang: Language;
   onNavigate: (page: string, param?: string) => void;
-  onOpenInquiryWithSummary: (summary: string) => void;
+  onOpenInquiryWithSummary: (summary: string, pdfFile?: File) => void;
   onDownloadFile?: (fileName: string) => void;
 }
 
@@ -26,6 +28,7 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
   currentLang,
   onNavigate,
   onOpenInquiryWithSummary,
+  onDownloadFile,
 }) => {
   const t = translations[currentLang];
 
@@ -43,6 +46,7 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
   const [viewMode, setViewMode] = useState<'elevation' | '3d' | 'effect'>('elevation');
   const [isLightOn, setIsLightOn] = useState<boolean>(true);
   const [dimLevel, setDimLevel] = useState<number>(100); // 10% - 100%
+  const [isPdfGenerating, setIsPdfGenerating] = useState(false);
 
   // Mathematical power & lumen calculations based on choices
   const lengthMeters = config.length / 1000;
@@ -157,8 +161,32 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
 - Calculated Power: ${totalWatts} W
 - Luminous Flux: ~${totalLumens} lm`.trim();
 
-  const handleInquiry = () => {
-    onOpenInquiryWithSummary(configSummaryText);
+  const createReportFile = () => createConfiguratorPdf({
+    summary: configSummaryText,
+    profileName: profileInfo.name,
+    lengthMm: config.length,
+    totalWatts,
+    totalLumens
+  });
+
+  const handleInquiry = async () => {
+    setIsPdfGenerating(true);
+    try {
+      onOpenInquiryWithSummary(configSummaryText, await createReportFile());
+    } finally {
+      setIsPdfGenerating(false);
+    }
+  };
+
+  const handlePdfDownload = async () => {
+    setIsPdfGenerating(true);
+    try {
+      const file = await createReportFile();
+      downloadConfiguratorPdf(file);
+      onDownloadFile?.(file.name);
+    } finally {
+      setIsPdfGenerating(false);
+    }
   };
 
   // Length calculation for SVG width scaling
@@ -242,7 +270,7 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                   <button
                     key={item.id}
                     onClick={() => setConfig({ ...config, profileType: item.id as any })}
-                    className={`p-3.5 border text-left transition-all rounded-none ${
+                    className={`rounded-2xl border p-3.5 text-left transition-all ${
                       config.profileType === item.id 
                         ? 'border-[#FFD21A] bg-[#FFD21A]/10 text-white ring-1 ring-[#FFD21A]' 
                         : 'border-white/10 bg-[#08090A] text-gray-400 hover:text-white hover:border-white/20'
@@ -274,7 +302,7 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                   <button
                     key={m.id}
                     onClick={() => setConfig({ ...config, mounting: m.id as any })}
-                    className={`p-3 text-xs font-mono uppercase border transition-all text-center flex items-center justify-center gap-2 rounded-none ${
+                    className={`flex items-center justify-center gap-2 rounded-2xl border p-3 text-center text-xs font-mono uppercase transition-all ${
                       config.mounting === m.id 
                         ? 'border-[#FFD21A] bg-[#FFD21A]/15 text-[#FFD21A] ring-1 ring-[#FFD21A]' 
                         : 'border-white/10 bg-[#08090A] text-gray-400 hover:text-white hover:border-white/20'
@@ -962,14 +990,23 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                 </div>
               </div>
 
-              {/* Primary Action Button: Request Quotation */}
-              <div className="pt-2">
+              {/* Primary actions: downloadable technical sheet + direct inquiry */}
+              <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  onClick={handlePdfDownload}
+                  disabled={isPdfGenerating}
+                  className="w-full flex items-center justify-center gap-2 bg-white/5 border border-white/15 text-white font-bold text-xs uppercase tracking-wider py-4 hover:border-[#FFD21A] hover:text-[#FFD21A] transition-all cursor-pointer disabled:cursor-wait disabled:opacity-60"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>{isPdfGenerating ? 'PDF hazırlanır...' : 'PDF HESABATINI YÜKLƏ'}</span>
+                </button>
                 <button
                   onClick={handleInquiry}
-                  className="w-full flex items-center justify-center gap-2 bg-[#FFD21A] text-black font-bold text-xs uppercase tracking-wider py-4 hover:bg-[#F0C413] transition-all shadow-[0_0_25px_rgba(255,210,26,0.3)] cursor-pointer"
+                  disabled={isPdfGenerating}
+                  className="w-full flex items-center justify-center gap-2 bg-[#FFD21A] text-black font-bold text-xs uppercase tracking-wider py-4 hover:bg-[#F0C413] transition-all shadow-[0_0_25px_rgba(255,210,26,0.3)] cursor-pointer disabled:cursor-wait disabled:opacity-60"
                 >
                   <Send className="w-4 h-4" />
-                  <span>{t.configurator.sendInquiry}</span>
+                  <span>{isPdfGenerating ? 'HESABAT HAZIRLANIR...' : t.configurator.sendInquiry}</span>
                 </button>
               </div>
 

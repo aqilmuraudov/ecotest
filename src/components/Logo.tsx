@@ -19,11 +19,10 @@ export const Logo: React.FC<LogoProps> = ({
 
   return (
     <div className={`flex items-center select-none ${className}`} id="ecolife-brand-logo">
-      <img 
-        src="/storage/products/reframe-ani-white.gif" 
-        alt="Ecolife" 
-        className={`${imgHeights[size]} w-auto object-contain max-w-[180px] sm:max-w-[220px] transition-transform duration-200 group-hover:scale-105`}
-        referrerPolicy="no-referrer"
+      <img
+        src="/ecolife-logo-gold.png?v=2"
+        alt="Ecolife"
+        className={`${imgHeights[size]} w-auto object-contain max-w-[180px] sm:max-w-[220px] ecolife-logo-breathe transition-transform duration-200 group-hover:scale-105`}
         loading="eager"
       />
     </div>

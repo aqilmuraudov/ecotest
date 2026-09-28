@@ -199,7 +199,7 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
               </p>
               <button
                 onClick={onOpenContact}
-                className="w-full bg-[#FFD21A] text-black font-bold text-xs uppercase tracking-wider py-3.5 hover:bg-[#F0C413] transition-all shadow-[0_0_20px_rgba(255,210,26,0.25)] rounded-none"
+                className="w-full rounded-full bg-[#FFD21A] py-3.5 text-xs font-bold uppercase tracking-wider text-black shadow-[0_0_20px_rgba(255,210,26,0.25)] transition-all hover:bg-[#F0C413]"
               >
                 {t.projects.contactEngineer} →
               </button>

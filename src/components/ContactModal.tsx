@@ -4,6 +4,7 @@ import { translations } from '../data/translations';
 import { useData } from '../context/DataContext';
 import { getLocalizedText } from '../utils/lang';
 import { SITE_CONFIG } from '../config/siteConfig';
+import { uploadFile } from '../lib/storage';
 import {
   sanitizeEmail,
   sanitizePhone,
@@ -11,7 +12,7 @@ import {
   checkRateLimit,
   getClientFingerprint,
 } from '../utils/sanitize';
-import { X, CheckCircle, Send, Phone, Layers, ShieldCheck, Box, Sliders } from 'lucide-react';
+import { X, CheckCircle, Send, Phone, Layers, ShieldCheck, Box, Sliders, FileDown } from 'lucide-react';
 
 interface ContactModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ interface ContactModalProps {
   currentLang: Language;
   prefilledProduct?: Product | null;
   configSummary?: string | null;
+  configPdf?: File | null;
 }
 
 export const ContactModal: React.FC<ContactModalProps> = ({
@@ -26,7 +28,8 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   onClose,
   currentLang,
   prefilledProduct,
-  configSummary
+  configSummary,
+  configPdf
 }) => {
   const t = translations[currentLang];
   const { addInquiry } = useData();
@@ -43,11 +46,13 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Sync default message and state when modal opens or prefilled item changes
   React.useEffect(() => {
     if (isOpen) {
       setIsSubmitted(false);
+      setSubmitError(null);
       let defaultMsg = '';
       if (prefilledProduct) {
         defaultMsg = currentLang === 'az'
@@ -104,6 +109,14 @@ export const ContactModal: React.FC<ContactModalProps> = ({
     setIsSubmitting(true);
     try {
       const fingerprint = getClientFingerprint();
+      let configPdfUrl: string | undefined;
+      if (configPdf) {
+        const upload = await uploadFile(configPdf, 'inquiries');
+        if (!upload.success || !upload.url) {
+          throw new Error(upload.error || 'Konfiqurasiya PDF-i yüklənə bilmədi.');
+        }
+        configPdfUrl = upload.url;
+      }
       await addInquiry({
         name: `${cleanFirstName} ${cleanLastName}`.trim() || 'Adsız Müştəri',
         email: cleanEmail,
@@ -117,13 +130,16 @@ export const ContactModal: React.FC<ContactModalProps> = ({
         productCategory: prefilledProduct?.category,
         productSpecs: prefilledProduct?.specs,
         configSummary: configSummary ? sanitizeText(configSummary, 1000) : undefined,
+        configPdfUrl,
+        configPdfName: configPdf?.name,
         ipHash: fingerprint,
       } as any);
+      setIsSubmitted(true);
     } catch (err) {
       console.error('Failed to submit inquiry:', err);
+      setSubmitError(err instanceof Error ? err.message : 'Sorğu göndərilə bilmədi. Yenidən cəhd edin.');
     } finally {
       setIsSubmitting(false);
-      setIsSubmitted(true);
     }
   };
 
@@ -136,12 +152,12 @@ export const ContactModal: React.FC<ContactModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
       <div 
         id="ecolife-inquiry-modal"
-        className="relative w-full max-w-2xl bg-[#0E1013] border border-white/15 shadow-2xl p-5 sm:p-8 max-h-[92vh] overflow-y-auto text-[#F5F5F5]"
+        className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-white/20 bg-[#0E1013] p-5 text-[#F5F5F5] shadow-2xl sm:p-8"
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white p-2 hover:bg-white/5 transition-colors z-20"
+          className="absolute right-4 top-4 z-20 rounded-full border border-white/10 bg-white/[.06] p-2 text-gray-400 transition-all hover:bg-white/15 hover:text-white"
           aria-label="Close"
         >
           <X className="w-5 h-5" />
@@ -265,11 +281,20 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                 <div className="text-xs font-mono text-gray-200 whitespace-pre-line leading-relaxed">
                   {configSummary}
                 </div>
+                {configPdf && (
+                  <div className="pt-2 flex items-center gap-2 text-[11px] font-mono text-emerald-300">
+                    <FileDown className="w-3.5 h-3.5" />
+                    <span>PDF hesabatı bu müraciətə əlavə ediləcək: {configPdf.name}</span>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+              {submitError && (
+                <p className="border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">{submitError}</p>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">

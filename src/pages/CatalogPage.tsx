@@ -43,6 +43,8 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   // Filtered and sorted products
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
+      // Arxivdə olan məhsullar yalnız idarəetmə panelində görünür.
+      if (product.archived) return false;
       // Category filter
       const productCats: string[] = Array.isArray(product.categories) && product.categories.length > 0
         ? product.categories
@@ -71,13 +73,13 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   }, [products, selectedCategory, searchQuery, sortBy, currentLang]);
 
   return (
-    <div className="min-h-screen bg-[#08090A] text-[#F5F5F5] pt-24 pb-20">
+    <div className="liquid-page min-h-screen text-[#F5F5F5] pt-28 pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* ========================================================================= */}
         {/* TOP BANNER & BREADCRUMBS */}
         {/* ========================================================================= */}
-        <div className="bg-[#0E1013] border border-white/10 p-6 sm:p-10 mb-10 shadow-2xl relative overflow-hidden">
+        <div className="liquid-surface p-6 sm:p-10 mb-10 relative overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             
             {/* Left Header Info */}
@@ -112,7 +114,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={t.catalog.searchPlaceholder}
-                    className="w-full bg-[#08090A] border border-white/15 pl-4 pr-11 py-3 text-xs font-mono text-white placeholder-gray-500 focus:outline-none focus:border-[#FFD21A] transition-colors shadow-inner rounded-none"
+                    className="liquid-pill w-full pl-4 pr-11 py-3 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-[#FFD21A] transition-colors shadow-inner"
                   />
                   {searchQuery ? (
                     <button 
@@ -130,7 +132,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             </div>
 
             {/* Right Architectural Moodshot */}
-            <div className="hidden lg:block lg:col-span-5 h-48 overflow-hidden border border-white/10 relative shadow-xl">
+            <div className="liquid-card hidden lg:block lg:col-span-5 h-48 overflow-hidden relative">
               <img 
                 src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80" 
                 alt="Ecolife Catalog Inspiration" 
@@ -176,6 +178,28 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           </div>
         </div>}
 
+        {!isLoading && (
+          <div className="mb-7 hidden flex-wrap items-center gap-2 lg:flex" aria-label="Category Filters">
+            {dynamicCategories.map((cat) => {
+              const isActive = selectedCategory === cat.id;
+              const label = currentLang === 'az' ? cat.nameAz : currentLang === 'ru' ? cat.nameRu : cat.nameEn;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`liquid-pill px-4 py-2 text-sm transition-all ${
+                    isActive
+                      ? 'border-[#FFD21A] bg-[#FFD21A]/15 font-bold text-[#FFD21A] shadow-[0_0_24px_rgba(255,210,26,.14)]'
+                      : 'text-white/70 hover:text-white'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* ========================================================================= */}
         {/* MAIN CATALOG LAYOUT: SIDEBAR + PRODUCT GRID (Matching Reference 2) */}
         {/* ========================================================================= */}
@@ -191,84 +215,9 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             </p>
           </div>
         ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* Left Categories Sidebar (Desktop) */}
-          <aside className="hidden lg:block lg:col-span-3">
-            <div className="sticky top-28 bg-[#101114] border border-white/10 p-6 shadow-xl space-y-6">
-              
-              <div className="border-b border-white/10 pb-3">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-[#FFD21A]">
-                  {t.catalog.categories}
-                </h3>
-              </div>
-
-              {/* Categories Navigation Items with Yellow Underline on Active */}
-              <nav className="space-y-1" aria-label="Category Filters">
-                {dynamicCategories.map((cat) => {
-                  const isActive = selectedCategory === cat.id;
-                  const label = currentLang === 'az' ? cat.nameAz : currentLang === 'ru' ? cat.nameRu : cat.nameEn;
-
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => setSelectedCategory(cat.id)}
-                      className={`w-full text-left py-2.5 px-3 text-sm transition-all duration-200 flex items-center justify-between group ${
-                        isActive 
-                          ? 'text-[#FFD21A] font-bold bg-[#FFD21A]/10 border-l-2 border-[#FFD21A]' 
-                          : 'text-gray-300 hover:text-white hover:bg-white/5'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span>{label}</span>
-                      </div>
-                      {isActive && (
-                        <div className="w-4 h-[2px] bg-[#FFD21A]" />
-                      )}
-                    </button>
-                  );
-                })}
-              </nav>
-
-              {/* Quick Filter Reset */}
-              {(selectedCategory !== 'all' || searchQuery) && (
-                <div className="pt-4 border-t border-white/10">
-                  <button
-                    onClick={() => {
-                      setSelectedCategory('all');
-                      setSearchQuery('');
-                    }}
-                    className="w-full text-xs text-center font-semibold text-gray-400 hover:text-[#FFD21A] py-1.5 transition-colors"
-                  >
-                    {t.catalog.clearFilters}
-                  </button>
-                </div>
-              )}
-
-              {/* Configurator Quick Link */}
-              <div className="pt-4 border-t border-white/10">
-                <div className="p-3.5 bg-black/40 border border-[#FFD21A]/30 space-y-2">
-                  <span className="text-[11px] font-bold text-[#FFD21A] uppercase tracking-wider block">
-                    {t.catalog.customSizePromoTitle}
-                  </span>
-                  <p className="text-[11px] text-gray-400">
-                    {t.catalog.customSizePromoDesc}
-                  </p>
-                  <button
-                    onClick={() => onNavigate('configurator')}
-                    className="text-xs font-bold text-white hover:text-[#FFD21A] flex items-center gap-1 pt-1"
-                  >
-                    <span>{t.catalog.configureNow}</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          </aside>
-
-          {/* Right Product Grid Column */}
-          <main className="lg:col-span-9 space-y-6">
+        <div>
+          {/* Full-width product grid mirrors the reference catalogue structure. */}
+          <main className="space-y-6">
             
             {/* Grid Header Info */}
             <div className="flex items-center justify-between text-xs text-gray-400 px-1">
@@ -298,13 +247,15 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                   <div
                     key={product.id}
                     onClick={() => onNavigate('catalog', product.slug)}
-                    className="group bg-[#0E1013] border border-white/10 overflow-hidden cursor-pointer hover:border-[#FFD21A] transition-all duration-300 shadow-lg flex flex-col justify-between"
+                    className="liquid-card group overflow-hidden cursor-pointer hover:border-[#FFD21A] transition-all duration-300 flex flex-col justify-between hover:-translate-y-1"
                   >
                     {/* Clean Product Visual Container */}
                     <div className="relative aspect-[4/3] bg-[#08090A] overflow-hidden flex items-center justify-center p-3">
                       <img 
                         src={product.image || (product.gallery && product.gallery[0]) || 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1000&q=80'} 
                         alt={product.name}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80';
@@ -383,7 +334,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
         {/* ========================================================================= */}
         {/* STAT BANNER UNDER CATALOG (Matching Reference 2 Bottom Banner) */}
         {/* ========================================================================= */}
-        <div className="w-full bg-[#101114] border border-white/10 p-6 lg:p-8 mt-14 shadow-xl">
+        <div className="liquid-surface w-full p-6 lg:p-8 mt-14">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 divide-y lg:divide-y-0 lg:divide-x divide-white/10">
             
             <div className="flex items-center gap-4 pt-4 lg:pt-0 first:pt-0">

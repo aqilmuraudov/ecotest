@@ -49,7 +49,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   const t = translations[currentLang];
   const { products } = useData();
 
-  const product = products.find((p) => p.slug === productSlug || p.id === productSlug) || products[0] || {
+  const product = products.find((p) => !p.archived && (p.slug === productSlug || p.id === productSlug)) || products.find((p) => !p.archived) || {
     id: 'not-found',
     slug: 'not-found',
     name: 'Məhsul',
@@ -313,7 +313,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
               {/* Official Warranty & Quality Note */}
               {showWarranty && (
-                <div className="flex items-center gap-2 p-3 bg-[#08090A] border border-[#FFD21A]/30 text-xs text-gray-300 font-mono">
+                <div className="flex items-center gap-2 rounded-2xl border border-[#FFD21A]/30 bg-[#08090A] p-3 text-xs text-gray-300 font-mono">
                   <ShieldCheck className="w-5 h-5 text-[#FFD21A] flex-shrink-0" />
                   <span>
                     {t.productDetail.warrantyBadge}
@@ -326,7 +326,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             <div className="space-y-3 pt-4 border-t border-white/10">
               <button
                 onClick={() => onRequestQuote(product)}
-                className="w-full flex items-center justify-center gap-2 bg-[#FFD21A] text-black font-bold text-xs uppercase tracking-wider py-4 hover:bg-[#F0C413] transition-all shadow-[0_0_25px_rgba(255,210,26,0.3)] rounded-none"
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-[#FFD21A] py-4 text-xs font-bold uppercase tracking-wider text-black shadow-[0_0_25px_rgba(255,210,26,0.3)] transition-all hover:bg-[#F0C413]"
               >
                 <MessageSquare className="w-4 h-4" />
                 <span>{t.productDetail.requestQuote}</span>
@@ -335,7 +335,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => onNavigate('configurator')}
-                  className="flex items-center justify-center gap-1.5 bg-[#08090A] border border-white/15 hover:border-[#FFD21A] text-white hover:text-[#FFD21A] py-2.5 text-xs font-mono uppercase tracking-wider transition-colors rounded-none"
+                  className="flex items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/[.06] py-2.5 text-xs font-mono uppercase tracking-wider text-white transition-all hover:border-[#FFD21A] hover:bg-white/10 hover:text-[#FFD21A]"
                 >
                   <Sliders className="w-3.5 h-3.5" />
                   <span>{t.nav.configurator}</span>
@@ -343,7 +343,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
                 <button
                   onClick={handleShare}
-                  className="flex items-center justify-center gap-1.5 bg-[#08090A] border border-white/15 hover:border-white text-gray-300 hover:text-white py-2.5 text-xs font-mono uppercase tracking-wider transition-colors rounded-none"
+                  className="flex items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/[.06] py-2.5 text-xs font-mono uppercase tracking-wider text-gray-300 transition-all hover:border-white hover:bg-white/10 hover:text-white"
                 >
                   <Share2 className="w-3.5 h-3.5" />
                   <span>{copiedLink ? t.productDetail.linkCopied : t.productDetail.share}</span>
@@ -360,13 +360,13 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-12">
           
           {/* Left Column: Full Technical Specifications Table */}
-          <div className="lg:col-span-8 bg-[#0E1013] border border-white/10 p-6 sm:p-8 shadow-xl">
+          <div className="min-w-0 rounded-[28px] border border-white/10 bg-[#0E1013] p-6 shadow-xl sm:p-8 lg:col-span-8">
             <h2 className="text-base font-mono font-bold text-white uppercase tracking-wider mb-6 flex items-center gap-2 hairline-b pb-4">
               <span className="w-2 h-2 bg-[#FFD21A]" />
               <span>{t.productDetail.specsTitle}</span>
             </h2>
 
-            <div className="divide-y divide-white/10 text-xs font-mono">
+            <div className="product-spec-list divide-y divide-white/10 text-xs font-mono">
               <div className="py-3 flex justify-between">
                 <span className="text-gray-400">MODEL / KOD</span>
                 <span className="text-white font-bold">{product.code}</span>
@@ -453,11 +453,11 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           </div>
 
           {/* Right Column: Real File Downloads & Services */}
-          <div className="lg:col-span-4 space-y-6">
+          <div className="min-w-0 space-y-6 lg:col-span-4">
             
             {/* Real Downloads Block */}
             {downloadableFiles.length > 0 && (
-              <div className="bg-[#0E1013] border border-white/10 p-6 shadow-xl space-y-4">
+              <div className="space-y-4 rounded-[28px] border border-white/10 bg-[#0E1013] p-6 shadow-xl">
                 <h3 className="text-xs font-mono font-bold text-[#FFD21A] uppercase tracking-widest">
                   {t.productDetail.downloadsTitle}
                 </h3>
@@ -474,7 +474,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                     <button
                       key={`${file.name}-${index}`}
                       onClick={() => handleRealDownload(file)}
-                      className="w-full flex items-center justify-between p-3 bg-[#08090A] hover:bg-[#14161B] border border-white/10 hover:border-[#FFD21A] transition-all text-xs group rounded-none"
+                      className="group flex w-full items-center justify-between rounded-2xl border border-white/10 bg-black/20 p-3 text-xs transition-all hover:border-[#FFD21A] hover:bg-white/10"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <ProductFileTypeIcon type={file.type} />

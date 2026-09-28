@@ -66,7 +66,7 @@ export async function uploadFileToCloudinary(
     formData.append('upload_preset', uploadPreset);
     formData.append('folder', `ecolife/${folder}`);
 
-    const resourceType = file.type.startsWith('video/') ? 'video' : 'image';
+    const resourceType = file.type === 'application/pdf' ? 'raw' : file.type.startsWith('video/') ? 'video' : 'image';
     const response = await fetch(
       `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
       { method: 'POST', body: formData }

@@ -62,7 +62,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/80 backdrop-blur-md animate-fadeIn">
       <div 
         id="ecolife-global-search-modal"
-        className="w-full max-w-2xl bg-[#0E1013] border border-white/15 shadow-2xl overflow-hidden text-[#F5F5F5]"
+        className="w-full max-w-2xl overflow-hidden rounded-[28px] border border-white/20 bg-[linear-gradient(145deg,rgba(255,255,255,.14),rgba(72,43,28,.52))] text-[#F5F5F5] shadow-2xl backdrop-blur-2xl"
       >
         {/* Search Input Bar */}
         <div className="relative border-b border-white/10 p-4 flex items-center gap-3">
@@ -77,7 +77,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
           />
           <button 
             onClick={onClose}
-            className="text-gray-400 hover:text-white p-1 hover:bg-white/5"
+            className="rounded-full border border-white/10 bg-white/[.06] p-2 text-gray-400 transition-all hover:bg-white/15 hover:text-white"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
@@ -96,9 +96,9 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                     : 'Enter a product name (e.g. Linear 40), code, or project title.'}
               </div>
               <div className="flex justify-center gap-2 pt-2">
-                <button onClick={() => setQuery('Linear')} className="px-2.5 py-1 bg-white/5 border border-white/10 hover:border-[#FFD21A] hover:text-[#FFD21A] transition-colors">Linear</button>
-                <button onClick={() => setQuery('Rail')} className="px-2.5 py-1 bg-white/5 border border-white/10 hover:border-[#FFD21A] hover:text-[#FFD21A] transition-colors">Ultra Rail</button>
-                <button onClick={() => setQuery('Ofis')} className="px-2.5 py-1 bg-white/5 border border-white/10 hover:border-[#FFD21A] hover:text-[#FFD21A] transition-colors">Ofis</button>
+                <button onClick={() => setQuery('Linear')} className="rounded-full border border-white/15 bg-white/[.07] px-3 py-1.5 transition-all hover:border-[#FFD21A] hover:bg-white/15 hover:text-[#FFD21A]">Linear</button>
+                <button onClick={() => setQuery('Rail')} className="rounded-full border border-white/15 bg-white/[.07] px-3 py-1.5 transition-all hover:border-[#FFD21A] hover:bg-white/15 hover:text-[#FFD21A]">Ultra Rail</button>
+                <button onClick={() => setQuery('Ofis')} className="rounded-full border border-white/15 bg-white/[.07] px-3 py-1.5 transition-all hover:border-[#FFD21A] hover:bg-white/15 hover:text-[#FFD21A]">Ofis</button>
               </div>
             </div>
           ) : (
@@ -114,7 +114,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                       <button
                         key={p.id}
                         onClick={() => handleSelect('catalog', p.slug)}
-                        className="w-full flex items-center justify-between p-2.5 bg-[#08090A] border border-white/5 hover:border-[#FFD21A] transition-colors text-left group"
+                        className="group flex w-full items-center justify-between rounded-2xl border border-white/10 bg-black/20 p-2.5 text-left transition-all hover:border-[#FFD21A]/60 hover:bg-white/10"
                       >
                         <div className="flex items-center gap-3">
                           <img 
@@ -148,7 +148,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                       <button
                         key={pr.id}
                         onClick={() => handleSelect('projects', pr.slug)}
-                        className="w-full flex items-center justify-between p-2.5 bg-[#08090A] border border-white/5 hover:border-[#FFD21A] transition-colors text-left group"
+                        className="group flex w-full items-center justify-between rounded-2xl border border-white/10 bg-black/20 p-2.5 text-left transition-all hover:border-[#FFD21A]/60 hover:bg-white/10"
                       >
                         <div>
                           <div className="text-xs font-bold text-white group-hover:text-[#FFD21A]">

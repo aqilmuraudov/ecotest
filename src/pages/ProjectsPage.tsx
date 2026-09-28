@@ -27,11 +27,11 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ currentLang, onNavig
     : projects.filter(p => p.category === selectedCategory);
 
   return (
-    <div className="min-h-screen bg-[#08090A] text-[#F5F5F5] pt-24 pb-20">
+    <div className="liquid-page min-h-screen text-[#F5F5F5] pt-28 pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Page Header */}
-        <div className="bg-[#0E1013] border border-white/10 p-6 sm:p-10 mb-10 shadow-2xl">
+        <div className="liquid-surface p-6 sm:p-10 mb-10">
           <div className="flex items-center space-x-2 text-xs font-mono uppercase text-gray-400 mb-3">
             <button onClick={() => onNavigate('home')} className="hover:text-[#FFD21A] transition-colors">
               {t.nav.home}
@@ -57,7 +57,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ currentLang, onNavig
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-4 py-2 text-xs font-mono uppercase tracking-wider transition-all rounded-none ${
+                    className={`liquid-pill px-4 py-2 text-xs font-medium tracking-wide transition-all ${
                     isActive 
                       ? 'bg-[#FFD21A] text-black font-bold shadow-[0_0_15px_rgba(255,210,26,0.25)]' 
                       : 'bg-[#08090A] border border-white/10 text-gray-400 hover:text-white hover:border-white/20'
@@ -76,7 +76,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ currentLang, onNavig
             <div
               key={project.id}
               onClick={() => onNavigate('projects', project.slug)}
-              className="group bg-[#0E1013] border border-white/10 overflow-hidden cursor-pointer hover:border-[#FFD21A] transition-all duration-300 shadow-xl flex flex-col justify-between rounded-none"
+              className="liquid-card group overflow-hidden cursor-pointer hover:border-[#FFD21A] transition-all duration-300 flex flex-col justify-between hover:-translate-y-1"
             >
               {/* Image Container */}
               <div className="relative aspect-[16/11] overflow-hidden bg-black/40">

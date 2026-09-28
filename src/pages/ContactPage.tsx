@@ -178,13 +178,13 @@ export const ContactPage: React.FC<ContactPageProps> = ({ currentLang, onNavigat
               <div className="pt-2">
                 <span className="text-xs font-mono uppercase tracking-widest text-gray-400 block mb-3">Sosial Şəbəkələr:</span>
                 <div className="flex items-center space-x-2">
-                  <a href={SITE_CONFIG.social.instagram} target="_blank" rel="noreferrer" className="w-9 h-9 bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:text-black hover:bg-[#FFD21A] transition-all">
+                  <a href={SITE_CONFIG.social.instagram} target="_blank" rel="noreferrer" className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/[.07] text-gray-300 transition-all hover:bg-[#FFD21A] hover:text-black">
                     <Instagram className="w-4 h-4" />
                   </a>
-                  <a href={SITE_CONFIG.social.facebook} target="_blank" rel="noreferrer" className="w-9 h-9 bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:text-black hover:bg-[#FFD21A] transition-all">
+                  <a href={SITE_CONFIG.social.facebook} target="_blank" rel="noreferrer" className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/[.07] text-gray-300 transition-all hover:bg-[#FFD21A] hover:text-black">
                     <Facebook className="w-4 h-4" />
                   </a>
-                  <a href={SITE_CONFIG.social.linkedin} target="_blank" rel="noreferrer" className="w-9 h-9 bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:text-black hover:bg-[#FFD21A] transition-all">
+                  <a href={SITE_CONFIG.social.linkedin} target="_blank" rel="noreferrer" className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/[.07] text-gray-300 transition-all hover:bg-[#FFD21A] hover:text-black">
                     <Linkedin className="w-4 h-4" />
                   </a>
                 </div>
@@ -218,7 +218,11 @@ export const ContactPage: React.FC<ContactPageProps> = ({ currentLang, onNavigat
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <h2 className="text-lg font-mono font-bold text-white uppercase tracking-wider mb-4 hairline-b pb-3">
-                  {t.contact.form.title || (currentLang === 'az' ? 'Onlayn Sorğu Formu' : currentLang === 'ru' ? 'Онлайн Форма Запроса' : 'Online Inquiry Form')}
+                  {currentLang === 'az'
+                    ? 'Onlayn Sorğu Formu'
+                    : currentLang === 'ru'
+                      ? 'Онлайн Форма Запроса'
+                      : 'Online Inquiry Form'}
                 </h2>
 
                 {validationError && (

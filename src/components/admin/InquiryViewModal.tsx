@@ -15,6 +15,7 @@ import {
   Layers, 
   Tag, 
   Sliders,
+  FileDown,
   CheckCircle2,
   Trash2
 } from 'lucide-react';
@@ -193,6 +194,17 @@ export const InquiryViewModal: React.FC<InquiryViewModalProps> = ({
             <div className="text-xs font-mono text-gray-200 whitespace-pre-line leading-relaxed bg-black/40 p-3 rounded-lg border border-white/5">
               {inquiry.configSummary}
             </div>
+            {inquiry.configPdfUrl && (
+              <a
+                href={inquiry.configPdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg border border-[#FFD21A]/35 bg-[#FFD21A]/10 px-3 py-2 text-xs font-bold text-[#FFD21A] hover:bg-[#FFD21A]/20 transition-colors"
+              >
+                <FileDown className="w-3.5 h-3.5" />
+                <span>{inquiry.configPdfName || 'Konfiqurasiya PDF-ini aç'}</span>
+              </a>
+            )}
           </div>
         )}
 
@@ -257,7 +269,13 @@ export const InquiryViewModal: React.FC<InquiryViewModalProps> = ({
             className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 py-2 px-3 rounded-lg hover:bg-red-500/10 transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>{t.inquiries.deleteInquiryBtn || 'Sorğunu Sil'}</span>
+            <span>
+              {currentLang === 'az'
+                ? 'Sorğunu Sil'
+                : currentLang === 'ru'
+                  ? 'Удалить запрос'
+                  : 'Delete inquiry'}
+            </span>
           </button>
 
           <button
