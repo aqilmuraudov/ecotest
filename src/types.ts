@@ -1,6 +1,4 @@
 export type Language = 'az' | 'en' | 'ru';
-export type Theme = 'dark' | 'light';
-
 export type ProductCategory = 
   | 'all'
   | 'linear-profiles'

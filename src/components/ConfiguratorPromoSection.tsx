@@ -9,8 +9,8 @@ interface ConfiguratorPromoSectionProps {
 
 /**
  * Home page configurator teaser.
- * Theme styling is intentionally self-contained so the light/dark appearance
- * cannot be broken by global text/background overrides elsewhere in the app.
+ * Styling is intentionally self-contained so this section remains consistent
+ * with the site's permanent dark interface.
  */
 export const ConfiguratorPromoSection: React.FC<ConfiguratorPromoSectionProps> = ({
   title,
@@ -113,44 +113,6 @@ export const ConfiguratorPromoSection: React.FC<ConfiguratorPromoSectionProps> =
           background: #F0C413;
         }
 
-        /* Light mode is deliberately explicit and scoped to this component. */
-        html.light .configurator-promo {
-          background: #FFFFFF;
-          border-color: #FFD21A;
-          box-shadow:
-            0 12px 36px -8px rgba(255, 210, 26, 0.16),
-            0 4px 18px rgba(15, 23, 42, 0.05);
-        }
-
-        html.light .configurator-promo__grid {
-          opacity: 0.38;
-          background-image:
-            linear-gradient(to right, rgba(15,23,42,0.025) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(15,23,42,0.025) 1px, transparent 1px);
-        }
-
-        html.light .configurator-promo__tag {
-          color: #0F172A;
-          background: #FFFBEB;
-          border-color: #FFD21A;
-        }
-
-        html.light .configurator-promo__tag-icon {
-          color: #D97706;
-        }
-
-        html.light .configurator-promo__pro {
-          display: none;
-        }
-
-        html.light .configurator-promo__title {
-          color: #0F172A;
-        }
-
-        html.light .configurator-promo__subtitle,
-        html.light .configurator-promo__feature {
-          color: #334155;
-        }
       `}</style>
     </section>
   );

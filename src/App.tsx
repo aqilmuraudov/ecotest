@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Language, Theme, Product } from './types';
+import { Language, Product } from './types';
 import { parseUrlToRoute, buildRoutePath } from './utils/router';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -23,35 +23,11 @@ import { useData } from './context/DataContext';
 
 export default function App() {
   const { products } = useData();
-  // Theme State with localStorage recovery (Default is 'dark')
-  const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem('ecolife_theme');
-    return saved === 'light' ? 'light' : 'dark';
-  });
-
   // Language State with localStorage recovery
   const [currentLang, setCurrentLang] = useState<Language>(() => {
     const saved = localStorage.getItem('ecolife_lang');
     return (saved === 'en' || saved === 'ru') ? saved : 'az';
   });
-
-  // Sync theme with HTML document
-  useEffect(() => {
-    if (theme === 'light') {
-      document.documentElement.classList.add('light');
-      document.documentElement.classList.remove('dark');
-      document.documentElement.setAttribute('data-theme', 'light');
-    } else {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-      document.documentElement.setAttribute('data-theme', 'dark');
-    }
-    localStorage.setItem('ecolife_theme', theme);
-  }, [theme]);
-
-  const handleToggleTheme = () => {
-    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
-  };
 
   // Navigation State initialized from actual browser URL
   const [activePage, setActivePage] = useState<string>(() => {
@@ -269,8 +245,6 @@ export default function App() {
       <Header
         currentLang={currentLang}
         onLanguageChange={handleLanguageChange}
-        currentTheme={theme}
-        onToggleTheme={handleToggleTheme}
         activePage={activePage}
         onNavigate={handleNavigate}
         onOpenContact={handleOpenContact}
@@ -285,7 +259,6 @@ export default function App() {
       {/* Global Footer */}
       <Footer
         currentLang={currentLang}
-        currentTheme={theme}
         onNavigate={handleNavigate}
         onOpenContact={handleOpenContact}
       />

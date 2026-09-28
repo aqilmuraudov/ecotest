@@ -1,18 +1,17 @@
 import React from 'react';
 import { Logo } from './Logo';
-import { Language, Theme } from '../types';
+import { Language } from '../types';
 import { translations } from '../data/translations';
 import { SITE_CONFIG } from '../config/siteConfig';
 import { Phone, Mail, MapPin, Instagram, Facebook, Linkedin, ArrowRight } from 'lucide-react';
 
 interface FooterProps {
   currentLang: Language;
-  currentTheme?: Theme;
   onNavigate: (page: string, param?: string) => void;
   onOpenContact: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ currentLang, currentTheme, onNavigate, onOpenContact }) => {
+export const Footer: React.FC<FooterProps> = ({ currentLang, onNavigate, onOpenContact }) => {
   const t = translations[currentLang];
 
   const navItems = [
@@ -40,7 +39,7 @@ export const Footer: React.FC<FooterProps> = ({ currentLang, currentTheme, onNav
               className="focus:outline-none"
               aria-label="Ecolife Home"
             >
-              <Logo size="md" theme={currentTheme} />
+              <Logo size="md" />
             </button>
             <p className="text-sm text-gray-400 font-normal max-w-sm leading-relaxed">
               {t.footer.tagline}

@@ -1,21 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Product, BlogPost, Project, Inquiry, CategoryItem } from '../types';
-import { products as initialProducts, productCategoriesList } from '../data/products';
+import { products as initialProducts } from '../data/products';
 import { blogPosts as initialBlogPosts } from '../data/blog';
 import { projects as initialProjects } from '../data/projects';
 import { supabase } from '../lib/supabase';
 import { idbStorage } from '../utils/indexedDBStorage';
-
-// Convert productCategoriesList to CategoryItem array (excluding 'all')
-const defaultCategories: CategoryItem[] = productCategoriesList
-  .filter(c => c.id !== 'all')
-  .map((c, idx) => ({
-    id: c.id,
-    nameAz: c.nameAz,
-    nameEn: c.nameEn,
-    nameRu: c.nameRu,
-    order: idx + 1
-  }));
 
 interface DataContextType {
   products: Product[];
@@ -77,7 +66,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (Array.isArray(parsed)) return parsed;
       }
     } catch {}
-    return initialProducts;
+    // Kataloq yalnız real mənbədən (IndexedDB cache və ya Supabase) gələn
+    // məhsulları göstərməlidir. Statik seed məlumatlarını ilkin UI fallback-i
+    // kimi istifadə etmək istifadəçiyə demo kataloq göstərirdi.
+    return [];
   });
 
   const [categories, setCategories] = useState<CategoryItem[]>(() => {
@@ -85,7 +77,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const saved = localStorage.getItem(LOCAL_STORAGE_CATEGORIES);
       if (saved) return JSON.parse(saved);
     } catch {}
-    return defaultCategories;
+    // Kateqoriyalar da yalnız real mənbədən yüklənir; demo kateqoriyalar
+    // ilkin render zamanı göstərilmir.
+    return [];
   });
 
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>(() => {

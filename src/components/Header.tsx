@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Logo } from './Logo';
-import { Language, Theme } from '../types';
+import { Language } from '../types';
 import { translations } from '../data/translations';
-import { MessageSquare, ChevronDown, ChevronRight, Menu, X, Search, Phone, Mail, Sparkles, Sun, Moon } from 'lucide-react';
+import { MessageSquare, ChevronDown, ChevronRight, Menu, X, Search, Phone, Mail, Sparkles } from 'lucide-react';
 
 interface HeaderProps {
   currentLang: Language;
   onLanguageChange: (lang: Language) => void;
-  currentTheme: Theme;
-  onToggleTheme: () => void;
   activePage: string;
   onNavigate: (page: string, param?: string) => void;
   onOpenContact: () => void;
@@ -18,8 +16,6 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   currentLang,
   onLanguageChange,
-  currentTheme,
-  onToggleTheme,
   activePage,
   onNavigate,
   onOpenContact,
@@ -103,7 +99,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="group focus:outline-none focus:ring-1 focus:ring-[#FFD21A] p-0.5 rounded-none"
             aria-label="Ecolife Architectural Lighting Home"
           >
-            <Logo size="md" theme={currentTheme} />
+            <Logo size="md" />
           </button>
 
           {/* Zone 2: Editorial Navigation Links (Desktop) */}
@@ -191,24 +187,6 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Zone 3: Quick Utilities & Primary Action */}
           <div className="hidden lg:flex items-center space-x-3">
-            {/* Theme Toggle Button */}
-            <button
-              onClick={onToggleTheme}
-              className="p-2 text-gray-400 hover:text-[#FFD21A] transition-colors hover:bg-white/5 border border-white/10 flex items-center justify-center rounded-none"
-              aria-label={currentTheme === 'dark' ? 'Ağ rejimə keç' : 'Qaranlıq rejimə keç'}
-              title={
-                currentTheme === 'dark'
-                  ? (currentLang === 'az' ? 'Ağ rejim (Light mode)' : currentLang === 'ru' ? 'Светлая тема' : 'Switch to Light Mode')
-                  : (currentLang === 'az' ? 'Qaranlıq rejim (Dark mode)' : currentLang === 'ru' ? 'Темная тема' : 'Switch to Dark Mode')
-              }
-            >
-              {currentTheme === 'dark' ? (
-                <Sun className="w-3.5 h-3.5 text-[#FFD21A]" />
-              ) : (
-                <Moon className="w-3.5 h-3.5 text-[#FFD21A]" />
-              )}
-            </button>
-
             {/* Search Trigger */}
             <button 
               onClick={() => onOpenSearch ? onOpenSearch() : onNavigate('catalog')}
@@ -263,15 +241,6 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Mobile & Tablet Icons (Visible on screens < 1024px) */}
           <div className="flex items-center space-x-2 lg:hidden">
-            {/* Quick Theme Toggle */}
-            <button
-              onClick={onToggleTheme}
-              className="p-2 text-gray-300 hover:text-[#FFD21A] rounded-lg hover:bg-white/5 transition-colors border border-white/5"
-              aria-label="Toggle Theme"
-            >
-              {currentTheme === 'dark' ? <Sun className="w-4 h-4 text-[#FFD21A]" /> : <Moon className="w-4 h-4 text-[#FFD21A]" />}
-            </button>
-
             <button 
               onClick={() => onOpenSearch ? onOpenSearch() : onNavigate('catalog')}
               className="p-2 text-gray-300 hover:text-[#FFD21A] rounded-lg hover:bg-white/5 transition-colors"
@@ -303,18 +272,10 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => handleNavClick('home')}
               className="focus:outline-none"
             >
-              <Logo size="md" theme={currentTheme} />
+              <Logo size="md" />
             </button>
 
             <div className="flex items-center space-x-2">
-              <button
-                onClick={onToggleTheme}
-                className="p-2.5 text-gray-400 hover:text-[#FFD21A] hover:bg-white/5 border border-white/10"
-                aria-label="Toggle Theme"
-              >
-                {currentTheme === 'dark' ? <Sun className="w-4 h-4 text-[#FFD21A]" /> : <Moon className="w-4 h-4 text-[#FFD21A]" />}
-              </button>
-
               <button 
                 onClick={() => {
                   setIsMobileMenuOpen(false);
@@ -339,40 +300,8 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Scrollable Navigation Body */}
           <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-4">
             
-            {/* Appearance & Language Dual Controls */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {/* Theme Selector */}
-              <div className="flex items-center justify-between p-3 bg-[#0E1013] border border-white/10">
-                <span className="text-xs font-mono uppercase tracking-widest text-gray-400">
-                  {currentLang === 'az' ? 'REJİM:' : currentLang === 'ru' ? 'ТЕМА:' : 'THEME:'}
-                </span>
-                <div className="flex space-x-1">
-                  <button
-                    onClick={() => currentTheme !== 'dark' && onToggleTheme()}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono uppercase transition-all ${
-                      currentTheme === 'dark'
-                        ? 'bg-[#FFD21A] text-black font-bold'
-                        : 'bg-white/5 text-gray-300 hover:text-white'
-                    }`}
-                  >
-                    <Moon className="w-3.5 h-3.5" />
-                    <span>{currentLang === 'az' ? 'Qaranlıq' : currentLang === 'ru' ? 'Темная' : 'Dark'}</span>
-                  </button>
-                  <button
-                    onClick={() => currentTheme !== 'light' && onToggleTheme()}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono uppercase transition-all ${
-                      currentTheme === 'light'
-                        ? 'bg-[#FFD21A] text-black font-bold'
-                        : 'bg-white/5 text-gray-300 hover:text-white'
-                    }`}
-                  >
-                    <Sun className="w-3.5 h-3.5" />
-                    <span>{currentLang === 'az' ? 'Ağ' : currentLang === 'ru' ? 'Светлая' : 'Light'}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Language Switcher */}
+            {/* Language Switcher */}
+            <div>
               <div className="flex items-center justify-between p-3 bg-[#0E1013] border border-white/10">
                 <span className="text-xs font-mono uppercase tracking-widest text-gray-400">
                   DİL:

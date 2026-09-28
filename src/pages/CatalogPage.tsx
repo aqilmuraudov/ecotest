@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Language, ProductCategory, Product } from '../types';
 import { translations } from '../data/translations';
-import { productCategoriesList } from '../data/products';
 import { useData } from '../context/DataContext';
 import { getLocalizedText } from '../utils/lang';
 import { 
@@ -30,14 +29,11 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   initialCategory = 'all'
 }) => {
   const t = translations[currentLang];
-  const { products, categories } = useData();
+  const { products, categories, isLoading } = useData();
 
   const dynamicCategories = useMemo(() => {
     const allTab = { id: 'all', nameAz: 'Bütün Məhsullar', nameEn: 'All Products', nameRu: 'Все продукты' };
-    if (!categories || categories.length === 0) {
-      return productCategoriesList;
-    }
-    return [allTab, ...categories];
+    return [allTab, ...(categories || [])];
   }, [categories]);
 
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'all');
@@ -152,7 +148,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
         {/* ========================================================================= */}
         {/* MOBILE CATEGORY SELECTOR */}
         {/* ========================================================================= */}
-        <div className="lg:hidden mb-6">
+        {!isLoading && <div className="lg:hidden mb-6">
           <div className="flex items-center justify-between gap-3 mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
               {t.catalog.categories}
@@ -178,11 +174,23 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
               ▼
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* ========================================================================= */}
         {/* MAIN CATALOG LAYOUT: SIDEBAR + PRODUCT GRID (Matching Reference 2) */}
         {/* ========================================================================= */}
+        {isLoading ? (
+          <div
+            className="min-h-80 bg-[#101114] border border-white/10 flex flex-col items-center justify-center gap-4 text-center"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="w-8 h-8 border-2 border-[#FFD21A] border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs font-mono uppercase tracking-widest text-gray-400">
+              Kataloq yüklənir...
+            </p>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
           {/* Left Categories Sidebar (Desktop) */}
@@ -370,6 +378,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
 
           </main>
         </div>
+        )}
 
         {/* ========================================================================= */}
         {/* STAT BANNER UNDER CATALOG (Matching Reference 2 Bottom Banner) */}
