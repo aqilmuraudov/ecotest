@@ -1,4 +1,6 @@
 export type Language = 'az' | 'en' | 'ru';
+export type Theme = 'dark' | 'light';
+
 export type ProductCategory = 
   | 'all'
   | 'linear-profiles'
@@ -85,13 +87,6 @@ export interface Product {
   featured?: boolean;
   isNew?: boolean;
   applications?: string[];
-  /** Optional sales price in AZN, managed from the admin panel. */
-  price?: number;
-  /** Archived products stay in the database but are excluded from the public catalogue. */
-  archived?: boolean;
-  archivedAt?: string;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export type ProjectCategory = 'all' | 'commercial' | 'office' | 'restaurant' | 'hotel' | 'residential';
@@ -221,8 +216,6 @@ export interface Inquiry {
   productSpecs?: Record<string, any>;
   roomPreset?: string;
   configSummary?: string;
-  configPdfUrl?: string;
-  configPdfName?: string;
   projectType?: string;
   ipHash?: string;
   userAgent?: string;

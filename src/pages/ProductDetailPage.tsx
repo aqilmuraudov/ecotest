@@ -5,20 +5,18 @@ import { useData } from '../context/DataContext';
 import { getLocalizedText } from '../utils/lang';
 import { cctLabel, getCctOptions, getFinishOptions, shouldShowWarrantyBadge } from '../utils/productOptions';
 import { downloadFileFromUrl, getDownloadableFiles } from '../utils/productFiles';
-import { 
-  ArrowLeft, 
-  Download, 
-  FileText, 
-  Box, 
-  Sliders, 
-  MessageSquare, 
-  Check, 
-  Share2, 
-  Sparkles, 
-  ShieldCheck, 
-  Zap, 
-  Eye, 
-  Layers, 
+import { FadeIn } from '../components/ui/FadeIn';
+import { EdButton, EdLink, EdHairline } from '../components/ed/EditorialUI';
+import { EdGlowFigure } from '../components/ed/EdGlowFigure';
+import { EdProductCard } from '../components/ed/EdProductCard';
+import {
+  ArrowLeft,
+  Download,
+  FileText,
+  Box,
+  Layers,
+  Share2,
+  ShieldCheck,
   ArrowRight,
   X,
   ChevronLeft,
@@ -26,9 +24,9 @@ import {
 } from 'lucide-react';
 
 function ProductFileTypeIcon({ type }: { type: ProductFile['type'] }) {
-  if (type === 'IES' || type === 'LDT') return <Box className="w-4 h-4 text-[#FFD21A]" />;
-  if (type === 'CAD') return <Layers className="w-4 h-4 text-[#FFD21A]" />;
-  return <FileText className="w-4 h-4 text-[#FFD21A]" />;
+  if (type === 'IES' || type === 'LDT') return <Box className="w-4 h-4 text-amber-warm" />;
+  if (type === 'CAD') return <Layers className="w-4 h-4 text-amber-warm" />;
+  return <FileText className="w-4 h-4 text-amber-warm" />;
 }
 
 interface ProductDetailPageProps {
@@ -49,7 +47,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   const t = translations[currentLang];
   const { products } = useData();
 
-  const product = products.find((p) => !p.archived && (p.slug === productSlug || p.id === productSlug)) || products.find((p) => !p.archived) || {
+  const product = products.find((p) => p.slug === productSlug || p.id === productSlug) || products[0] || {
     id: 'not-found',
     slug: 'not-found',
     name: 'Məhsul',
@@ -66,7 +64,6 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
-  // Yalnız REAL məlumatı olan seçimlər göstərilir (hardcoded defolt yoxdur)
   const cctOptions = getCctOptions(product);
   const finishOptions = getFinishOptions(product);
   const showWarranty = shouldShowWarrantyBadge(product);
@@ -75,7 +72,6 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   const [selectedFinish, setSelectedFinish] = useState(finishOptions[0] || '');
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Məhsul dəyişəndə seçimləri və qalereya indeksini sıfırla
   useEffect(() => {
     setSelectedCCT(getCctOptions(product)[0] || '');
     setSelectedFinish(getFinishOptions(product)[0] || '');
@@ -83,14 +79,13 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.slug]);
 
-  // Unified Gallery list starting with main image
   const galleryList = Array.from(
     new Set([
       product.image,
       ...(Array.isArray(product.gallery) ? product.gallery : [])
     ].filter(Boolean))
   );
-  
+
   const currentImage = galleryList[activeImageIndex] || galleryList[0] || product.image || 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1000&q=80';
 
   const relatedProducts = products
@@ -109,7 +104,6 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     setTimeout(() => setCopiedLink(false), 2500);
   };
 
-  // REAL fayllar — yalnız Supabase Storage URL-i olanlar göstərilir (fake fayl yoxdur)
   const downloadableFiles = getDownloadableFiles(product.files);
 
   const handleRealDownload = async (file: ProductFile) => {
@@ -119,483 +113,344 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#08090A] text-[#F5F5F5] pt-24 pb-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Breadcrumb & Back Navigation */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-2 text-xs text-gray-400">
-            <button 
-              onClick={() => onNavigate('home')} 
-              className="hover:text-[#FFD21A] transition-colors"
-            >
-              {t.nav.home}
-            </button>
+    <div className="bg-[var(--ed-bg)] text-[var(--ed-ivory)] pt-32 pb-24">
+      <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
+
+        {/* Breadcrumb */}
+        <div className="flex items-center justify-between mb-10">
+          <div className="flex items-center gap-2 font-micro text-[9px] text-mute">
+            <button onClick={() => onNavigate('home')} className="hover:text-amber-warm transition-colors">{t.nav.home}</button>
             <span>/</span>
-            <button 
-              onClick={() => onNavigate('catalog')} 
-              className="hover:text-[#FFD21A] transition-colors"
-            >
-              {t.nav.catalog}
-            </button>
+            <button onClick={() => onNavigate('catalog')} className="hover:text-amber-warm transition-colors">{t.nav.catalog}</button>
             <span>/</span>
-            <span className="text-[#FFD21A]">{product.name}</span>
+            <span className="text-[var(--ed-ivory)]">{product.name}</span>
           </div>
 
           <button
             onClick={() => onNavigate('catalog')}
-            className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 font-micro text-[9px] text-mute hover:text-ivory transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Kataloqa Qayıt</span>
+            <span>{t.catalog.backToCatalog}</span>
           </button>
         </div>
 
-        {/* ========================================================================= */}
-        {/* TOP SECTION: IMAGE GALLERY & SUMMARY CONFIGURATION */}
-        {/* ========================================================================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 bg-[#0E1013] border border-white/10 p-6 sm:p-10 shadow-2xl">
-          
-          {/* Left Column: Image Gallery with Architectural Framing */}
+        {/* Hero: image left on cream plate, editorial summary right */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+
+          {/* Gallery column */}
           <div className="lg:col-span-7 space-y-4">
-            {/* Main Stage Image */}
-            <div 
-              onClick={() => setLightboxOpen(true)}
-              className="group relative aspect-[4/3] bg-[#08090A] border border-white/10 overflow-hidden flex items-center justify-center p-4 cursor-zoom-in"
-            >
-              <img 
-                src={currentImage} 
-                alt={product.name}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1000&q=80';
-                }}
-              />
-              
-              {/* Product Code Badge */}
-              <div className="absolute top-4 left-4">
-                <span className="text-xs font-mono font-bold bg-black/90 text-[#FFD21A] px-3 py-1 border border-white/10 shadow-lg">
-                  {product.code}
-                </span>
+            <FadeIn>
+              <div
+                onClick={() => setLightboxOpen(true)}
+                className="group relative ed-plate aspect-[4/3] overflow-hidden cursor-zoom-in"
+              >
+                <img
+                  src={currentImage}
+                  alt={product.name}
+                  className="w-full h-full object-cover transition-transform duration-[900ms] group-hover:scale-[1.04]"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1000&q=80';
+                  }}
+                />
+                {/* Warm floor glow activation */}
+                <div className="absolute inset-x-0 bottom-0 h-1/3 ed-glow-floor opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
               </div>
+            </FadeIn>
 
-              {/* Category Badge */}
-              <div className="absolute top-4 right-4">
-                <span className="text-[11px] font-mono uppercase tracking-wider bg-black/80 text-white px-3 py-1 border border-white/10 shadow-lg">
-                  {getLocalizedText(product.categoryName, currentLang)}
-                </span>
-              </div>
-
-              {/* Zoom hint badge */}
-              <div className="absolute bottom-4 right-4 bg-black/80 border border-white/10 text-white px-3 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 text-xs font-mono">
-                <Eye className="w-3.5 h-3.5 text-[#FFD21A]" />
-                <span>BÖYÜT // LIGHTBOX</span>
-              </div>
-            </div>
-
-            {/* Thumbnail Strip */}
+            {/* Thumbnail strip */}
             {galleryList.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+              <div className="flex gap-3 overflow-x-auto pb-1">
                 {galleryList.map((img, idx) => (
                   <button
                     key={idx}
                     onClick={() => setActiveImageIndex(idx)}
-                    className={`relative w-20 h-16 overflow-hidden border flex-shrink-0 transition-all ${
-                      activeImageIndex === idx 
-                        ? 'border-[#FFD21A] ring-1 ring-[#FFD21A]' 
-                        : 'border-white/10 opacity-60 hover:opacity-100'
+                    className={`relative w-20 h-16 overflow-hidden flex-shrink-0 transition-all ${
+                      activeImageIndex === idx
+                        ? 'ring-1 ring-[var(--ed-amber)]'
+                        : 'opacity-50 hover:opacity-90'
                     }`}
                   >
-                    <img 
-                      src={img} 
-                      alt={`Thumbnail ${idx + 1}`} 
+                    <img
+                      src={img}
+                      alt={`Thumbnail ${idx + 1}`}
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=200&q=80';
                       }}
                     />
-                    {idx === 0 && (
-                      <span className="absolute bottom-0 inset-x-0 bg-[#FFD21A] text-black text-[7px] font-mono font-bold text-center uppercase tracking-wider py-0.5">
-                        ƏSAS
-                      </span>
-                    )}
                   </button>
                 ))}
               </div>
             )}
-
-            {/* Key Technical Highlights */}
-            <div className="grid grid-cols-3 gap-2.5 pt-2 text-center text-xs font-mono">
-              <div className="p-3 bg-[#08090A] border border-white/10">
-                <div className="text-gray-500 text-[10px] uppercase">RƏNGÖTÜRMƏ</div>
-                <div className="text-[#FFD21A] font-bold mt-0.5">{product.specs?.cri || 'CRI > 95'}</div>
-              </div>
-              <div className="p-3 bg-[#08090A] border border-white/10">
-                <div className="text-gray-500 text-[10px] uppercase">PARILTI DƏRƏCƏSİ</div>
-                <div className="text-white font-bold mt-0.5">{product.specs?.ugr || 'UGR < 16'}</div>
-              </div>
-              <div className="p-3 bg-[#08090A] border border-white/10">
-                <div className="text-gray-500 text-[10px] uppercase">İSTİSMAR ÖMRÜ</div>
-                <div className="text-white font-bold mt-0.5">{product.specs?.lifespan || '60,000 hrs'}</div>
-              </div>
-            </div>
           </div>
 
-          {/* Right Column: Title, Quick Selectors & Action Buttons */}
-          <div className="lg:col-span-5 flex flex-col justify-between space-y-6">
-            <div className="space-y-4">
+          {/* Editorial summary column */}
+          <div className="lg:col-span-5 space-y-8">
+            <FadeIn delay={0.1}>
               <div>
-                <span className="text-xs font-mono font-bold uppercase tracking-widest text-[#FFD21A]">
+                <p className="font-micro text-amber-warm mb-4">
                   {getLocalizedText(product.categoryName, currentLang)}
-                </span>
-                <h1 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight mt-1">
+                </p>
+                <h1 className="ed-display-md font-display text-ivory">
                   {product.name}
                 </h1>
-                <p className="text-sm text-gray-300 mt-2 leading-relaxed">
+                <p className="text-sm text-soft mt-5 leading-relaxed">
                   {getLocalizedText(product.subtitle, currentLang)}
                 </p>
               </div>
+            </FadeIn>
 
-              <div className="h-[1px] bg-white/10" />
-
-              {/* Description summary */}
-              <p className="text-xs text-gray-300 leading-relaxed">
+            <FadeIn delay={0.18}>
+              <EdHairline />
+              <p className="text-xs text-mute leading-relaxed pt-5">
                 {getLocalizedText(product.description, currentLang)}
               </p>
+            </FadeIn>
 
-              {/* CCT Option Selection */}
-              {cctOptions.length > 0 && (
-                <div className="space-y-2 pt-2">
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300">
-                    RƏNG TEMPERATURU (CCT): <span className="text-[#FFD21A]">{selectedCCT ? cctLabel(selectedCCT) : ''}</span>
+            {/* CCT options (only when real data exists — logic preserved) */}
+            {cctOptions.length > 0 && (
+              <FadeIn delay={0.22}>
+                <div className="space-y-2.5">
+                  <label className="font-micro text-[9px] text-mute block">
+                    {t.productDetail.cct}: <span className="text-amber-warm">{selectedCCT ? cctLabel(selectedCCT) : ''}</span>
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {cctOptions.map((cct) => (
                       <button
                         key={cct}
                         onClick={() => setSelectedCCT(cct)}
-                        className={`px-3 py-1.5 text-xs font-mono border transition-all ${
-                          selectedCCT === cct 
-                            ? 'border-[#FFD21A] bg-[#FFD21A]/15 text-[#FFD21A] font-bold' 
-                            : 'border-white/10 text-gray-400 hover:text-white hover:bg-white/5'
-                        }`}
+                        className={`ed-pill !py-1.5 !px-4 !text-xs ${selectedCCT === cct ? 'ed-pill--active' : ''}`}
                       >
                         {cctLabel(cct)}
                       </button>
                     ))}
                   </div>
                 </div>
-              )}
+              </FadeIn>
+            )}
 
-              {/* Finish Option Selection */}
-              {finishOptions.length > 0 && (
-                <div className="space-y-2">
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300">
-                    PROFİL RƏNGİ / ÖRTÜK: <span className="text-[#FFD21A]">{selectedFinish}</span>
+            {/* Finish options (only when real data exists — logic preserved) */}
+            {finishOptions.length > 0 && (
+              <FadeIn delay={0.26}>
+                <div className="space-y-2.5">
+                  <label className="font-micro text-[9px] text-mute block">
+                    {t.productDetail.color}: <span className="text-amber-warm">{selectedFinish}</span>
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {finishOptions.map((finish) => (
                       <button
                         key={finish}
                         onClick={() => setSelectedFinish(finish)}
-                        className={`px-3 py-1.5 text-xs font-mono border transition-all ${
-                          selectedFinish === finish 
-                            ? 'border-[#FFD21A] bg-[#FFD21A]/15 text-[#FFD21A] font-bold' 
-                            : 'border-white/10 text-gray-400 hover:text-white hover:bg-white/5'
-                        }`}
+                        className={`ed-pill !py-1.5 !px-4 !text-xs ${selectedFinish === finish ? 'ed-pill--active' : ''}`}
                       >
                         {finish}
                       </button>
                     ))}
                   </div>
                 </div>
-              )}
-
-              {/* Official Warranty & Quality Note */}
-              {showWarranty && (
-                <div className="flex items-center gap-2 rounded-2xl border border-[#FFD21A]/30 bg-[#08090A] p-3 text-xs text-gray-300 font-mono">
-                  <ShieldCheck className="w-5 h-5 text-[#FFD21A] flex-shrink-0" />
-                  <span>
-                    {t.productDetail.warrantyBadge}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="space-y-3 pt-4 border-t border-white/10">
-              <button
-                onClick={() => onRequestQuote(product)}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-[#FFD21A] py-4 text-xs font-bold uppercase tracking-wider text-black shadow-[0_0_25px_rgba(255,210,26,0.3)] transition-all hover:bg-[#F0C413]"
-              >
-                <MessageSquare className="w-4 h-4" />
-                <span>{t.productDetail.requestQuote}</span>
-              </button>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => onNavigate('configurator')}
-                  className="flex items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/[.06] py-2.5 text-xs font-mono uppercase tracking-wider text-white transition-all hover:border-[#FFD21A] hover:bg-white/10 hover:text-[#FFD21A]"
-                >
-                  <Sliders className="w-3.5 h-3.5" />
-                  <span>{t.nav.configurator}</span>
-                </button>
-
-                <button
-                  onClick={handleShare}
-                  className="flex items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/[.06] py-2.5 text-xs font-mono uppercase tracking-wider text-gray-300 transition-all hover:border-white hover:bg-white/10 hover:text-white"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span>{copiedLink ? t.productDetail.linkCopied : t.productDetail.share}</span>
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* SECTION 02: COMPLETE TECHNICAL SPECIFICATIONS & DOWNLOADS */}
-        {/* ========================================================================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-12">
-          
-          {/* Left Column: Full Technical Specifications Table */}
-          <div className="min-w-0 rounded-[28px] border border-white/10 bg-[#0E1013] p-6 shadow-xl sm:p-8 lg:col-span-8">
-            <h2 className="text-base font-mono font-bold text-white uppercase tracking-wider mb-6 flex items-center gap-2 hairline-b pb-4">
-              <span className="w-2 h-2 bg-[#FFD21A]" />
-              <span>{t.productDetail.specsTitle}</span>
-            </h2>
-
-            <div className="product-spec-list divide-y divide-white/10 text-xs font-mono">
-              <div className="py-3 flex justify-between">
-                <span className="text-gray-400">MODEL / KOD</span>
-                <span className="text-white font-bold">{product.code}</span>
-              </div>
-              {product.specs?.material && (
-                <div className="py-3 flex justify-between">
-                  <span className="text-gray-400">{t.productDetail.material}</span>
-                  <span className="text-white">{product.specs.material}</span>
-                </div>
-              )}
-              {product.specs?.dimensions && (
-                <div className="py-3 flex justify-between">
-                  <span className="text-gray-400">{t.productDetail.dimensions}</span>
-                  <span className="text-white">{product.specs.dimensions}</span>
-                </div>
-              )}
-              {product.specs?.power && (
-                <div className="py-3 flex justify-between">
-                  <span className="text-gray-400">{t.productDetail.power}</span>
-                  <span className="text-[#FFD21A] font-bold">{product.specs.power}</span>
-                </div>
-              )}
-              {product.specs?.cct && (
-                <div className="py-3 flex justify-between">
-                  <span className="text-gray-400">{t.productDetail.cct}</span>
-                  <span className="text-white">{product.specs.cct}</span>
-                </div>
-              )}
-              {product.specs?.cri && (
-                <div className="py-3 flex justify-between">
-                  <span className="text-gray-400">{t.productDetail.cri}</span>
-                  <span className="text-[#FFD21A] font-bold">{product.specs.cri}</span>
-                </div>
-              )}
-              {product.specs?.lumen && (
-                <div className="py-3 flex justify-between">
-                  <span className="text-gray-400">{t.productDetail.lumen}</span>
-                  <span className="text-white">{product.specs.lumen}</span>
-                </div>
-              )}
-              {product.specs?.ugr && (
-                <div className="py-3 flex justify-between">
-                  <span className="text-gray-400">{t.productDetail.ugr || 'UGR'}</span>
-                  <span className="text-white font-bold">{product.specs.ugr}</span>
-                </div>
-              )}
-              {product.specs?.voltage && (
-                <div className="py-3 flex justify-between">
-                  <span className="text-gray-400">{t.productDetail.voltage}</span>
-                  <span className="text-white">{product.specs.voltage}</span>
-                </div>
-              )}
-              {product.specs?.mounting && (
-                <div className="py-3 flex justify-between">
-                  <span className="text-gray-400">{t.productDetail.mounting}</span>
-                  <span className="text-white">{product.specs.mounting}</span>
-                </div>
-              )}
-              {product.specs?.ipRating && (
-                <div className="py-3 flex justify-between">
-                  <span className="text-gray-400">{t.productDetail.ip}</span>
-                  <span className="text-white">{product.specs.ipRating}</span>
-                </div>
-              )}
-              {product.specs?.beamAngle && (
-                <div className="py-3 flex justify-between">
-                  <span className="text-gray-400">{t.productDetail.beamAngle}</span>
-                  <span className="text-white">{product.specs.beamAngle}</span>
-                </div>
-              )}
-              {product.specs?.dimmable && (
-                <div className="py-3 flex justify-between">
-                  <span className="text-gray-400">{t.productDetail.dimmable}</span>
-                  <span className="text-white">{product.specs.dimmable}</span>
-                </div>
-              )}
-              {product.specs?.warranty && (
-                <div className="py-3 flex justify-between">
-                  <span className="text-gray-400">Zəmanət Müddəti</span>
-                  <span className="text-white">{product.specs.warranty}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right Column: Real File Downloads & Services */}
-          <div className="min-w-0 space-y-6 lg:col-span-4">
-            
-            {/* Real Downloads Block */}
-            {downloadableFiles.length > 0 && (
-              <div className="space-y-4 rounded-[28px] border border-white/10 bg-[#0E1013] p-6 shadow-xl">
-                <h3 className="text-xs font-mono font-bold text-[#FFD21A] uppercase tracking-widest">
-                  {t.productDetail.downloadsTitle}
-                </h3>
-                <p className="text-xs text-gray-400 leading-relaxed font-mono">
-                  {currentLang === 'az'
-                    ? `${downloadableFiles.length} texniki fayl mövcuddur — yükləmək üçün klikləyin.`
-                    : currentLang === 'ru'
-                    ? `${downloadableFiles.length} технических файлов — нажмите для загрузки.`
-                    : `${downloadableFiles.length} technical file${downloadableFiles.length > 1 ? 's' : ''} available — click to download.`}
-                </p>
-
-                <div className="space-y-2.5 pt-2 font-mono">
-                  {downloadableFiles.map((file, index) => (
-                    <button
-                      key={`${file.name}-${index}`}
-                      onClick={() => handleRealDownload(file)}
-                      className="group flex w-full items-center justify-between rounded-2xl border border-white/10 bg-black/20 p-3 text-xs transition-all hover:border-[#FFD21A] hover:bg-white/10"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <ProductFileTypeIcon type={file.type} />
-                        <div className="text-left min-w-0">
-                          <div className="font-semibold text-white truncate max-w-[220px] group-hover:text-[#FFD21A] transition-colors">{file.name}</div>
-                          <div className="text-[10px] text-gray-400">{file.type} • {file.size || '—'}</div>
-                        </div>
-                      </div>
-                      <Download className="w-4 h-4 text-gray-400 group-hover:text-[#FFD21A] flex-shrink-0" />
-                    </button>
-                  ))}
-                </div>
-              </div>
+              </FadeIn>
             )}
 
-            {/* Custom Length Cut & Join Service */}
-            <div className="bg-[#101114] border border-[#FFD21A]/30 p-6 shadow-xl space-y-3">
-              <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-[#FFD21A]">
-                <Sparkles className="w-4 h-4" />
-                <span>{t.productDetail.customServiceTitle}</span>
+            {/* Warranty note */}
+            {showWarranty && (
+              <FadeIn delay={0.3}>
+                <div className="flex items-start gap-3 pt-2">
+                  <ShieldCheck className="w-4 h-4 text-amber-warm flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-mute leading-relaxed">
+                    {t.productDetail.warrantyBadge}
+                  </p>
+                </div>
+              </FadeIn>
+            )}
+
+            {/* Actions */}
+            <FadeIn delay={0.34}>
+              <div className="space-y-4 pt-4">
+                <EdButton
+                  onClick={() => onRequestQuote(product)}
+                  className="w-full justify-center"
+                >
+                  {t.productDetail.requestQuote}
+                </EdButton>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <EdButton variant="ghost" onClick={() => onNavigate('configurator')} className="justify-center !text-xs">
+                    {t.nav.configurator}
+                  </EdButton>
+                  <EdButton variant="ghost" onClick={handleShare} className="justify-center !text-xs">
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>{copiedLink ? t.productDetail.linkCopied : t.productDetail.share}</span>
+                  </EdButton>
+                </div>
               </div>
-              <p className="text-xs text-gray-300 leading-relaxed font-mono">
-                {t.productDetail.customServiceDesc}
-              </p>
-              <button
-                onClick={() => onRequestQuote(product)}
-                className="text-xs font-mono font-bold text-white hover:text-[#FFD21A] inline-flex items-center gap-1.5 pt-1 uppercase tracking-wider"
-              >
-                <span>{t.productDetail.consultEngineer}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+            </FadeIn>
+          </div>
+        </div>
+
+        {/* Specifications + downloads */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mt-24">
+
+          <div className="lg:col-span-7">
+            <FadeIn>
+              <p className="font-micro text-amber-warm mb-8">{t.productDetail.specsTitle}</p>
+              <div className="border-t border-[var(--ed-line)]">
+                <div className="py-4 flex justify-between items-center border-b border-[var(--ed-line)]">
+                  <span className="font-micro text-[9px] text-mute">Code</span>
+                  <span className="font-mono-tech text-sm text-[var(--ed-ivory)]">{product.code}</span>
+                </div>
+                {product.specs?.cct && (
+                  <div className="py-4 flex justify-between items-center border-b border-[var(--ed-line)]">
+                    <span className="font-micro text-[9px] text-mute">{t.productDetail.cct}</span>
+                    <span className="text-sm text-[var(--ed-ivory)]">{product.specs.cct}</span>
+                  </div>
+                )}
+                {product.specs?.finish && (
+                  <div className="py-4 flex justify-between items-center border-b border-[var(--ed-line)]">
+                    <span className="font-micro text-[9px] text-mute">{t.productDetail.color}</span>
+                    <span className="text-sm text-[var(--ed-ivory)]">{product.specs.finish}</span>
+                  </div>
+                )}
+                {product.specs?.mounting && (
+                  <div className="py-4 flex justify-between items-center border-b border-[var(--ed-line)]">
+                    <span className="font-micro text-[9px] text-mute">{t.productDetail.mounting}</span>
+                    <span className="text-sm text-[var(--ed-ivory)]">{product.specs.mounting}</span>
+                  </div>
+                )}
+                {product.specs?.material && (
+                  <div className="py-4 flex justify-between items-center border-b border-[var(--ed-line)]">
+                    <span className="font-micro text-[9px] text-mute">{t.productDetail.material}</span>
+                    <span className="text-sm text-[var(--ed-ivory)]">{product.specs.material}</span>
+                  </div>
+                )}
+                {product.specs?.dimensions && (
+                  <div className="py-4 flex justify-between items-center border-b border-[var(--ed-line)]">
+                    <span className="font-micro text-[9px] text-mute">{t.productDetail.dimensions}</span>
+                    <span className="text-sm text-[var(--ed-ivory)]">{product.specs.dimensions}</span>
+                  </div>
+                )}
+                {!product.specs?.cct && !product.specs?.finish && !product.specs?.dimensions && (
+                  <div className="py-6 text-mute text-xs italic">
+                    {currentLang === 'az' ? 'Əlavə texniki parametr daxil edilməyib.' : currentLang === 'ru' ? 'Дополнительные параметры не указаны.' : 'No additional technical parameters specified.'}
+                  </div>
+                )}
+              </div>
+            </FadeIn>
+          </div>
+
+          {/* Downloads + custom service */}
+          <div className="lg:col-span-5 space-y-10">
+            {downloadableFiles.length > 0 && (
+              <FadeIn delay={0.08}>
+                <div>
+                  <p className="font-micro text-amber-warm mb-6">{t.productDetail.downloadsTitle}</p>
+                  <div className="space-y-2">
+                    {downloadableFiles.map((file, index) => (
+                      <button
+                        key={`${file.name}-${index}`}
+                        onClick={() => handleRealDownload(file)}
+                        className="w-full flex items-center justify-between p-3.5 border border-[var(--ed-line)] hover:border-[var(--ed-line-amber)] transition-colors group"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <ProductFileTypeIcon type={file.type} />
+                          <div className="text-left min-w-0">
+                            <div className="text-xs font-medium text-[var(--ed-ivory)] truncate max-w-[220px]">{file.name}</div>
+                            <div className="font-mono-tech text-[10px] text-mute">{file.type} • {file.size || '—'}</div>
+                          </div>
+                        </div>
+                        <Download className="w-4 h-4 text-mute group-hover:text-amber-warm transition-colors" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </FadeIn>
+            )}
+
+            {/* Custom fabrication */}
+            <FadeIn delay={0.14}>
+              <div>
+                <EdHairline amber />
+                <p className="font-micro text-amber-warm mt-6 mb-3">{t.productDetail.customServiceTitle}</p>
+                <p className="text-xs text-mute leading-relaxed">
+                  {t.productDetail.customServiceDesc}
+                </p>
+                <div className="mt-5">
+                  <EdLink arrow onClick={() => onRequestQuote(product)}>
+                    {t.productDetail.consultEngineer}
+                  </EdLink>
+                </div>
+              </div>
+            </FadeIn>
+          </div>
+        </div>
+
+        {/* Related products */}
+        {relatedProducts.length > 0 && (
+          <div className="mt-28">
+            <FadeIn>
+              <div className="flex items-end justify-between mb-12">
+                <h2 className="ed-display-md font-display text-ivory">
+                  {currentLang === 'az' ? 'oxşar' : currentLang === 'ru' ? 'похожие' : 'related'}
+                  <br />
+                  <span className="text-soft">{currentLang === 'az' ? 'sistemlər' : currentLang === 'ru' ? 'системы' : 'systems'}</span>
+                </h2>
+                <EdLink arrow onClick={() => onNavigate('catalog')}>
+                  {t.productDetail.viewAll}
+                </EdLink>
+              </div>
+            </FadeIn>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-14">
+              {relatedProducts.map((rel, i) => (
+                <FadeIn key={rel.id} delay={0.06 * i}>
+                  <EdProductCard
+                    product={rel}
+                    currentLang={currentLang}
+                    onNavigate={onNavigate}
+                    exploreLabel={currentLang === 'az' ? 'Ətraflı' : currentLang === 'ru' ? 'Подробнее' : 'Explore'}
+                  />
+                </FadeIn>
+              ))}
             </div>
-
           </div>
-
-        </div>
-
-        {/* ========================================================================= */}
-        {/* SECTION 03: SIMILAR / COMPATIBLE PRODUCTS */}
-        {/* ========================================================================= */}
-        <div className="mt-16 pt-12 border-t border-white/10">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xl font-bold text-white uppercase tracking-wider">
-              {t.productDetail.relatedProducts}
-            </h2>
-            <button
-              onClick={() => onNavigate('catalog')}
-              className="text-xs font-mono font-bold text-[#FFD21A] hover:text-white uppercase tracking-wider"
-            >
-              {t.productDetail.viewAll} →
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {relatedProducts.map((rel) => (
-              <div
-                key={rel.id}
-                onClick={() => {
-                  onNavigate('catalog', rel.slug);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className="group bg-[#101114] border border-white/10 overflow-hidden cursor-pointer hover:border-[#FFD21A]/50 transition-all p-4 flex flex-col justify-between"
-              >
-                <div className="aspect-[4/3] bg-[#16181D] overflow-hidden mb-3">
-                  <img src={rel.image} alt={rel.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-bold text-white uppercase group-hover:text-[#FFD21A] transition-colors">{rel.name}</h3>
-                    <div className="text-[11px] font-mono text-gray-400">{rel.code}</div>
-                  </div>
-                  <div className="w-6 h-6 bg-white/5 flex items-center justify-center text-[#FFD21A] group-hover:bg-[#FFD21A] group-hover:text-black transition-all">
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
+        )}
       </div>
 
-      {/* ========================================================================= */}
-      {/* ARCHITECTURAL LIGHTBOX MODAL */}
-      {/* ========================================================================= */}
+      {/* Lightbox — preserved */}
       {lightboxOpen && (
-        <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 animate-in fade-in duration-200">
-          {/* Top Bar */}
-          <div className="flex items-center justify-between border-b border-white/10 pb-4 max-w-7xl mx-auto w-full">
+        <div className="fixed inset-0 z-[100] bg-[#141412]/98 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 animate-fadeIn">
+          {/* Top bar */}
+          <div className="flex items-center justify-between border-b border-[var(--ed-line)] pb-4 max-w-7xl mx-auto w-full">
             <div className="flex items-center gap-3">
-              <span className="text-xs font-mono font-bold bg-[#FFD21A] text-black px-2.5 py-1">
-                {product.code}
-              </span>
-              <h4 className="text-sm font-bold text-white uppercase">{product.name}</h4>
-              <span className="text-xs font-mono text-gray-400">
+              <span className="font-mono-tech text-xs text-amber-warm">{product.code}</span>
+              <h4 className="text-sm font-medium text-[var(--ed-ivory)]">{product.name}</h4>
+              <span className="font-mono-tech text-xs text-mute">
                 ({activeImageIndex + 1} / {galleryList.length})
               </span>
             </div>
             <button
               onClick={() => setLightboxOpen(false)}
-              className="p-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition-colors"
+              className="p-2 text-[var(--ed-soft)] hover:text-amber-warm transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Main Lightbox Canvas with Left/Right Navigation */}
+          {/* Canvas with navigation */}
           <div className="relative flex-1 flex items-center justify-center my-4 overflow-hidden">
             {galleryList.length > 1 && (
               <button
                 onClick={() => setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : galleryList.length - 1))}
-                className="absolute left-2 sm:left-6 z-10 p-3 bg-black/70 hover:bg-[#FFD21A] text-white hover:text-black transition-all border border-white/10"
+                className="absolute left-2 sm:left-6 z-10 p-3 border border-[var(--ed-line)] hover:border-[var(--ed-amber)] text-[var(--ed-ivory)] transition-colors rounded-full"
               >
-                <ChevronLeft className="w-6 h-6" />
+                <ChevronLeft className="w-5 h-5" />
               </button>
             )}
 
             <img
               src={currentImage}
               alt={product.name}
-              className="max-h-[75vh] max-w-[90vw] object-contain shadow-2xl border border-white/10"
+              className="max-h-[75vh] max-w-[90vw] object-contain"
               onError={(e) => {
                 (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80';
               }}
@@ -604,24 +459,24 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             {galleryList.length > 1 && (
               <button
                 onClick={() => setActiveImageIndex((prev) => (prev < galleryList.length - 1 ? prev + 1 : 0))}
-                className="absolute right-2 sm:right-6 z-10 p-3 bg-black/70 hover:bg-[#FFD21A] text-white hover:text-black transition-all border border-white/10"
+                className="absolute right-2 sm:right-6 z-10 p-3 border border-[var(--ed-line)] hover:border-[var(--ed-amber)] text-[var(--ed-ivory)] transition-colors rounded-full"
               >
-                <ChevronRight className="w-6 h-6" />
+                <ChevronRight className="w-5 h-5" />
               </button>
             )}
           </div>
 
-          {/* Bottom Thumbnails */}
+          {/* Bottom thumbnails */}
           {galleryList.length > 1 && (
             <div className="flex items-center justify-center gap-2 overflow-x-auto py-2 max-w-4xl mx-auto">
               {galleryList.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setActiveImageIndex(idx)}
-                  className={`relative w-16 h-12 overflow-hidden border transition-all ${
+                  className={`relative w-16 h-12 overflow-hidden transition-all ${
                     activeImageIndex === idx
-                      ? 'border-[#FFD21A] ring-1 ring-[#FFD21A]'
-                      : 'border-white/20 opacity-50 hover:opacity-100'
+                      ? 'ring-1 ring-[var(--ed-amber)]'
+                      : 'opacity-40 hover:opacity-90'
                   }`}
                 >
                   <img src={img} alt="" className="w-full h-full object-cover" />
@@ -631,7 +486,6 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           )}
         </div>
       )}
-
     </div>
   );
 };

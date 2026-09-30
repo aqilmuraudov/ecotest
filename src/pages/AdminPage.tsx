@@ -9,12 +9,6 @@ import {
   getStorageBucketName,
   setStorageBucketName
 } from '../lib/supabase';
-import {
-  StorageProviderType,
-  getActiveStorageProvider,
-  setActiveStorageProvider
-} from '../lib/storage';
-import { getCloudinaryConfig, setCloudinaryConfig } from '../lib/cloudinary';
 import { signInWithEmail, signOut, hasAdminSessionMarker, getCurrentAdmin } from '../utils/auth';
 import { sanitizeEmail, sanitizeText } from '../utils/sanitize';
 import { normalizeImportedProducts } from '../utils/importProducts';
@@ -55,13 +49,7 @@ import {
   Phone,
   MessageSquare,
   Flame,
-  Filter,
-  Archive,
-  ArchiveRestore,
-  CheckSquare,
-  Square,
-  Tag,
-  X
+  Filter
 } from 'lucide-react';
 
 interface AdminPageProps {
@@ -87,9 +75,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     addProduct,
     updateProduct,
     deleteProduct,
+    deleteAllProducts,
     bulkImportProducts,
-    bulkUpdateProducts,
-    bulkDeleteProducts,
     addBlogPost,
     updateBlogPost,
     deleteBlogPost,
@@ -129,7 +116,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   }, [isAuthenticated]);
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'blog' | 'projects' | 'inquiries' | 'users' | 'import_export' | 'database'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'blog' | 'projects' | 'inquiries' | 'import_export' | 'database'>('overview');
 
   // Inquiries Search & Filter
   const [inquirySearch, setInquirySearch] = useState<string>('');
@@ -282,14 +269,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
-  const [productStatusFilter, setProductStatusFilter] = useState<'active' | 'archived' | 'all'>('active');
-  const [productDateFilter, setProductDateFilter] = useState<'all' | 'last7' | 'last30' | 'thisYear'>('all');
-  const [priceMin, setPriceMin] = useState<string>('');
-  const [priceMax, setPriceMax] = useState<string>('');
-  const [productSort, setProductSort] = useState<'newest' | 'oldest' | 'nameAsc' | 'nameDesc' | 'priceAsc' | 'priceDesc'>('newest');
-  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
-  const [bulkCategoryId, setBulkCategoryId] = useState<string>('');
-  const [isBulkActionBusy, setIsBulkActionBusy] = useState<boolean>(false);
 
   // Modals state
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -306,11 +285,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({
 
   // Storage bucket config state
   const [bucketNameInput, setBucketNameInput] = useState<string>(() => getStorageBucketName());
-
-  // Storage provider (Cloudinary / Supabase) config state
-  const [storageProvider, setStorageProviderState] = useState<StorageProviderType>(() => getActiveStorageProvider());
-  const [cloudNameInput, setCloudNameInput] = useState<string>(() => getCloudinaryConfig().cloudName);
-  const [uploadPresetInput, setUploadPresetInput] = useState<string>(() => getCloudinaryConfig().uploadPreset);
 
   // Status feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -371,19 +345,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     if (!window.confirm(t.overview.seedConfirm)) return;
     const res = await seedAllToSupabase();
     showToast(res.message);
-  };
-
-  // Storage provider switch handler
-  const handleProviderSelect = (provider: StorageProviderType) => {
-    setActiveStorageProvider(provider);
-    setStorageProviderState(provider);
-    showToast(`${t.database.providerUpdatedToast} ${provider === 'cloudinary' ? t.database.providerCloudinary : t.database.providerSupabase}`);
-  };
-
-  // Cloudinary config save handler
-  const handleSaveCloudinaryConfig = () => {
-    setCloudinaryConfig({ cloudName: cloudNameInput.trim(), uploadPreset: uploadPresetInput.trim() });
-    showToast(t.database.cloudinaryConfigUpdatedToast);
   };
 
   // Language Switcher Helper
@@ -483,113 +444,18 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   }
 
   // Filtered Products
-  const filteredProducts = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    const minPrice = priceMin.trim() === '' ? undefined : Number(priceMin.replace(',', '.'));
-    const maxPrice = priceMax.trim() === '' ? undefined : Number(priceMax.replace(',', '.'));
-    const now = Date.now();
-    const dateThresholds = {
-      last7: now - 7 * 24 * 60 * 60 * 1000,
-      last30: now - 30 * 24 * 60 * 60 * 1000,
-      thisYear: new Date(new Date().getFullYear(), 0, 1).getTime()
-    } as const;
-
-    return products.filter(p => {
-      const matchesSearch = !query ||
-        p.name.toLowerCase().includes(query) ||
-        p.code.toLowerCase().includes(query) ||
-        p.description?.az?.toLowerCase().includes(query) ||
-        p.description?.en?.toLowerCase().includes(query);
-      const pCats: string[] = Array.isArray(p.categories) && p.categories.length > 0
-        ? p.categories
-        : [p.category];
-      const matchesCategory = filterCategory === 'all' || pCats.includes(filterCategory);
-      const matchesStatus = productStatusFilter === 'all' ||
-        (productStatusFilter === 'archived' ? Boolean(p.archived) : !p.archived);
-      const itemDate = new Date(p.createdAt || p.updatedAt || 0).getTime();
-      const dateThreshold = productDateFilter === 'all' ? undefined : dateThresholds[productDateFilter];
-      const matchesDate = !dateThreshold || (Number.isFinite(itemDate) && itemDate >= dateThreshold);
-      const matchesMinPrice = minPrice === undefined || (p.price !== undefined && p.price >= minPrice);
-      const matchesMaxPrice = maxPrice === undefined || (p.price !== undefined && p.price <= maxPrice);
-      return matchesSearch && matchesCategory && matchesStatus && matchesDate && matchesMinPrice && matchesMaxPrice;
-    }).sort((a, b) => {
-      if (productSort === 'nameAsc') return a.name.localeCompare(b.name, 'az');
-      if (productSort === 'nameDesc') return b.name.localeCompare(a.name, 'az');
-      if (productSort === 'priceAsc') return (a.price ?? Number.POSITIVE_INFINITY) - (b.price ?? Number.POSITIVE_INFINITY);
-      if (productSort === 'priceDesc') return (b.price ?? Number.NEGATIVE_INFINITY) - (a.price ?? Number.NEGATIVE_INFINITY);
-      const aDate = new Date(a.createdAt || a.updatedAt || 0).getTime();
-      const bDate = new Date(b.createdAt || b.updatedAt || 0).getTime();
-      return productSort === 'oldest' ? aDate - bDate : bDate - aDate;
-    });
-  }, [products, searchQuery, filterCategory, productStatusFilter, productDateFilter, priceMin, priceMax, productSort]);
-
-  const visibleSelectedIds = filteredProducts.filter(product => selectedProductIds.includes(product.id)).map(product => product.id);
-  const allVisibleSelected = filteredProducts.length > 0 && visibleSelectedIds.length === filteredProducts.length;
-  const selectedCount = selectedProductIds.length;
-
-  const toggleProductSelection = (id: string) => {
-    setSelectedProductIds(previous => previous.includes(id)
-      ? previous.filter(selectedId => selectedId !== id)
-      : [...previous, id]
-    );
-  };
-
-  const toggleVisibleProductSelection = () => {
-    const visibleIds = filteredProducts.map(product => product.id);
-    setSelectedProductIds(previous => allVisibleSelected
-      ? previous.filter(id => !visibleIds.includes(id))
-      : [...new Set([...previous, ...visibleIds])]
-    );
-  };
-
-  const handleBulkCategoryAssignment = async () => {
-    const category = categories.find(item => item.id === bulkCategoryId);
-    if (!category || selectedCount === 0) return;
-    setIsBulkActionBusy(true);
-    const result = await bulkUpdateProducts(selectedProductIds, {
-      category: category.id,
-      categories: [category.id],
-      categoryName: { az: category.nameAz, en: category.nameEn, ru: category.nameRu },
-      categoryNames: [{ az: category.nameAz, en: category.nameEn, ru: category.nameRu }]
-    });
-    setIsBulkActionBusy(false);
-    if (result.success) {
-      setSelectedProductIds([]);
-      setBulkCategoryId('');
-      showToast(`${result.count} məhsul “${category.nameAz}” kateqoriyasına köçürüldü.`);
-    } else {
-      showToast(`Xəta: ${result.error || 'Toplu əməliyyat tamamlanmadı.'}`);
-    }
-  };
-
-  const handleBulkArchive = async (archived: boolean) => {
-    if (selectedCount === 0) return;
-    const action = archived ? 'arxivləmək' : 'bərpa etmək';
-    if (!window.confirm(`${selectedCount} məhsulu ${action} istədiyinizə əminsiniz?`)) return;
-    setIsBulkActionBusy(true);
-    const result = await bulkUpdateProducts(selectedProductIds, { archived });
-    setIsBulkActionBusy(false);
-    if (result.success) {
-      setSelectedProductIds([]);
-      showToast(`${result.count} məhsul ${archived ? 'arxivləndi' : 'bərpa edildi'}.`);
-    } else {
-      showToast(`Xəta: ${result.error || 'Toplu əməliyyat tamamlanmadı.'}`);
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    if (selectedCount === 0 || userRole !== 'admin') return;
-    if (!window.confirm(`${selectedCount} seçilmiş məhsul həmişəlik silinəcək. Bu əməliyyat geri qaytarılmır. Davam edilsin?`)) return;
-    setIsBulkActionBusy(true);
-    const result = await bulkDeleteProducts(selectedProductIds);
-    setIsBulkActionBusy(false);
-    if (result.success) {
-      setSelectedProductIds([]);
-      showToast(`${result.count} məhsul silindi.`);
-    } else {
-      showToast(`Xəta: ${result.error || 'Toplu silmə tamamlanmadı.'}`);
-    }
-  };
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = 
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.description?.az?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.description?.en?.toLowerCase().includes(searchQuery.toLowerCase());
+    const pCats: string[] = Array.isArray(p.categories) && p.categories.length > 0
+      ? p.categories
+      : [p.category];
+    const matchesCategory = filterCategory === 'all' || pCats.includes(filterCategory);
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className="min-h-screen bg-[#08090A] text-white pt-20 pb-24">
@@ -944,31 +810,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                     );
                   })}
                 </select>
-
-                <select value={productDateFilter} onChange={(e) => setProductDateFilter(e.target.value as typeof productDateFilter)} aria-label="Vaxta görə filtr" className="bg-[#16181F] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#FFD21A]">
-                  <option value="all">Bütün vaxtlar</option>
-                  <option value="last7">Son 7 gün</option>
-                  <option value="last30">Son 30 gün</option>
-                  <option value="thisYear">Bu il</option>
-                </select>
-                <select value={productStatusFilter} onChange={(e) => setProductStatusFilter(e.target.value as typeof productStatusFilter)} aria-label="Statusa görə filtr" className="bg-[#16181F] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#FFD21A]">
-                  <option value="active">Aktiv məhsullar</option>
-                  <option value="archived">Arxiv</option>
-                  <option value="all">Bütün statuslar</option>
-                </select>
-                <div className="flex items-center gap-1.5 bg-[#16181F] border border-white/10 rounded-xl px-2.5 py-1.5">
-                  <input type="number" min="0" step="0.01" value={priceMin} onChange={(e) => setPriceMin(e.target.value)} placeholder="Min ₼" aria-label="Minimum qiymət" className="w-16 bg-transparent py-1 text-xs text-white placeholder-gray-500 focus:outline-none" />
-                  <span className="text-gray-600">—</span>
-                  <input type="number" min="0" step="0.01" value={priceMax} onChange={(e) => setPriceMax(e.target.value)} placeholder="Max ₼" aria-label="Maksimum qiymət" className="w-16 bg-transparent py-1 text-xs text-white placeholder-gray-500 focus:outline-none" />
-                </div>
-                <select value={productSort} onChange={(e) => setProductSort(e.target.value as typeof productSort)} aria-label="Sıralama" className="bg-[#16181F] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#FFD21A]">
-                  <option value="newest">Ən yeni</option>
-                  <option value="oldest">Ən köhnə</option>
-                  <option value="nameAsc">Ad: A–Z</option>
-                  <option value="nameDesc">Ad: Z–A</option>
-                  <option value="priceAsc">Qiymət: artan</option>
-                  <option value="priceDesc">Qiymət: azalan</option>
-                </select>
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5">
@@ -981,6 +822,27 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   <FolderPlus className="w-4 h-4 text-[#FFD21A]" />
                   <span>{t.products.manageCategories} ({categories.length})</span>
                 </button>
+
+                {userRole === 'admin' && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (window.confirm("Bütün məhsulları silmək istədiyinizə əminsiniz? Bu əməliyyat geri qaytarılmır.")) {
+                        const res = await deleteAllProducts();
+                        if (res.success) {
+                          alert("Bütün məhsullar uğurla silindi.");
+                        } else {
+                          alert(`Xəta: ${res.error}`);
+                        }
+                      }
+                    }}
+                    className="flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-xl transition-all whitespace-nowrap cursor-pointer"
+                    title="Hamısını sil"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Hamısını sil ({products.length})</span>
+                  </button>
+                )}
 
                 <button
                   onClick={() => {
@@ -995,53 +857,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               </div>
             </div>
 
-            <div className="flex flex-col xl:flex-row xl:items-center gap-3 bg-[#12141B] border border-white/10 rounded-2xl px-4 py-3">
-              <div className="flex items-center gap-2 text-xs text-gray-300 shrink-0">
-                <CheckSquare className="w-4 h-4 text-[#FFD21A]" />
-                <span><strong className="text-white">{selectedCount}</strong> seçilib</span>
-                <span className="text-gray-600">•</span>
-                <span>{filteredProducts.length} nəticə</span>
-              </div>
-              {selectedCount > 0 ? (
-                <div className="flex flex-wrap items-center gap-2 xl:ml-auto">
-                  <select value={bulkCategoryId} onChange={(e) => setBulkCategoryId(e.target.value)} disabled={isBulkActionBusy} aria-label="Seçilmiş məhsullar üçün kateqoriya" className="bg-[#16181F] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#FFD21A] disabled:opacity-50">
-                    <option value="">Kateqoriyaya köçür...</option>
-                    {categories.map(category => <option key={category.id} value={category.id}>{category.nameAz}</option>)}
-                  </select>
-                  <button type="button" onClick={handleBulkCategoryAssignment} disabled={!bulkCategoryId || isBulkActionBusy} className="inline-flex items-center gap-1.5 rounded-xl border border-[#FFD21A]/40 bg-[#FFD21A]/10 px-3 py-2 text-xs font-bold text-[#FFD21A] transition-colors hover:bg-[#FFD21A]/20 disabled:cursor-not-allowed disabled:opacity-40" title="Seçilmiş məhsulları seçilən kateqoriyaya köçür">
-                    <Tag className="w-3.5 h-3.5" /> Köçür
-                  </button>
-                  <button type="button" onClick={() => handleBulkArchive(true)} disabled={isBulkActionBusy} className="inline-flex items-center gap-1.5 rounded-xl border border-orange-400/35 bg-orange-400/10 px-3 py-2 text-xs font-bold text-orange-300 transition-colors hover:bg-orange-400/20 disabled:cursor-not-allowed disabled:opacity-40">
-                    <Archive className="w-3.5 h-3.5" /> Arxivlə
-                  </button>
-                  <button type="button" onClick={() => handleBulkArchive(false)} disabled={isBulkActionBusy} className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-400/35 bg-emerald-400/10 px-3 py-2 text-xs font-bold text-emerald-300 transition-colors hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-40">
-                    <ArchiveRestore className="w-3.5 h-3.5" /> Bərpa et
-                  </button>
-                  {userRole === 'admin' && (
-                    <button type="button" onClick={handleBulkDelete} disabled={isBulkActionBusy} className="inline-flex items-center gap-1.5 rounded-xl border border-red-500/35 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-400 transition-colors hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40">
-                      <Trash2 className="w-3.5 h-3.5" /> Sil
-                    </button>
-                  )}
-                  <button type="button" onClick={() => setSelectedProductIds([])} disabled={isBulkActionBusy} className="p-2 text-gray-400 transition-colors hover:text-white disabled:opacity-40" title="Seçimi ləğv et">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <p className="text-[11px] text-gray-500 xl:ml-auto">Sətirləri seçin; toplu kateqoriya, arxiv və silmə əməliyyatları burada görünəcək.</p>
-              )}
-            </div>
-
             {/* Products Table */}
             <div className="bg-[#101115] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs text-gray-300">
                   <thead className="bg-[#16181F] text-gray-400 uppercase font-mono text-[10px] tracking-wider border-b border-white/10">
                     <tr>
-                      <th className="px-4 py-3.5 w-10">
-                        <button type="button" onClick={toggleVisibleProductSelection} className="text-gray-400 transition-colors hover:text-[#FFD21A]" title={allVisibleSelected ? 'Görünən məhsulların seçimini ləğv et' : 'Görünən məhsulların hamısını seç'} aria-label={allVisibleSelected ? 'Görünən məhsulların seçimini ləğv et' : 'Görünən məhsulların hamısını seç'}>
-                          {allVisibleSelected ? <CheckSquare className="w-4 h-4 text-[#FFD21A]" /> : <Square className="w-4 h-4" />}
-                        </button>
-                      </th>
                       <th className="px-4 py-3.5">{t.products.tableImage}</th>
                       <th className="px-4 py-3.5">{t.products.tableName}</th>
                       <th className="px-4 py-3.5">{t.products.tableCodeCategory}</th>
@@ -1052,12 +873,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {filteredProducts.map((p) => (
-                      <tr key={p.id} className={`hover:bg-white/5 transition-colors ${selectedProductIds.includes(p.id) ? 'bg-[#FFD21A]/[0.035]' : ''}`}>
-                        <td className="px-4 py-3 align-middle">
-                          <button type="button" onClick={() => toggleProductSelection(p.id)} className="text-gray-400 transition-colors hover:text-[#FFD21A]" title={selectedProductIds.includes(p.id) ? 'Seçimi ləğv et' : 'Məhsulu seç'} aria-label={selectedProductIds.includes(p.id) ? 'Seçimi ləğv et' : 'Məhsulu seç'}>
-                            {selectedProductIds.includes(p.id) ? <CheckSquare className="w-4 h-4 text-[#FFD21A]" /> : <Square className="w-4 h-4" />}
-                          </button>
-                        </td>
+                      <tr key={p.id} className="hover:bg-white/5 transition-colors">
                         <td className="px-4 py-3">
                           <img src={p.image} alt={p.name} className="w-12 h-12 rounded-lg object-cover bg-black/60 border border-white/10" />
                         </td>
@@ -1072,7 +888,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                               ? `${p.categories.length} kateqoriya`
                               : p.category}
                           </div>
-                          <div className="mt-1 text-emerald-300">{p.price !== undefined ? `${p.price.toLocaleString('az-AZ')} ₼` : 'Qiymət təyin edilməyib'}</div>
                         </td>
                         <td className="px-4 py-3 font-mono text-[11px] text-gray-300">
                           <div>{p.specs?.power || '—'} / {p.specs?.cct || '—'}</div>
@@ -1089,9 +904,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                               <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 w-fit">
                                 NEW
                               </span>
-                            )}
-                            {p.archived && (
-                              <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-500/30 w-fit">ARXİV</span>
                             )}
                           </div>
                         </td>
@@ -1134,11 +946,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                         </td>
                       </tr>
                     ))}
-                    {filteredProducts.length === 0 && (
-                      <tr>
-                        <td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-400">Bu filtrə uyğun məhsul tapılmadı. Filtrləri dəyişin və ya sıfırlayın.</td>
-                      </tr>
-                    )}
                   </tbody>
                 </table>
               </div>
@@ -1606,105 +1413,41 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                 </div>
               </div>
 
-              {/* Storage Provider Switcher (Cloudinary / Supabase) */}
-              <div className="bg-[#16181F] p-5 rounded-xl border border-[#FFD21A]/20 space-y-4">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <UploadCloud className="w-4 h-4 text-[#FFD21A]" />
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">
-                      {t.database.storageProviderTitle}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-gray-400">
-                    {t.database.storageProviderDesc}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleProviderSelect('cloudinary')}
-                    className={`flex-1 text-xs font-bold px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-                      storageProvider === 'cloudinary'
-                        ? 'bg-[#FFD21A] text-black'
-                        : 'bg-[#0E0F14] text-gray-400 border border-white/10 hover:text-white'
-                    }`}
-                  >
-                    {t.database.providerCloudinary}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleProviderSelect('supabase')}
-                    className={`flex-1 text-xs font-bold px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-                      storageProvider === 'supabase'
-                        ? 'bg-[#FFD21A] text-black'
-                        : 'bg-[#0E0F14] text-gray-400 border border-white/10 hover:text-white'
-                    }`}
-                  >
-                    {t.database.providerSupabase}
-                  </button>
-                </div>
-
-                {storageProvider === 'cloudinary' ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-mono uppercase text-gray-400">{t.database.cloudNameLabel}</span>
-                      <input
-                        type="text"
-                        value={cloudNameInput}
-                        onChange={(e) => setCloudNameInput(e.target.value)}
-                        placeholder="sdektval"
-                        className="w-full bg-[#0E0F14] border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:border-[#FFD21A] focus:outline-none"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-mono uppercase text-gray-400">{t.database.uploadPresetLabel}</span>
-                      <input
-                        type="text"
-                        value={uploadPresetInput}
-                        onChange={(e) => setUploadPresetInput(e.target.value)}
-                        placeholder="ecolife_preset"
-                        className="w-full bg-[#0E0F14] border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:border-[#FFD21A] focus:outline-none"
-                      />
-                    </div>
-                    <div className="sm:col-span-2 flex justify-end">
-                      <button
-                        type="button"
-                        onClick={handleSaveCloudinaryConfig}
-                        className="bg-[#FFD21A] text-black font-bold text-xs px-4 py-1.5 rounded-lg hover:bg-[#F0C413] transition-colors whitespace-nowrap cursor-pointer"
-                      >
-                        {t.database.applyBtn}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
-                    <div className="space-y-0.5">
-                      <span className="text-[11px] text-gray-400">
-                        {t.database.storageBucketDesc}
+              {/* Supabase Storage Bucket Settings */}
+              <div className="bg-[#16181F] p-5 rounded-xl border border-[#FFD21A]/20 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <UploadCloud className="w-4 h-4 text-[#FFD21A]" />
+                      <span className="text-xs font-bold text-white uppercase tracking-wider">
+                        {t.database.storageBucketTitle}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={bucketNameInput}
-                        onChange={(e) => setBucketNameInput(e.target.value)}
-                        placeholder="ecolife"
-                        className="bg-[#0E0F14] border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:border-[#FFD21A] focus:outline-none w-32"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStorageBucketName(bucketNameInput);
-                          showToast(`${t.database.bucketUpdatedToast} "${bucketNameInput}"`);
-                        }}
-                        className="bg-[#FFD21A] text-black font-bold text-xs px-3 py-1.5 rounded-lg hover:bg-[#F0C413] transition-colors whitespace-nowrap cursor-pointer"
-                      >
-                        {t.database.applyBtn}
-                      </button>
-                    </div>
+                    <p className="text-[11px] text-gray-400">
+                      {t.database.storageBucketDesc}
+                    </p>
                   </div>
-                )}
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={bucketNameInput}
+                      onChange={(e) => setBucketNameInput(e.target.value)}
+                      placeholder="ecolife"
+                      className="bg-[#0E0F14] border border-white/15 rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:border-[#FFD21A] focus:outline-none w-32"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStorageBucketName(bucketNameInput);
+                        showToast(`${t.database.bucketUpdatedToast} "${bucketNameInput}"`);
+                      }}
+                      className="bg-[#FFD21A] text-black font-bold text-xs px-3 py-1.5 rounded-lg hover:bg-[#F0C413] transition-colors whitespace-nowrap cursor-pointer"
+                    >
+                      {t.database.applyBtn}
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* SQL Migration Script Copy Area */}
@@ -1818,7 +1561,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               />
 
               {importStatus && (
-                <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono">
+                <div className={`p-3.5 rounded-xl border text-xs font-mono ${
+                  importStatus.includes('Xəta') || importStatus.includes('Zəhmət olmasa') || importStatus.includes('İdxal xətası')
+                    ? 'bg-red-500/10 border-red-500/30 text-red-400' 
+                    : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                }`}>
                   {importStatus}
                 </div>
               )}

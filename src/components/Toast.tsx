@@ -27,21 +27,21 @@ export const Toast: React.FC<ToastProps> = ({
 
   return (
     <div className="fixed bottom-6 right-6 z-50 animate-slideUp">
-      <div className="glow-yellow-sm flex items-center gap-3 rounded-2xl border border-[#FFD21A]/50 bg-[#0E1013]/90 px-5 py-3.5 text-white shadow-[inset_0_1px_rgba(255,255,255,.14),0_10px_30px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+      <div className="flex items-center gap-3 bg-[#24231f] border border-[var(--ed-line-amber)] text-[var(--ed-ivory)] px-5 py-3.5 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.6)]">
         {type === 'download' ? (
-          <Download className="w-4 h-4 text-[#FFD21A] flex-shrink-0 animate-bounce" />
+          <Download className="w-4 h-4 text-amber-warm flex-shrink-0" />
         ) : (
-          <CheckCircle2 className="w-4 h-4 text-[#FFD21A] flex-shrink-0" />
+          <CheckCircle2 className="w-4 h-4 text-amber-warm flex-shrink-0" />
         )}
-        <div className="text-xs font-mono pr-2">
+        <div className="text-xs font-medium pr-2">
           {message}
         </div>
-        <button 
+        <button
           onClick={onClose}
-          className="text-gray-400 hover:text-white transition-colors ml-2"
+          className="text-mute hover:text-ivory transition-colors ml-2"
           aria-label="Close"
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="w-4 h-4" />
         </button>
       </div>
     </div>

@@ -107,9 +107,7 @@ export async function uploadFileToSupabase(
       return { success: false, error: 'Şəkil üçün Public URL əldə edilə bilmədi.' };
     }
 
-    const finalUrl = (bucket === DEFAULT_STORAGE_BUCKET)
-      ? `/storage/${data.path}`
-      : publicData.publicUrl;
+    const finalUrl = publicData.publicUrl;
 
     return { 
       success: true, 
@@ -177,9 +175,6 @@ CREATE TABLE IF NOT EXISTS public.products (
   featured BOOLEAN DEFAULT false,
   is_new BOOLEAN DEFAULT false,
   applications JSONB DEFAULT '[]'::jsonb,
-  price NUMERIC(12,2),
-  archived BOOLEAN NOT NULL DEFAULT false,
-  archived_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -187,10 +182,6 @@ CREATE TABLE IF NOT EXISTS public.products (
 -- Mövcud products cədvəlinə multi-category sütunlarını əlavə et (əgər yoxdursa)
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS categories JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS category_names JSONB DEFAULT '[]'::jsonb;
-ALTER TABLE public.products ADD COLUMN IF NOT EXISTS price NUMERIC(12,2);
-ALTER TABLE public.products ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT false;
-ALTER TABLE public.products ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
-CREATE INDEX IF NOT EXISTS products_archived_created_at_idx ON public.products (archived, created_at DESC);
 
 -- 2. BLOG / ARTICLES
 CREATE TABLE IF NOT EXISTS public.articles (
@@ -244,16 +235,11 @@ CREATE TABLE IF NOT EXISTS public.inquiries (
   product_name TEXT,
   room_preset TEXT,
   config_summary TEXT,
-  config_pdf_url TEXT,
-  config_pdf_name TEXT,
   status TEXT DEFAULT 'new',
   ip_hash TEXT,
   user_agent TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
-ALTER TABLE public.inquiries ADD COLUMN IF NOT EXISTS config_pdf_url TEXT;
-ALTER TABLE public.inquiries ADD COLUMN IF NOT EXISTS config_pdf_name TEXT;
 
 -- 5. CATEGORIES
 CREATE TABLE IF NOT EXISTS public.categories (

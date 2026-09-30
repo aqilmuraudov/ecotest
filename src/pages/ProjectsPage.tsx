@@ -2,7 +2,10 @@ import React, { useState } from 'react';
 import { Language, Project } from '../types';
 import { translations } from '../data/translations';
 import { useData } from '../context/DataContext';
-import { ArrowRight, MapPin } from 'lucide-react';
+import { FadeIn } from '../components/ui/FadeIn';
+import { EdLink, EdHairline } from '../components/ed/EditorialUI';
+import { EdCategoryPills } from '../components/ed/EdCategoryPills';
+import { ArrowRight } from 'lucide-react';
 
 interface ProjectsPageProps {
   currentLang: Language;
@@ -20,112 +23,138 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ currentLang, onNavig
     { id: 'office', label: currentLang === 'az' ? 'Ofis' : currentLang === 'ru' ? 'Офисы' : 'Office' },
     { id: 'restaurant', label: currentLang === 'az' ? 'Restoran & Kafe' : currentLang === 'ru' ? 'Рестораны' : 'Hospitality' },
     { id: 'residential', label: currentLang === 'az' ? 'Yaşayış' : currentLang === 'ru' ? 'Жилые' : 'Residential' },
-  ];
+  ].filter(cat => cat.id === 'all' || projects.some(p => p.category === cat.id));
 
-  const filteredProjects = selectedCategory === 'all' 
-    ? projects 
+  const filteredProjects = selectedCategory === 'all'
+    ? projects
     : projects.filter(p => p.category === selectedCategory);
 
-  return (
-    <div className="liquid-page min-h-screen text-[#F5F5F5] pt-28 pb-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Page Header */}
-        <div className="liquid-surface p-6 sm:p-10 mb-10">
-          <div className="flex items-center space-x-2 text-xs font-mono uppercase text-gray-400 mb-3">
-            <button onClick={() => onNavigate('home')} className="hover:text-[#FFD21A] transition-colors">
-              {t.nav.home}
-            </button>
-            <span>/</span>
-            <span className="text-[#FFD21A]">{t.nav.projects}</span>
-          </div>
+  const lead = filteredProjects[0];
+  const rest = filteredProjects.slice(1);
 
-          <div className="max-w-2xl space-y-3">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white uppercase tracking-tight">
-              {t.projects.title}
+  return (
+    <div className="bg-[var(--ed-bg)] text-[var(--ed-ivory)] pt-32 pb-24">
+      <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
+
+        {/* Header */}
+        <div className="mb-14">
+          <FadeIn>
+            <p className="font-micro text-amber-warm mb-5">02 — {t.nav.projects}</p>
+            <h1 className="ed-display-lg font-display text-ivory">
+              {currentLang === 'az' ? 'seçilmiş' : currentLang === 'ru' ? 'избранные' : 'selected'}
+              <br />
+              <span className="text-soft">{currentLang === 'az' ? 'layihələr' : currentLang === 'ru' ? 'проекты' : 'projects'}</span>
             </h1>
-            <p className="text-sm sm:text-base text-gray-300 font-normal leading-relaxed">
+            <p className="text-sm text-mute mt-6 max-w-lg leading-relaxed">
               {t.projects.subtitle}
             </p>
-          </div>
-
-          {/* Filter Tabs */}
-          <div className="flex flex-wrap gap-2 pt-6">
-            {categories.map((cat) => {
-              const isActive = selectedCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                    className={`liquid-pill px-4 py-2 text-xs font-medium tracking-wide transition-all ${
-                    isActive 
-                      ? 'bg-[#FFD21A] text-black font-bold shadow-[0_0_15px_rgba(255,210,26,0.25)]' 
-                      : 'bg-[#08090A] border border-white/10 text-gray-400 hover:text-white hover:border-white/20'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              );
-            })}
-          </div>
+          </FadeIn>
         </div>
 
-        {/* Projects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredProjects.map((project) => (
-            <div
-              key={project.id}
-              onClick={() => onNavigate('projects', project.slug)}
-              className="liquid-card group overflow-hidden cursor-pointer hover:border-[#FFD21A] transition-all duration-300 flex flex-col justify-between hover:-translate-y-1"
-            >
-              {/* Image Container */}
-              <div className="relative aspect-[16/11] overflow-hidden bg-black/40">
-                <img 
-                  src={project.coverImage} 
-                  alt={project.title} 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                <div className="absolute top-3 left-3 flex gap-2">
-                  <span className="text-[11px] font-mono uppercase tracking-wider bg-black/90 text-[#FFD21A] px-2.5 py-1 border border-white/10">
-                    {project.categoryName[currentLang]}
-                  </span>
-                </div>
-                <div className="absolute bottom-3 right-3">
-                  <span className="text-[11px] font-mono bg-black/90 text-gray-300 px-2.5 py-0.5 border border-white/10 tabular-nums">
-                    {project.year}
-                  </span>
-                </div>
-              </div>
+        {/* Category pills */}
+        <div className="mb-6">
+          <EdCategoryPills
+            items={categories}
+            activeId={selectedCategory}
+            onSelect={setSelectedCategory}
+            className="!justify-start"
+          />
+        </div>
 
-              {/* Body */}
-              <div className="p-6 flex-1 flex flex-col justify-between">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-mono text-gray-400">
-                    <MapPin className="w-3.5 h-3.5 text-[#FFD21A]" />
-                    <span>{project.location}</span>
+        <EdHairline className="mb-16" />
+
+        {filteredProjects.length === 0 ? (
+          <div className="py-24 text-center">
+            <h3 className="ed-display-sm font-display text-ivory">
+              {t.catalog.noProducts}
+            </h3>
+          </div>
+        ) : (
+          <>
+            {/* Lead project — full-width cinematic */}
+            {lead && (
+              <FadeIn>
+                <button
+                  onClick={() => onNavigate('projects', lead.slug)}
+                  className="group relative w-full aspect-[16/10] lg:aspect-[21/9] overflow-hidden text-left"
+                >
+                  <img
+                    src={lead.coverImage}
+                    alt={lead.title}
+                    className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.03]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#1d1d1b]/92 via-[#1d1d1b]/25 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-7 lg:p-12 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+                    <div>
+                      <h2 className="ed-display-md font-display text-ivory max-w-3xl">
+                        {lead.title}
+                      </h2>
+                      <div className="font-micro text-[9px] text-soft mt-4 flex flex-wrap gap-x-6 gap-y-1">
+                        <span className="text-amber-warm">{lead.categoryName[currentLang]}</span>
+                        <span>{lead.location}</span>
+                        <span>{lead.client}</span>
+                        <span>{lead.year}</span>
+                      </div>
+                    </div>
+                    <span className="font-micro text-[10px] text-ivory flex items-center gap-2 shrink-0">
+                      {t.projects.viewProject}
+                      <ArrowRight className="w-4 h-4 text-amber-warm transition-transform duration-300 group-hover:translate-x-1.5" />
+                    </span>
                   </div>
+                </button>
+              </FadeIn>
+            )}
 
-                  <h3 className="text-xl font-bold text-white uppercase tracking-tight group-hover:text-[#FFD21A] transition-colors">
-                    {project.title}
-                  </h3>
+            {/* Two-column editorial spread */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mt-6 lg:mt-8">
+              {rest.map((project, i) => (
+                <FadeIn key={project.id} delay={0.06 * (i + 1)}>
+                  <button
+                    onClick={() => onNavigate('projects', project.slug)}
+                    className="group relative w-full aspect-[4/3] overflow-hidden text-left"
+                  >
+                    <img
+                      src={project.coverImage}
+                      alt={project.title}
+                      loading="lazy"
+                      className="w-full h-full object-cover transition-transform duration-[1100ms] ease-out group-hover:scale-[1.05]"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#1d1d1b]/85 via-transparent to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-7 lg:p-9">
+                      <h3 className="ed-display-sm font-display text-ivory">
+                        {project.title}
+                      </h3>
+                      <div className="font-micro text-[9px] text-soft mt-3 flex flex-wrap gap-x-5 gap-y-1">
+                        <span className="text-amber-warm">{project.categoryName[currentLang]}</span>
+                        <span>{project.location}</span>
+                        <span>{project.year}</span>
+                      </div>
+                    </div>
+                  </button>
+                </FadeIn>
+              ))}
+            </div>
+          </>
+        )}
 
-                  <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed pt-1">
-                    {project.shortDescription[currentLang]}
-                  </p>
-                </div>
-
-                <div className="pt-5 mt-4 hairline-t flex items-center justify-between text-xs font-mono">
-                  <span className="text-gray-400">
-                    {t.projects.client}: <strong className="text-white">{project.client}</strong>
-                  </span>
-                  <div className="flex items-center gap-1.5 font-bold text-[#FFD21A] group-hover:underline">
-                    <span>{t.projects.viewProject}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </div>
-                </div>
+        {/* CTA */}
+        <div className="mt-28">
+          <EdHairline amber className="mb-14" />
+          <FadeIn>
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+              <h2 className="ed-display-md font-display text-ivory max-w-2xl">
+                {t.projects.similarProjectCta}
+              </h2>
+              <div className="flex flex-col gap-4">
+                <p className="text-sm text-mute max-w-sm leading-relaxed">
+                  {t.projects.similarProjectDesc}
+                </p>
+                <EdLink arrow onClick={() => onNavigate('contact')}>
+                  {t.projects.contactEngineer}
+                </EdLink>
               </div>
             </div>
-          ))}
+          </FadeIn>
         </div>
 
       </div>

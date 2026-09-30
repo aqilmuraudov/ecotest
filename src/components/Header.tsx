@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Logo } from './Logo';
-import { Language } from '../types';
+import { Language, Theme } from '../types';
 import { translations } from '../data/translations';
-import { MessageSquare, ChevronDown, ChevronRight, Menu, X, Search, Phone, Mail, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronRight, Menu, X, Search, Sun, Moon } from 'lucide-react';
 
 interface HeaderProps {
   currentLang: Language;
   onLanguageChange: (lang: Language) => void;
+  currentTheme: Theme;
+  onToggleTheme: () => void;
   activePage: string;
   onNavigate: (page: string, param?: string) => void;
   onOpenContact: () => void;
@@ -16,6 +18,8 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   currentLang,
   onLanguageChange,
+  currentTheme,
+  onToggleTheme,
   activePage,
   onNavigate,
   onOpenContact,
@@ -30,13 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
   const t = translations[currentLang];
 
   useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 20) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
-    };
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -58,22 +56,14 @@ export const Header: React.FC<HeaderProps> = ({
     num: string;
     label: string;
     hasDropdown?: boolean;
-    badge?: string;
   }
 
   const navItems: NavItem[] = [
-    { id: 'home', num: '01', label: t.nav.home },
-    { id: 'catalog', num: '02', label: t.nav.catalog },
-    { id: 'projects', num: '03', label: t.nav.projects },
-    { 
-      id: 'solutions', 
-      num: '04', 
-      label: t.nav.solutions,
-      hasDropdown: true 
-    },
-    { id: 'configurator', num: '05', label: t.nav.configurator },
-    { id: 'about', num: '06', label: t.nav.about },
-    { id: 'contact', num: '07', label: t.nav.contact },
+    { id: 'catalog', num: '01', label: currentLang === 'az' ? 'Məhsullar' : currentLang === 'ru' ? 'Продукты' : 'Products' },
+    { id: 'projects', num: '02', label: t.nav.projects },
+    { id: 'solutions', num: '03', label: t.nav.solutions, hasDropdown: true },
+    { id: 'configurator', num: '04', label: t.nav.configurator },
+    { id: 'about', num: '05', label: t.nav.about },
   ];
 
   const handleNavClick = (pageId: string, param?: string) => {
@@ -84,84 +74,72 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header 
+      <header
         id="ecolife-global-header"
-        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
-          isScrolled 
-            ? 'bg-[#08090A]/95 backdrop-blur-md py-3.5 border-b border-white/10 shadow-2xl' 
-            : 'bg-[#08090A]/85 backdrop-blur-sm py-4 sm:py-5 border-b border-white/5'
+        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ${
+          isScrolled
+            ? 'bg-[#1d1d1b]/90 backdrop-blur-xl border-b border-[var(--ed-line)]'
+            : 'bg-transparent border-b border-transparent'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          {/* Zone 1: Single Brand Lockup */}
-          <button 
+        <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12 flex items-center justify-between h-[72px]">
+          {/* Brand */}
+          <button
             onClick={() => handleNavClick('home')}
-            className="group rounded-full p-1 focus:outline-none focus:ring-1 focus:ring-[#FFD21A]/70"
-            aria-label="Ecolife Architectural Lighting Home"
+            className="group focus:outline-none focus:ring-1 focus:ring-[var(--ed-amber)] rounded p-1"
+            aria-label="Ecolife Home"
           >
-            <Logo size="md" />
+            <Logo size="md" theme={currentTheme} />
           </button>
 
-          {/* Zone 2: Editorial Navigation Links (Desktop) */}
-          <nav className="hidden items-center gap-1.5 lg:flex" aria-label="Main Navigation">
-            {navItems.filter(item => item.id !== 'contact').map((item) => {
+          {/* Center Navigation — small, generous spacing, underline animation */}
+          <nav className="hidden lg:flex items-center gap-10 xl:gap-12" aria-label="Main Navigation">
+            {navItems.map((item) => {
               const isActive = activePage === item.id || (item.id === 'catalog' && activePage.startsWith('catalog-'));
-              
+
               if (item.hasDropdown) {
                 return (
-                  <div 
-                    key={item.id} 
+                  <div
+                    key={item.id}
                     className="relative group"
                     onMouseEnter={() => setIsSolutionsDropdownOpen(true)}
                     onMouseLeave={() => setIsSolutionsDropdownOpen(false)}
                   >
                     <button
                       onClick={() => handleNavClick(item.id)}
-                      className={`flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-mono uppercase tracking-widest transition-all ${
-                        isActive 
-                          ? 'bg-white/15 text-[#FFD21A] font-bold shadow-[inset_0_1px_rgba(255,255,255,.18)]'
-                          : 'text-[#F5F5F5]/70 hover:text-white'
+                      className={`relative font-micro text-[11px] transition-colors py-2 flex items-center gap-1.5 ${
+                        isActive ? 'text-amber-warm' : 'text-[var(--ed-soft)] hover:text-ivory'
                       }`}
                     >
                       <span>{item.label}</span>
-                      <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isSolutionsDropdownOpen ? 'rotate-180 text-[#FFD21A]' : 'text-gray-500'}`} />
+                      <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isSolutionsDropdownOpen ? 'rotate-180' : ''}`} />
+                      <span className={`absolute bottom-0 left-0 right-0 h-px bg-[var(--ed-amber)] transition-transform duration-300 origin-left ${isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'}`} />
                     </button>
 
-                    {/* Solutions Dropdown Menu */}
+                    {/* Quiet dropdown */}
                     {isSolutionsDropdownOpen && (
-                      <div className="absolute left-0 top-full z-50 w-64 pt-2 animate-fadeIn">
-                        <div className="space-y-1 rounded-2xl border border-white/20 bg-[#38271f]/88 p-2 shadow-[inset_0_1px_rgba(255,255,255,.18),0_24px_60px_rgba(0,0,0,.34)] backdrop-blur-2xl">
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 w-60 bg-[#24231f] border border-[var(--ed-line)] rounded-xl shadow-2xl py-2 px-1.5 z-50 animate-fadeIn">
                         <button
                           onClick={() => { handleNavClick('solutions'); }}
-                          className="w-full rounded-xl px-4 py-2.5 text-left text-[11px] font-mono font-bold uppercase tracking-widest text-[#FFD21A] hover:bg-white/10"
+                          className="w-full text-left px-3 py-2.5 text-xs font-micro text-amber-warm hover:bg-white/5 rounded-lg"
                         >
-                          {t.solutions.exploreAll} →
+                          {t.solutions.exploreAll}
                         </button>
-                        <button
-                          onClick={() => { onNavigate('solutions', 'commercial-lighting'); setIsSolutionsDropdownOpen(false); }}
-                          className="w-full rounded-xl px-4 py-2.5 text-left text-xs text-[#F5F5F5] transition-colors hover:bg-white/10 hover:text-[#FFD21A]"
-                        >
-                          {currentLang === 'az' ? 'Ticarət və İctimai Məkanlar' : currentLang === 'ru' ? 'Торговые пространства' : 'Commercial & Retail'}
-                        </button>
-                        <button
-                          onClick={() => { onNavigate('solutions', 'office-lighting'); setIsSolutionsDropdownOpen(false); }}
-                          className="w-full rounded-xl px-4 py-2.5 text-left text-xs text-[#F5F5F5] transition-colors hover:bg-white/10 hover:text-[#FFD21A]"
-                        >
-                          {currentLang === 'az' ? 'Ofis və Biznes Mərkəzləri' : currentLang === 'ru' ? 'Офисы и бизнес-центры' : 'Office & Corporate'}
-                        </button>
-                        <button
-                          onClick={() => { onNavigate('solutions', 'hospitality-lighting'); setIsSolutionsDropdownOpen(false); }}
-                          className="w-full rounded-xl px-4 py-2.5 text-left text-xs text-[#F5F5F5] transition-colors hover:bg-white/10 hover:text-[#FFD21A]"
-                        >
-                          {currentLang === 'az' ? 'Otel və Restoranlar' : currentLang === 'ru' ? 'Отели и рестораны' : 'Hospitality & Dining'}
-                        </button>
-                        <button
-                          onClick={() => { onNavigate('solutions', 'residential-lighting'); setIsSolutionsDropdownOpen(false); }}
-                          className="w-full rounded-xl px-4 py-2.5 text-left text-xs text-[#F5F5F5] transition-colors hover:bg-white/10 hover:text-[#FFD21A]"
-                        >
-                          {currentLang === 'az' ? 'Fərdi Yaşayış və Villalar' : currentLang === 'ru' ? 'Элитное жилье' : 'Luxury Residential'}
-                        </button>
-                        </div>
+                        <div className="ed-hairline my-1" />
+                        {[
+                          { slug: 'commercial-lighting', az: 'Ticarət və İctimai', ru: 'Торговые пространства', en: 'Commercial & Retail' },
+                          { slug: 'office-lighting', az: 'Ofis və Biznes', ru: 'Офисы и бизнес', en: 'Office & Corporate' },
+                          { slug: 'hospitality-lighting', az: 'Otel və Restoranlar', ru: 'Отели и рестораны', en: 'Hospitality & Dining' },
+                          { slug: 'residential-lighting', az: 'Fərdi Yaşayış', ru: 'Элитное жилье', en: 'Luxury Residential' },
+                        ].map((entry) => (
+                          <button
+                            key={entry.slug}
+                            onClick={() => { onNavigate('solutions', entry.slug); setIsSolutionsDropdownOpen(false); }}
+                            className="w-full text-left px-3 py-2.5 text-[13px] text-[var(--ed-soft)] hover:text-ivory hover:bg-white/5 rounded-lg transition-colors"
+                          >
+                            {currentLang === 'az' ? entry.az : currentLang === 'ru' ? entry.ru : entry.en}
+                          </button>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -172,86 +150,86 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item.id)}
-                  className={`flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-mono uppercase tracking-widest transition-all ${
-                    isActive 
-                      ? 'bg-white/15 text-[#FFD21A] font-bold shadow-[inset_0_1px_rgba(255,255,255,.18)]'
-                      : 'text-[#F5F5F5]/70 hover:text-white'
+                  className={`relative font-micro text-[11px] transition-colors py-2 ${
+                    isActive ? 'text-amber-warm' : 'text-[var(--ed-soft)] hover:text-ivory'
                   }`}
                 >
                   <span>{item.label}</span>
+                  <span className={`absolute bottom-0 left-0 right-0 h-px bg-[var(--ed-amber)] transition-transform duration-300 origin-left ${isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'}`} />
                 </button>
               );
             })}
           </nav>
 
-          {/* Zone 3: Quick Utilities & Primary Action */}
-          <div className="hidden lg:flex items-center space-x-3">
-            {/* Search Trigger */}
-            <button 
+          {/* Right controls: search · language · contact */}
+          <div className="hidden lg:flex items-center gap-2">
+            {/* Search */}
+            <button
               onClick={() => onOpenSearch ? onOpenSearch() : onNavigate('catalog')}
-              className="rounded-full border border-white/15 bg-white/[.07] p-2.5 text-gray-300 shadow-[inset_0_1px_rgba(255,255,255,.12)] transition-all hover:border-[#FFD21A]/40 hover:bg-white/15 hover:text-[#FFD21A]"
-              aria-label="Search Catalog"
-              title={t.catalog.searchPlaceholder}
+              className="p-2.5 text-[var(--ed-soft)] hover:text-amber-warm transition-colors rounded-full hover:bg-white/5"
+              aria-label="Search"
             >
-              <Search className="w-3.5 h-3.5" />
+              <Search className="w-4 h-4" />
             </button>
 
-            {/* Language Selector Dropdown */}
+            {/* Theme */}
+            <button
+              onClick={onToggleTheme}
+              className="p-2.5 text-[var(--ed-soft)] hover:text-amber-warm transition-colors rounded-full hover:bg-white/5"
+              aria-label="Toggle theme"
+            >
+              {currentTheme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+
+            {/* Language */}
             <div className="relative">
               <button
                 onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
-                className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[.07] px-3 py-2 text-[11px] font-mono uppercase tracking-widest text-[#F5F5F5] shadow-[inset_0_1px_rgba(255,255,255,.12)] transition-all hover:border-[#FFD21A]/40 hover:bg-white/15 hover:text-[#FFD21A]"
+                className="font-micro text-[11px] text-[var(--ed-soft)] hover:text-ivory px-2.5 py-1.5 rounded-full border border-[var(--ed-line)] hover:border-[rgba(242,237,227,0.3)] transition-colors flex items-center gap-1"
               >
-                <span>{currentLang.toUpperCase()}</span>
-                <ChevronDown className="w-3 h-3 text-[#FFD21A]" />
+                {currentLang.toUpperCase()}
+                <ChevronDown className="w-3 h-3" />
               </button>
 
               {isLangDropdownOpen && (
-                <div className="absolute right-0 z-50 mt-2 w-28 space-y-1 rounded-2xl border border-white/15 bg-[#201713]/90 p-2 shadow-xl backdrop-blur-2xl">
+                <div className="absolute right-0 mt-2 w-28 bg-[#24231f] border border-[var(--ed-line)] rounded-xl shadow-xl py-1 z-50 animate-fadeIn">
                   {(['az', 'en', 'ru'] as Language[]).map((lang) => (
                     <button
                       key={lang}
-                      onClick={() => {
-                        onLanguageChange(lang);
-                        setIsLangDropdownOpen(false);
-                      }}
-                      className={`w-full rounded-xl px-3 py-2 text-left text-[11px] font-mono uppercase transition-all ${
-                        currentLang === lang 
-                          ? 'bg-white/15 text-[#FFD21A] font-bold shadow-inner'
-                          : 'text-gray-400 hover:bg-white/10 hover:text-white'
+                      onClick={() => { onLanguageChange(lang); setIsLangDropdownOpen(false); }}
+                      className={`w-full text-left px-3.5 py-2 text-xs font-micro transition-colors ${
+                        currentLang === lang ? 'text-amber-warm' : 'text-[var(--ed-soft)] hover:text-ivory hover:bg-white/5'
                       }`}
                     >
-                      {lang === 'az' ? 'AZ' : lang === 'en' ? 'EN' : 'RU'}
+                      {lang.toUpperCase()}
                     </button>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Primary Action Button */}
+            {/* Contact CTA */}
             <button
               onClick={onOpenContact}
-              className="flex items-center gap-2 rounded-full border border-[#ffe778]/70 bg-[linear-gradient(135deg,#ffe36c,#ffd21a)] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-black shadow-[inset_0_1px_rgba(255,255,255,.65),0_0_22px_rgba(255,210,26,.24)] transition-all duration-200 hover:-translate-y-0.5 hover:brightness-105"
+              className="ed-btn-primary !py-2 !px-5 ml-2"
             >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>{t.nav.writeUs}</span>
+              {t.nav.contact}
             </button>
           </div>
 
-          {/* Mobile & Tablet Icons (Visible on screens < 1024px) */}
-          <div className="flex items-center space-x-2 lg:hidden">
-            <button 
+          {/* Mobile icons */}
+          <div className="flex items-center gap-1 lg:hidden">
+            <button
               onClick={() => onOpenSearch ? onOpenSearch() : onNavigate('catalog')}
-              className="rounded-full border border-transparent p-2.5 text-gray-300 transition-all hover:border-white/15 hover:bg-white/10 hover:text-[#FFD21A]"
+              className="p-2.5 text-[var(--ed-soft)] hover:text-amber-warm transition-colors"
               aria-label="Search"
             >
               <Search className="w-5 h-5" />
             </button>
-            
             <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="rounded-full border border-white/15 bg-white/10 p-2.5 text-white shadow-[inset_0_1px_rgba(255,255,255,.14)] transition-all hover:bg-white/15 hover:text-[#FFD21A] focus:outline-none"
-              aria-label="Open Navigation Menu"
+              className="p-2.5 text-ivory hover:text-amber-warm transition-colors"
+              aria-label="Open menu"
             >
               <Menu className="w-6 h-6" />
             </button>
@@ -259,133 +237,96 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </header>
 
-      {/* Full-Screen Mobile & Tablet Menu Modal */}
+      {/* Full-screen mobile menu */}
       {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 z-[100] flex h-screen w-screen flex-col overflow-hidden bg-[#08090A] text-[#F5F5F5] animate-fadeIn"
+        <div
+          className="fixed inset-0 z-[100] bg-[#1d1d1b] flex flex-col h-screen w-screen overflow-hidden animate-fadeIn"
           id="ecolife-mobile-nav-modal"
         >
-          {/* Top Bar inside Menu */}
-          <div className="flex flex-shrink-0 items-center justify-between rounded-3xl border border-white/15 bg-[#0E1013] px-5 py-4 shadow-[inset_0_1px_rgba(255,255,255,.14),0_16px_50px_rgba(0,0,0,.28)]">
-            <button 
-              onClick={() => handleNavClick('home')}
-              className="focus:outline-none"
-            >
-              <Logo size="md" />
+          {/* Top bar */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--ed-line)] flex-shrink-0">
+            <button onClick={() => handleNavClick('home')} className="focus:outline-none">
+              <Logo size="md" theme={currentTheme} />
             </button>
-
-            <div className="flex items-center space-x-2">
-              <button 
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  if (onOpenSearch) onOpenSearch();
-                }}
-                className="rounded-full border border-white/15 bg-white/[.06] p-2.5 text-gray-300 transition-all hover:bg-white/15 hover:text-[#FFD21A]"
-                aria-label="Search"
+            <div className="flex items-center gap-1">
+              <button
+                onClick={onToggleTheme}
+                className="p-2.5 text-[var(--ed-soft)] hover:text-amber-warm"
+                aria-label="Toggle theme"
               >
-                <Search className="w-4 h-4" />
+                {currentTheme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
-
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="rounded-full border border-white/15 bg-white/10 p-2.5 text-gray-300 transition-all hover:bg-white/15 hover:text-white focus:outline-none"
-                aria-label="Close Navigation Menu"
+                className="p-2.5 text-ivory hover:text-amber-warm"
+                aria-label="Close menu"
               >
-                <X className="w-5 h-5 text-[#FFD21A]" />
+                <X className="w-6 h-6" />
               </button>
             </div>
           </div>
 
-          {/* Scrollable Navigation Body */}
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-4">
-            
-            {/* Language Switcher */}
-            <div>
-              <div className="flex items-center justify-between rounded-2xl border border-white/15 bg-[#0E1013] p-3 shadow-[inset_0_1px_rgba(255,255,255,.12)]">
-                <span className="text-xs font-mono uppercase tracking-widest text-gray-400">
-                  DİL:
-                </span>
-                <div className="flex space-x-1 rounded-full border border-white/10 bg-black/15 p-1">
-                  {(['az', 'en', 'ru'] as Language[]).map((lang) => (
-                    <button
-                      key={lang}
-                      onClick={() => onLanguageChange(lang)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-mono uppercase transition-all ${
-                        currentLang === lang 
-                          ? 'bg-[#FFD21A] text-black font-bold shadow-[0_0_16px_rgba(255,210,26,.22)]'
-                          : 'text-gray-300 hover:bg-white/10 hover:text-white'
-                      }`}
-                    >
-                      {lang}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          {/* Nav body */}
+          <div className="flex-1 overflow-y-auto px-5 py-8 space-y-8">
+            {/* Language pills */}
+            <div className="flex gap-2">
+              {(['az', 'en', 'ru'] as Language[]).map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => onLanguageChange(lang)}
+                  className={`ed-pill !px-4 !py-1.5 !text-xs ${currentLang === lang ? 'ed-pill--active' : ''}`}
+                >
+                  {lang.toUpperCase()}
+                </button>
+              ))}
             </div>
 
-            {/* Prominent Large Mobile Navigation Links List */}
-            <div className="space-y-1.5 rounded-3xl border border-white/15 bg-[#0E1013] p-2.5 shadow-[inset_0_1px_rgba(255,255,255,.12)] sm:p-3">
+            {/* Large nav list */}
+            <nav className="space-y-1">
               {navItems.map((item) => {
                 const isActive = activePage === item.id;
-                
+
                 if (item.id === 'solutions') {
                   return (
-                    <div key={item.id} className="rounded-2xl">
+                    <div key={item.id} className="border-b border-[var(--ed-line-soft)]">
                       <button
                         type="button"
                         onClick={() => setIsMobileSolutionsOpen(!isMobileSolutionsOpen)}
-                        className={`group flex w-full items-center justify-between rounded-2xl px-3 py-3.5 transition-all ${isActive ? 'bg-white/15 shadow-inner' : 'hover:bg-white/10'}`}
+                        className="w-full flex items-center justify-between py-4 text-left"
                         aria-expanded={isMobileSolutionsOpen}
                       >
-                        <div className="flex items-center gap-3.5 text-left">
-                          <span className="text-sm font-mono text-[#FFD21A] font-extrabold">{item.num}</span>
-                          <span className={`text-lg sm:text-xl font-bold tracking-wide transition-colors ${
-                            isActive ? 'text-[#FFD21A]' : 'text-white group-hover:text-[#FFD21A]'
-                          }`}>
+                        <div className="flex items-baseline gap-4">
+                          <span className="font-mono-tech text-xs text-mute">{item.num}</span>
+                          <span className={`ed-display-sm font-display ${isActive ? 'text-amber-warm' : 'text-ivory'}`}>
                             {item.label}
                           </span>
                         </div>
-                        <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isMobileSolutionsOpen ? 'rotate-180 text-[#FFD21A]' : 'group-hover:text-[#FFD21A]'}`} />
+                        <ChevronDown className={`w-5 h-5 text-mute transition-transform duration-200 ${isMobileSolutionsOpen ? 'rotate-180' : ''}`} />
                       </button>
 
-                      {/* Subcategories */}
                       {isMobileSolutionsOpen && (
-                        <div className="pl-6 sm:pl-10 pr-3 pb-4 space-y-2">
+                        <div className="pb-5 pl-10 space-y-1">
                           <button
                             onClick={() => handleNavClick('solutions')}
-                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[#FFD21A] hover:bg-white/10 sm:text-base"
+                            className="w-full text-left py-2.5 text-sm text-amber-warm flex items-center justify-between"
                           >
-                            <span>{currentLang === 'az' ? 'Bütün Həllər' : currentLang === 'ru' ? 'Все решения' : 'All Solutions'}</span>
-                            <ChevronRight className="w-4 h-4 text-[#FFD21A]" />
+                            <span>{t.solutions.exploreAll}</span>
+                            <ChevronRight className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => handleNavClick('solutions', 'commercial-lighting')}
-                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-[#FFD21A] sm:text-base"
-                          >
-                            <span>• {currentLang === 'az' ? 'Ticarət və İctimai Məkanlar' : currentLang === 'ru' ? 'Торговые пространства' : 'Commercial & Retail'}</span>
-                            <ChevronRight className="w-4 h-4 text-gray-500" />
-                          </button>
-                          <button
-                            onClick={() => handleNavClick('solutions', 'office-lighting')}
-                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-[#FFD21A] sm:text-base"
-                          >
-                            <span>• {currentLang === 'az' ? 'Ofis və Biznes Mərkəzləri' : currentLang === 'ru' ? 'Офисы и бизнес-центры' : 'Office & Corporate'}</span>
-                            <ChevronRight className="w-4 h-4 text-gray-500" />
-                          </button>
-                          <button
-                            onClick={() => handleNavClick('solutions', 'hospitality-lighting')}
-                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-[#FFD21A] sm:text-base"
-                          >
-                            <span>• {currentLang === 'az' ? 'Otel və Restoranlar' : currentLang === 'ru' ? 'Отели и рестораны' : 'Hospitality & Dining'}</span>
-                            <ChevronRight className="w-4 h-4 text-gray-500" />
-                          </button>
-                          <button
-                            onClick={() => handleNavClick('solutions', 'residential-lighting')}
-                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-[#FFD21A] sm:text-base"
-                          >
-                            <span>• {currentLang === 'az' ? 'Fərdi Yaşayış və Villalar' : currentLang === 'ru' ? 'Элитное жилье' : 'Luxury Residential'}</span>
-                            <ChevronRight className="w-4 h-4 text-gray-500" />
-                          </button>
+                          {[
+                            { slug: 'commercial-lighting', az: 'Ticarət və İctimai', ru: 'Торговые пространства', en: 'Commercial & Retail' },
+                            { slug: 'office-lighting', az: 'Ofis və Biznes', ru: 'Офисы и бизнес', en: 'Office & Corporate' },
+                            { slug: 'hospitality-lighting', az: 'Otel və Restoranlar', ru: 'Отели и рестораны', en: 'Hospitality & Dining' },
+                            { slug: 'residential-lighting', az: 'Fərdi Yaşayış', ru: 'Элитное жилье', en: 'Luxury Residential' },
+                          ].map((entry) => (
+                            <button
+                              key={entry.slug}
+                              onClick={() => handleNavClick('solutions', entry.slug)}
+                              className="w-full text-left py-2.5 text-sm text-[var(--ed-soft)] hover:text-ivory"
+                            >
+                              {currentLang === 'az' ? entry.az : currentLang === 'ru' ? entry.ru : entry.en}
+                            </button>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -396,26 +337,33 @@ export const Header: React.FC<HeaderProps> = ({
                   <button
                     key={item.id}
                     onClick={() => handleNavClick(item.id)}
-                    className={`flex w-full items-center justify-between rounded-2xl px-3 py-3.5 text-left transition-all ${
-                      isActive 
-                        ? 'bg-white/15 text-[#FFD21A] font-extrabold shadow-[inset_0_1px_rgba(255,255,255,.14)]'
-                        : 'text-white hover:bg-white/10 hover:text-[#FFD21A]'
+                    className={`w-full flex items-baseline gap-4 py-4 text-left border-b border-[var(--ed-line-soft)] ${
+                      isActive ? 'text-amber-warm' : 'text-ivory'
                     }`}
                   >
-                    <div className="flex items-center gap-3.5">
-                      <span className="text-sm font-mono text-[#FFD21A] font-extrabold">{item.num}</span>
-                      <span className="text-lg sm:text-xl font-bold tracking-wide">{item.label}</span>
-                    </div>
-                    <ChevronRight className={`w-5 h-5 ${isActive ? 'text-[#FFD21A]' : 'text-gray-500'}`} />
+                    <span className="font-mono-tech text-xs text-mute">{item.num}</span>
+                    <span className="ed-display-sm font-display">{item.label}</span>
                   </button>
                 );
               })}
-            </div>
 
+              {/* Contact */}
+              <button
+                onClick={() => handleNavClick('contact')}
+                className="w-full flex items-baseline gap-4 py-4 text-left border-b border-[var(--ed-line-soft)] text-ivory"
+              >
+                <span className="font-mono-tech text-xs text-mute">06</span>
+                <span className="ed-display-sm font-display">{t.nav.contact}</span>
+              </button>
+            </nav>
+
+            {/* Contact CTA */}
+            <button onClick={onOpenContact} className="ed-btn-primary w-full justify-center">
+              {t.nav.writeUs}
+            </button>
           </div>
         </div>
       )}
     </>
   );
 };
-

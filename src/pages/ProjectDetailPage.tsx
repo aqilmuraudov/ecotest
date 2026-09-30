@@ -2,16 +2,15 @@ import React, { useState } from 'react';
 import { Language } from '../types';
 import { translations } from '../data/translations';
 import { useData } from '../context/DataContext';
-import { 
-  ArrowLeft, 
-  MapPin, 
-  Calendar, 
-  Building2, 
-  Sparkles, 
-  CheckCircle2, 
+import { FadeIn } from '../components/ui/FadeIn';
+import { EdButton, EdLink, EdHairline } from '../components/ed/EditorialUI';
+import { EdProductCard } from '../components/ed/EdProductCard';
+import {
+  ArrowLeft,
+  MapPin,
+  Calendar,
+  Building2,
   ArrowRight,
-  Layers,
-  Eye,
   X
 } from 'lucide-react';
 
@@ -33,236 +32,225 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
   const project = projects.find(p => p.slug === projectSlug) || projects[0];
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
 
-  const usedProducts = products.filter(prod => 
+  const usedProducts = products.filter(prod =>
     project?.productsUsed?.includes(prod.id) || project?.productsUsed?.includes(prod.name)
   );
 
   return (
-    <div className="min-h-screen bg-[#08090A] text-[#F5F5F5] pt-24 pb-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Breadcrumb & Back */}
+    <div className="bg-[var(--ed-bg)] text-[var(--ed-ivory)] pt-32 pb-24">
+      <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
+
+        {/* Breadcrumb */}
         <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-2 text-xs text-gray-400">
-            <button onClick={() => onNavigate('home')} className="hover:text-[#FFD21A] transition-colors">
-              {t.nav.home}
-            </button>
+          <div className="flex items-center gap-2 font-micro text-[9px] text-mute">
+            <button onClick={() => onNavigate('home')} className="hover:text-amber-warm transition-colors">{t.nav.home}</button>
             <span>/</span>
-            <button onClick={() => onNavigate('projects')} className="hover:text-[#FFD21A] transition-colors">
-              {t.nav.projects}
-            </button>
+            <button onClick={() => onNavigate('projects')} className="hover:text-amber-warm transition-colors">{t.nav.projects}</button>
             <span>/</span>
-            <span className="text-[#FFD21A]">{project.title}</span>
+            <span className="text-[var(--ed-ivory)]">{project.title}</span>
           </div>
 
           <button
             onClick={() => onNavigate('projects')}
-            className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 font-micro text-[9px] text-mute hover:text-ivory transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>{t.projects.backToProjects}</span>
           </button>
         </div>
 
-        {/* Hero Banner with Title and Metadata */}
-        <div className="relative overflow-hidden border border-white/10 bg-[#0E1013] mb-10 shadow-2xl group">
-          <div 
-            onClick={() => setLightboxImg(project.coverImage)}
-            className="relative aspect-[21/9] min-h-[360px] w-full cursor-pointer"
-          >
-            <img 
-              src={project.coverImage} 
-              alt={project.title} 
-              className="w-full h-full object-cover group-hover:scale-[1.01] transition-transform duration-500"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0E1013] via-[#0E1013]/60 to-transparent" />
-            
-            <div className="absolute top-4 right-4 bg-black/80 px-3 py-1.5 border border-white/10 text-white text-xs font-mono opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5">
-              <Eye className="w-3.5 h-3.5 text-[#FFD21A]" />
-              <span>BÖYÜT</span>
+        {/* Cinematic hero with overlapping title */}
+        <div className="relative mb-16">
+          <FadeIn>
+            <div
+              onClick={() => setLightboxImg(project.coverImage)}
+              className="relative aspect-[16/10] lg:aspect-[21/9] overflow-hidden cursor-zoom-in"
+            >
+              <img
+                src={project.coverImage}
+                alt={project.title}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#1d1d1b]/90 via-transparent to-transparent" />
             </div>
+          </FadeIn>
 
-            <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10 flex flex-col justify-end pointer-events-none">
-              <div className="flex flex-wrap items-center gap-2 mb-3">
-                <span className="text-xs font-mono font-bold uppercase tracking-wider bg-[#FFD21A] text-black px-3 py-1">
-                  {project.categoryName[currentLang]}
-                </span>
-                <span className="text-xs font-mono text-gray-300 bg-black/80 px-3 py-1 border border-white/10 tabular-nums">
-                  {project.year}
-                </span>
-              </div>
-
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white uppercase tracking-tight">
+          {/* Overlapping title block */}
+          <div className="lg:absolute lg:bottom-0 lg:left-12 lg:right-12 lg:p-10 p-6 -mt-16 lg:mt-0 relative z-10">
+            <FadeIn delay={0.15}>
+              <p className="font-micro text-amber-warm mb-4">
+                {project.categoryName[currentLang]} — {project.year}
+              </p>
+              <h1 className="ed-display-lg font-display text-ivory">
                 {project.title}
               </h1>
-
-              <div className="flex flex-wrap items-center gap-6 mt-4 text-xs font-mono text-gray-300">
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4 text-[#FFD21A]" />
-                  {project.location}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Building2 className="w-4 h-4 text-[#FFD21A]" />
-                  {t.projects.client}: <strong>{project.client}</strong>
-                </span>
-                {project.architect && (
-                  <span className="flex items-center gap-1.5 text-gray-400">
-                    {t.projects.architect}: {project.architect}
-                  </span>
-                )}
-              </div>
-            </div>
+            </FadeIn>
           </div>
         </div>
 
-        {/* 2 Column Details: Story & Engineering Metrics */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
-          
-          {/* Narrative / Lighting Solution */}
-          <div className="lg:col-span-8 space-y-6">
-            <div className="bg-[#0E1013] border border-white/10 p-6 sm:p-8 space-y-5 shadow-xl">
-              <h2 className="text-lg font-mono font-bold text-white uppercase tracking-wider flex items-center gap-2 hairline-b pb-4">
-                <span className="w-2 h-2 bg-[#FFD21A]" />
-                <span>{t.projects.conceptTitle}</span>
-              </h2>
+        {/* Metadata row */}
+        <div className="border-t border-[var(--ed-line)] py-6 grid grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+          {[
+            { icon: <MapPin className="w-3.5 h-3.5 text-amber-warm" />, label: t.projects.location, value: project.location },
+            { icon: <Building2 className="w-3.5 h-3.5 text-amber-warm" />, label: t.projects.client, value: project.client },
+            { icon: <Calendar className="w-3.5 h-3.5 text-amber-warm" />, label: t.projects.year, value: project.year },
+            ...(project.architect ? [{ icon: <ArrowRight className="w-3.5 h-3.5 text-amber-warm" />, label: t.projects.architect, value: project.architect }] : []),
+          ].slice(0, 4).map((item, i) => (
+            <div key={i}>
+              <div className="flex items-center gap-2 mb-2">
+                {item.icon}
+                <span className="font-micro text-[9px] text-mute">{item.label}</span>
+              </div>
+              <span className="text-sm text-[var(--ed-ivory)]">{item.value}</span>
+            </div>
+          ))}
+        </div>
 
-              <p className="text-sm sm:text-base text-gray-300 leading-relaxed font-normal">
-                {project.fullDescription[currentLang]}
-              </p>
+        {/* Narrative + metrics */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 mb-20">
+          <div className="lg:col-span-7 space-y-10">
+            <FadeIn>
+              <div>
+                <p className="font-micro text-amber-warm mb-5">{t.projects.conceptTitle}</p>
+                <p className="text-base text-soft leading-relaxed">
+                  {project.fullDescription[currentLang]}
+                </p>
+              </div>
+            </FadeIn>
 
-              <div className="p-5 bg-[#08090A] border border-[#FFD21A]/30 space-y-2">
-                <div className="text-xs font-mono font-bold uppercase tracking-wider text-[#FFD21A] flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" />
-                  <span>{t.projects.engineeringTitle}</span>
-                </div>
-                <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
+            <FadeIn delay={0.1}>
+              <div>
+                <EdHairline amber />
+                <p className="font-micro text-amber-warm mt-6 mb-3">{t.projects.engineeringTitle}</p>
+                <p className="text-sm text-mute leading-relaxed">
                   {project.lightingSolution[currentLang]}
                 </p>
               </div>
-            </div>
-
-            {/* Project Gallery Images */}
-            {project.gallery && project.gallery.length > 0 && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between hairline-b pb-2">
-                  <div className="flex items-center gap-2 text-xs font-mono uppercase font-bold text-white tracking-wider">
-                    <Layers className="w-4 h-4 text-[#FFD21A]" />
-                    <span>Layihə Qalereyası ({project.gallery.length} foto)</span>
-                  </div>
-                  <span className="text-[11px] font-mono text-gray-400">Böyütmək üçün fotonun üzərinə klikləyin</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {project.gallery.map((img, idx) => (
-                    <div 
-                      key={idx} 
-                      onClick={() => setLightboxImg(img)}
-                      className="group relative overflow-hidden border border-white/10 aspect-[4/3] bg-black/40 cursor-pointer"
-                    >
-                      <img src={img} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Eye className="w-6 h-6 text-[#FFD21A]" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            </FadeIn>
           </div>
 
-          {/* Right Metrics & Inquiry Column */}
-          <div className="lg:col-span-4 space-y-6">
-            
-            {/* Key Project Metrics */}
-            {project.metrics && (
-              <div className="bg-[#0E1013] border border-white/10 p-6 shadow-xl space-y-4">
-                <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-[#FFD21A]">
-                  {t.projects.metricsTitle}
-                </h3>
-                <div className="divide-y divide-white/10 font-mono">
-                  {project.metrics.map((m, i) => (
-                    <div key={i} className="py-3 flex justify-between text-xs">
-                      <span className="text-gray-400">{m.label[currentLang]}</span>
-                      <span className="text-white font-bold">{m.value}</span>
-                    </div>
-                  ))}
+          {/* Metrics sidebar */}
+          <div className="lg:col-span-5">
+            <FadeIn delay={0.15}>
+              {project.metrics && project.metrics.length > 0 && (
+                <div>
+                  <p className="font-micro text-amber-warm mb-6">{t.projects.metricsTitle}</p>
+                  <div className="border-t border-[var(--ed-line)]">
+                    {project.metrics.map((m, i) => (
+                      <div key={i} className="py-5 flex justify-between items-center border-b border-[var(--ed-line)]">
+                        <span className="font-micro text-[9px] text-mute">{m.label[currentLang]}</span>
+                        <span className="font-mono-tech text-sm text-[var(--ed-ivory)]">{m.value}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </FadeIn>
 
             {/* Inquiry CTA */}
-            <div className="bg-[#0E1013] border border-[#FFD21A]/40 p-6 shadow-xl space-y-4 text-center">
-              <h3 className="text-lg font-bold text-white uppercase">
-                {t.projects.similarProjectCta}
-              </h3>
-              <p className="text-xs text-gray-300 leading-relaxed">
-                {t.projects.similarProjectDesc}
-              </p>
-              <button
-                onClick={onOpenContact}
-                className="w-full rounded-full bg-[#FFD21A] py-3.5 text-xs font-bold uppercase tracking-wider text-black shadow-[0_0_20px_rgba(255,210,26,0.25)] transition-all hover:bg-[#F0C413]"
-              >
-                {t.projects.contactEngineer} →
-              </button>
-            </div>
-
+            <FadeIn delay={0.25}>
+              <div className="mt-12 lg:mt-16">
+                <EdHairline amber />
+                <h3 className="ed-display-sm font-display text-ivory mt-8">
+                  {t.projects.similarProjectCta}
+                </h3>
+                <p className="text-xs text-mute mt-4 leading-relaxed">
+                  {t.projects.similarProjectDesc}
+                </p>
+                <div className="mt-7">
+                  <EdButton arrow onClick={onOpenContact}>
+                    {t.projects.contactEngineer}
+                  </EdButton>
+                </div>
+              </div>
+            </FadeIn>
           </div>
-
         </div>
 
-        {/* Products Used in this Project */}
-        {usedProducts.length > 0 && (
-          <div className="mt-12 pt-10 hairline-t">
-            <h2 className="text-xl font-bold text-white uppercase tracking-wider mb-6">
-              {t.projects.systemsUsedTitle}
-            </h2>
+        {/* Gallery — large architectural compositions */}
+        {project.gallery && project.gallery.length > 0 && (
+          <div className="mb-24">
+            <FadeIn>
+              <div className="flex items-end justify-between mb-10">
+                <h2 className="ed-display-md font-display text-ivory">
+                  {currentLang === 'az' ? 'layihə' : currentLang === 'ru' ? 'проект' : 'project'}
+                  <br />
+                  <span className="text-soft">{currentLang === 'az' ? 'qalereyası' : currentLang === 'ru' ? 'галерея' : 'gallery'}</span>
+                </h2>
+                <span className="font-mono-tech text-xs text-mute">{project.gallery.length} foto</span>
+              </div>
+            </FadeIn>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {usedProducts.map((prod) => (
-                <div
-                  key={prod.id}
-                  onClick={() => onNavigate('catalog', prod.slug)}
-                  className="group bg-[#0E1013] border border-white/10 overflow-hidden cursor-pointer hover:border-[#FFD21A] transition-all p-4 flex flex-col justify-between"
-                >
-                  <div className="aspect-[4/3] bg-[#08090A] overflow-hidden mb-3">
-                    <img src={prod.image} alt={prod.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-white uppercase group-hover:text-[#FFD21A] transition-colors">{prod.name}</h3>
-                    <div className="text-[11px] font-mono text-gray-400 mt-0.5">{prod.code}</div>
-                  </div>
-                  <div className="pt-3 mt-3 hairline-t flex items-center justify-between text-xs font-mono text-[#FFD21A]">
-                    <span>{t.projects.viewInCatalog}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </div>
-                </div>
+            <div className="space-y-6 lg:space-y-8">
+              {project.gallery.map((img, idx) => (
+                <FadeIn key={idx} delay={0.05 * Math.min(idx, 4)}>
+                  <button
+                    onClick={() => setLightboxImg(img)}
+                    className={`group relative w-full overflow-hidden cursor-zoom-in ${
+                      idx % 3 === 0 ? 'aspect-[16/9]' : 'aspect-[4/3] md:w-3/4'
+                    } ${idx % 3 === 1 ? 'md:ml-auto' : ''} ${idx % 3 === 2 ? 'md:w-3/4' : ''}`}
+                  >
+                    <img
+                      src={img}
+                      alt={`Gallery ${idx + 1}`}
+                      loading="lazy"
+                      className="w-full h-full object-cover transition-transform duration-[1100ms] group-hover:scale-[1.03]"
+                    />
+                  </button>
+                </FadeIn>
               ))}
             </div>
           </div>
         )}
 
-        {/* Fullscreen Lightbox Modal */}
-        {lightboxImg && (
-          <div 
-            onClick={() => setLightboxImg(null)}
-            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out"
-          >
-            <div className="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-              <button
-                onClick={() => setLightboxImg(null)}
-                className="absolute -top-12 right-0 text-white/70 hover:text-white p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-              <img
-                src={lightboxImg}
-                alt="Full preview"
-                className="max-h-[85vh] max-w-full object-contain border border-white/10 shadow-2xl"
-              />
+        {/* Systems used */}
+        {usedProducts.length > 0 && (
+          <div>
+            <FadeIn>
+              <h2 className="ed-display-md font-display text-ivory mb-12">
+                {currentLang === 'az' ? 'istifadə olunan' : currentLang === 'ru' ? 'использованные' : 'systems'}
+                <br />
+                <span className="text-soft">{currentLang === 'az' ? 'sistemlər' : currentLang === 'ru' ? 'системы' : 'used'}</span>
+              </h2>
+            </FadeIn>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-14">
+              {usedProducts.map((prod, i) => (
+                <FadeIn key={prod.id} delay={0.06 * i}>
+                  <EdProductCard
+                    product={prod}
+                    currentLang={currentLang}
+                    onNavigate={onNavigate}
+                    exploreLabel={t.projects.viewInCatalog}
+                  />
+                </FadeIn>
+              ))}
             </div>
           </div>
         )}
-
       </div>
+
+      {/* Lightbox */}
+      {lightboxImg && (
+        <div
+          onClick={() => setLightboxImg(null)}
+          className="fixed inset-0 z-[100] bg-[#141412]/98 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out animate-fadeIn"
+        >
+          <div className="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setLightboxImg(null)}
+              className="absolute -top-12 right-0 text-[var(--ed-soft)] hover:text-amber-warm p-2 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img
+              src={lightboxImg}
+              alt="Full preview"
+              className="max-h-[85vh] max-w-full object-contain"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

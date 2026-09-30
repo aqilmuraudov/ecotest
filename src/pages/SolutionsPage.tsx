@@ -1,20 +1,13 @@
 import React, { useState } from 'react';
-import { Language, Solution } from '../types';
+import { Language } from '../types';
 import { translations } from '../data/translations';
 import { solutions } from '../data/solutions';
 import { products } from '../data/products';
 import { projects } from '../data/projects';
-import { 
-  Building, 
-  Briefcase, 
-  Hotel, 
-  Home, 
-  CheckCircle2, 
-  ArrowRight, 
-  LampCeiling,
-  Layers, 
-  MessageSquare 
-} from 'lucide-react';
+import { FadeIn } from '../components/ui/FadeIn';
+import { EdButton, EdLink, EdHairline } from '../components/ed/EditorialUI';
+import { EdProductCard } from '../components/ed/EdProductCard';
+import { ArrowRight } from 'lucide-react';
 
 interface SolutionsPageProps {
   currentLang: Language;
@@ -30,217 +23,211 @@ export const SolutionsPage: React.FC<SolutionsPageProps> = ({
   initialSlug
 }) => {
   const t = translations[currentLang];
-  
+
   const defaultSolution = solutions.find(s => s.slug === initialSlug) || solutions[0];
   const [activeSolutionId, setActiveSolutionId] = useState<string>(defaultSolution.id);
+  const [hoveredImage, setHoveredImage] = useState<string | null>(null);
 
   const currentSolution = solutions.find(s => s.id === activeSolutionId) || solutions[0];
 
-  const recommendedProds = products.filter(p => 
+  const recommendedProds = products.filter(p =>
     currentSolution.recommendedProductIds.includes(p.id)
   );
 
-  const relatedProjects = projects.filter(p => 
+  const relatedProjects = projects.filter(p =>
     currentSolution.projectIds?.includes(p.id)
   );
 
-  const icons = {
-    commercial: <Building className="w-5 h-5 stroke-[1.5]" />,
-    office: <Briefcase className="w-5 h-5 stroke-[1.5]" />,
-    hospitality: <Hotel className="w-5 h-5 stroke-[1.5]" />,
-    residential: <Home className="w-5 h-5 stroke-[1.5]" />
-  };
-
   return (
-    <div className="liquid-page min-h-screen text-[#F5F5F5] pt-28 pb-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Page Header */}
-        <div className="liquid-surface p-6 sm:p-10 mb-10">
-          <div className="flex items-center space-x-2 text-xs font-mono uppercase text-gray-400 mb-3">
-            <button onClick={() => onNavigate('home')} className="hover:text-[#FFD21A] transition-colors">
-              {t.nav.home}
-            </button>
-            <span>/</span>
-            <span className="text-[#FFD21A]">{t.nav.solutions}</span>
-          </div>
+    <div className="bg-[var(--ed-bg)] text-[var(--ed-ivory)] pt-32 pb-24">
+      <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
 
-          <div className="max-w-2xl space-y-3">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white uppercase tracking-tight">
-              {t.solutions.title}
+        {/* Header */}
+        <div className="mb-16">
+          <FadeIn>
+            <p className="font-micro text-amber-warm mb-5">03 — {t.nav.solutions}</p>
+            <h1 className="ed-display-lg font-display text-ivory">
+              {currentLang === 'az' ? 'işıq' : currentLang === 'ru' ? 'световые' : 'lighting'}
+              <br />
+              <span className="text-soft">{currentLang === 'az' ? 'həlləri' : currentLang === 'ru' ? 'решения' : 'solutions'}</span>
             </h1>
-            <p className="text-sm sm:text-base text-gray-300 font-normal leading-relaxed">
+            <p className="text-sm text-mute mt-6 max-w-lg leading-relaxed">
               {t.solutions.subtitle}
             </p>
-          </div>
+          </FadeIn>
+        </div>
 
-          {/* Solution Selector Tabs */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-8">
-            {solutions.map((sol) => {
+        {/* Numbered solution list — hover reveals image */}
+        <div className="mb-24">
+          <div className="border-t border-[var(--ed-line)]">
+            {solutions.map((sol, i) => {
               const isActive = activeSolutionId === sol.id;
               return (
-                <button
-                  key={sol.id}
-                  onClick={() => setActiveSolutionId(sol.id)}
-                  className={`flex flex-col justify-between rounded-2xl border p-4 text-left transition-all ${
-                    isActive 
-                      ? 'bg-[#18191E] border-[#FFD21A] ring-1 ring-[#FFD21A] shadow-[0_0_20px_rgba(255,210,26,0.2)]' 
-                      : 'bg-black/40 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
-                  }`}
-                >
-                  <div className={`p-2 w-fit mb-3 ${isActive ? 'bg-[#FFD21A] text-black' : 'bg-white/5 text-gray-300'}`}>
-                    {icons[sol.id as keyof typeof icons] || <LampCeiling className="w-5 h-5 stroke-[1.5]" />}
-                  </div>
-                  <div>
-                    <h3 className={`text-xs sm:text-sm font-bold uppercase tracking-wide font-mono ${isActive ? 'text-[#FFD21A]' : 'text-white'}`}>
-                      {sol.title[currentLang]}
-                    </h3>
-                  </div>
-                </button>
+                <FadeIn key={sol.id} delay={0.04 * i}>
+                  <button
+                    onClick={() => { setActiveSolutionId(sol.id); setHoveredImage(sol.image); }}
+                    onMouseEnter={() => setHoveredImage(sol.image)}
+                    className="group w-full flex items-center justify-between py-7 lg:py-9 border-b border-[var(--ed-line)] text-left relative overflow-hidden"
+                  >
+                    {/* Warm sweep on hover */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[rgba(245,166,35,0.05)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+
+                    <div className="flex items-baseline gap-8 lg:gap-14 relative z-10">
+                      <span className={`font-mono-tech text-xs transition-colors ${isActive ? 'text-amber-warm' : 'text-mute'}`}>
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <span className={`ed-display-sm font-display transition-colors duration-300 ${
+                        isActive ? 'text-amber-warm' : 'text-ivory group-hover:text-amber-warm'
+                      }`}>
+                        {sol.title[currentLang]}
+                      </span>
+                    </div>
+
+                    <ArrowRight className={`w-5 h-5 relative z-10 transition-all duration-300 ${
+                      isActive ? 'text-amber-warm translate-x-1' : 'text-mute group-hover:text-amber-warm group-hover:translate-x-1'
+                    }`} />
+                  </button>
+                </FadeIn>
               );
             })}
           </div>
+
+          {/* Hover image preview (desktop) */}
+          {hoveredImage && (
+            <div className="hidden lg:block mt-8 aspect-[21/9] overflow-hidden">
+              <img
+                src={hoveredImage}
+                alt={currentSolution.title[currentLang]}
+                className="w-full h-full object-cover animate-fadeIn"
+              />
+            </div>
+          )}
         </div>
 
-        {/* Main Solution Showcase */}
-        <div className="liquid-surface overflow-hidden p-6 sm:p-10 mb-12">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-            
-            {/* Left Content */}
-            <div className="lg:col-span-7 space-y-6">
-              <div>
-                <span className="text-xs font-mono font-bold uppercase tracking-widest text-[#FFD21A]">
-                  Memarlıq Həlli
-                </span>
-                <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight mt-1">
-                  {currentSolution.title[currentLang]}
-                </h2>
-                <p className="text-base text-gray-300 mt-2 font-normal">
-                  {currentSolution.subtitle[currentLang]}
-                </p>
-              </div>
-
-              <p className="text-xs sm:text-sm text-gray-300 leading-relaxed font-mono">
+        {/* Active solution detail */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+          <div className="lg:col-span-7">
+            <FadeIn>
+              <p className="font-micro text-amber-warm mb-5">
+                {String(solutions.findIndex(s => s.id === currentSolution.id) + 1).padStart(2, '0')} — {currentSolution.title[currentLang]}
+              </p>
+              <h2 className="ed-display-md font-display text-ivory">
+                {currentSolution.subtitle[currentLang]}
+              </h2>
+              <p className="text-sm text-soft leading-relaxed mt-8">
                 {currentSolution.description[currentLang]}
               </p>
+            </FadeIn>
 
-              {/* Key Features List */}
-              <div className="space-y-3 pt-2">
-                <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-white">
-                  {t.solutions.keyFeaturesTitle}
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FadeIn delay={0.12}>
+              <div className="mt-12">
+                <p className="font-micro text-[9px] text-mute mb-6">{t.solutions.keyFeaturesTitle}</p>
+                <div className="space-y-0 border-t border-[var(--ed-line)]">
                   {currentSolution.keyFeatures[currentLang].map((feat, idx) => (
-                    <div key={idx} className="liquid-card flex items-start gap-2.5 p-3 text-xs text-gray-300">
-                      <CheckCircle2 className="w-4 h-4 text-[#FFD21A] flex-shrink-0 mt-0.5" />
-                      <span>{feat}</span>
+                    <div key={idx} className="flex items-start gap-6 py-4 border-b border-[var(--ed-line)]">
+                      <span className="font-mono-tech text-[10px] text-mute pt-0.5">{String(idx + 1).padStart(2, '0')}</span>
+                      <span className="text-sm text-soft leading-relaxed">{feat}</span>
                     </div>
                   ))}
                 </div>
               </div>
+            </FadeIn>
 
-              {/* Consultation CTA */}
-              <div className="pt-4 flex flex-wrap items-center gap-4">
-                <button
-                  onClick={onOpenContact}
-                  className="flex items-center gap-2 bg-[#FFD21A] text-black font-bold text-xs uppercase tracking-wider px-6 py-3.5 hover:bg-[#F0C413] transition-all shadow-[0_0_20px_rgba(255,210,26,0.25)] cursor-pointer"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  <span>{t.solutions.consultationBtn}</span>
-                </button>
-                <button
-                  onClick={() => onNavigate('configurator')}
-                  className="text-xs font-mono font-bold text-gray-300 hover:text-white border border-white/15 px-6 py-3.5 hover:bg-white/5 transition-colors uppercase tracking-wider"
-                >
+            <FadeIn delay={0.18}>
+              <div className="mt-12 flex flex-wrap items-center gap-6">
+                <EdButton arrow onClick={onOpenContact}>
+                  {t.solutions.consultationBtn}
+                </EdButton>
+                <EdLink onClick={() => onNavigate('configurator')}>
                   {t.catalog.configureNow}
-                </button>
+                </EdLink>
               </div>
-            </div>
+            </FadeIn>
+          </div>
 
-            {/* Right Large Atmospheric Image */}
-            <div className="lg:col-span-5 aspect-[4/3] overflow-hidden border border-white/10 relative shadow-xl">
-              <img 
-                src={currentSolution.image} 
-                alt={currentSolution.title[currentLang]} 
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-6">
-                <div className="text-xs font-mono font-bold uppercase tracking-wider text-[#FFD21A]">
-                  Ecolife • {t.whyUs.imageTagline}
-                </div>
+          {/* Solution image */}
+          <div className="lg:col-span-5">
+            <FadeIn direction="left" delay={0.1}>
+              <div className="relative aspect-[4/3] overflow-hidden">
+                <img
+                  src={currentSolution.image}
+                  alt={currentSolution.title[currentLang]}
+                  className="w-full h-full object-cover"
+                />
               </div>
-            </div>
-
+              <span className="font-micro text-[9px] text-mute block mt-4">
+                ECOLIFE — {currentSolution.title[currentLang]}
+              </span>
+            </FadeIn>
           </div>
         </div>
 
-        {/* Recommended Products for this Solution */}
+        {/* Recommended products */}
         {recommendedProds.length > 0 && (
-          <div className="mb-14">
-            <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-6">
-              {t.solutions.recommendedSystemsTitle}
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {recommendedProds.map((prod) => (
-                <div
-                  key={prod.id}
-                  onClick={() => onNavigate('catalog', prod.slug)}
-                  className="liquid-card group overflow-hidden cursor-pointer hover:border-[#FFD21A] transition-all p-4 flex flex-col justify-between hover:-translate-y-1"
-                >
-                  <div className="aspect-[4/3] bg-[#08090A] overflow-hidden mb-3">
-                    <img src={prod.image} alt={prod.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-white uppercase group-hover:text-[#FFD21A] transition-colors">{prod.name}</h4>
-                    <div className="text-[11px] font-mono text-gray-400 mt-0.5">{prod.specs.dimensions}</div>
-                  </div>
-                  <div className="pt-3 mt-3 hairline-t flex items-center justify-between text-xs font-mono text-[#FFD21A]">
-                    <span>{t.projects.viewInCatalog}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </div>
-                </div>
+          <div className="mt-28">
+            <FadeIn>
+              <h2 className="ed-display-md font-display text-ivory mb-12">
+                {currentLang === 'az' ? 'tövsiyə olunan' : currentLang === 'ru' ? 'рекомендуемые' : 'recommended'}
+                <br />
+                <span className="text-soft">{currentLang === 'az' ? 'sistemlər' : currentLang === 'ru' ? 'системы' : 'systems'}</span>
+              </h2>
+            </FadeIn>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-14">
+              {recommendedProds.slice(0, 3).map((prod, i) => (
+                <FadeIn key={prod.id} delay={0.06 * i}>
+                  <EdProductCard
+                    product={prod}
+                    currentLang={currentLang}
+                    onNavigate={onNavigate}
+                    exploreLabel={t.projects.viewInCatalog}
+                  />
+                </FadeIn>
               ))}
             </div>
           </div>
         )}
 
-        {/* Related Case Studies */}
+        {/* Related case studies */}
         {relatedProjects.length > 0 && (
-          <div>
-            <h3 className="text-xl font-bold text-white uppercase tracking-wider mb-6">
-              {t.solutions.realProjectsTitle}
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {relatedProjects.map((proj) => (
-                <div
-                  key={proj.id}
-                  onClick={() => onNavigate('projects', proj.slug)}
-                  className="liquid-card group overflow-hidden cursor-pointer hover:border-[#FFD21A] transition-all p-6 flex flex-col sm:flex-row gap-6 items-center hover:-translate-y-1"
-                >
-                  <div className="w-full sm:w-48 aspect-[4/3] overflow-hidden flex-shrink-0 bg-black/40">
-                    <img src={proj.coverImage} alt={proj.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                  </div>
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#FFD21A]">
-                      {proj.location}
-                    </span>
-                    <h4 className="text-base font-bold text-white uppercase group-hover:text-[#FFD21A] transition-colors">
-                      {proj.title}
-                    </h4>
-                    <p className="text-xs text-gray-400 line-clamp-2">
-                      {proj.shortDescription[currentLang]}
-                    </p>
-                    <div className="pt-2 text-xs font-mono font-bold text-[#FFD21A] flex items-center gap-1">
-                      <span>{t.solutions.inspectProject}</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+          <div className="mt-28">
+            <FadeIn>
+              <h2 className="ed-display-md font-display text-ivory mb-12">
+                {currentLang === 'az' ? 'real' : currentLang === 'ru' ? 'реальные' : 'real'}
+                <br />
+                <span className="text-soft">{currentLang === 'az' ? 'layihələr' : currentLang === 'ru' ? 'проекты' : 'projects'}</span>
+              </h2>
+            </FadeIn>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+              {relatedProjects.map((proj, i) => (
+                <FadeIn key={proj.id} delay={0.08 * i}>
+                  <button
+                    onClick={() => onNavigate('projects', proj.slug)}
+                    className="group relative w-full aspect-[4/3] overflow-hidden text-left"
+                  >
+                    <img
+                      src={proj.coverImage}
+                      alt={proj.title}
+                      loading="lazy"
+                      className="w-full h-full object-cover transition-transform duration-[1100ms] group-hover:scale-[1.05]"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#1d1d1b]/85 via-transparent to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-7 lg:p-8 flex items-end justify-between gap-4">
+                      <div>
+                        <h3 className="ed-display-sm font-display text-ivory">
+                          {proj.title}
+                        </h3>
+                        <span className="font-micro text-[9px] text-soft mt-2 block">{proj.location}</span>
+                      </div>
+                      <ArrowRight className="w-5 h-5 text-amber-warm opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
                     </div>
-                  </div>
-                </div>
+                  </button>
+                </FadeIn>
               ))}
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

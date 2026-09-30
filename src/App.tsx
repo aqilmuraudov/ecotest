@@ -1,35 +1,57 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Language, Product } from './types';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { Language, Theme, Product } from './types';
 import { parseUrlToRoute, buildRoutePath } from './utils/router';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
-import { AmbientLightingBackdrop } from './components/AmbientLightingBackdrop';
 import { ContactModal } from './components/ContactModal';
 import { SearchModal } from './components/SearchModal';
 import { Toast } from './components/Toast';
-import { SeoManager } from './components/SeoManager';
 
 // Pages
-import { HomePageLiquid as HomePage } from './pages/HomePageLiquid';
-import { CatalogPage } from './pages/CatalogPage';
-import { ProductDetailPage } from './pages/ProductDetailPage';
-import { ProjectsPage } from './pages/ProjectsPage';
-import { ProjectDetailPage } from './pages/ProjectDetailPage';
-import { SolutionsPage } from './pages/SolutionsPage';
-import { ConfiguratorPage } from './pages/ConfiguratorPage';
-import { BlogPage } from './pages/BlogPage';
-import { AdminPage } from './pages/AdminPage';
-import { AboutPage } from './pages/AboutPage';
-import { ContactPage } from './pages/ContactPage';
+import { HomePage } from './pages/HomePage';
+const CatalogPage = lazy(() => import('./pages/CatalogPage').then(module => ({ default: module.CatalogPage })));
+const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage').then(module => ({ default: module.ProductDetailPage })));
+const ProjectsPage = lazy(() => import('./pages/ProjectsPage').then(module => ({ default: module.ProjectsPage })));
+const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage').then(module => ({ default: module.ProjectDetailPage })));
+const SolutionsPage = lazy(() => import('./pages/SolutionsPage').then(module => ({ default: module.SolutionsPage })));
+const ConfiguratorPage = lazy(() => import('./pages/ConfiguratorPage').then(module => ({ default: module.ConfiguratorPage })));
+const BlogPage = lazy(() => import('./pages/BlogPage').then(module => ({ default: module.BlogPage })));
+const AdminPage = lazy(() => import('./pages/AdminPage').then(module => ({ default: module.AdminPage })));
+const AboutPage = lazy(() => import('./pages/AboutPage').then(module => ({ default: module.AboutPage })));
+const ContactPage = lazy(() => import('./pages/ContactPage').then(module => ({ default: module.ContactPage })));
 import { useData } from './context/DataContext';
 
 export default function App() {
   const { products } = useData();
+  // Theme State with localStorage recovery (Default is 'dark')
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved = localStorage.getItem('ecolife_theme');
+    return saved === 'light' ? 'light' : 'dark';
+  });
+
   // Language State with localStorage recovery
   const [currentLang, setCurrentLang] = useState<Language>(() => {
     const saved = localStorage.getItem('ecolife_lang');
     return (saved === 'en' || saved === 'ru') ? saved : 'az';
   });
+
+  // Sync theme with HTML document
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+    localStorage.setItem('ecolife_theme', theme);
+  }, [theme]);
+
+  const handleToggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   // Navigation State initialized from actual browser URL
   const [activePage, setActivePage] = useState<string>(() => {
@@ -45,9 +67,6 @@ export default function App() {
     }
     return undefined;
   });
-  const seoProduct = activePage === 'catalog' && pageParam
-    ? products.find(product => !product.archived && (product.slug === pageParam || product.id === pageParam))
-    : undefined;
 
   // Listen to Browser Back / Forward buttons (popstate)
   useEffect(() => {
@@ -67,7 +86,6 @@ export default function App() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState<boolean>(false);
   const [selectedProductForInquiry, setSelectedProductForInquiry] = useState<Product | null>(null);
   const [configSummaryForInquiry, setConfigSummaryForInquiry] = useState<string | null>(null);
-  const [configPdfForInquiry, setConfigPdfForInquiry] = useState<File | null>(null);
 
   // Download Toast State
   const [toastMessage, setToastMessage] = useState<string>('');
@@ -106,21 +124,18 @@ export default function App() {
   const handleOpenContact = () => {
     setSelectedProductForInquiry(null);
     setConfigSummaryForInquiry(null);
-    setConfigPdfForInquiry(null);
     setIsContactModalOpen(true);
   };
 
   const handleRequestProductQuote = (product: Product) => {
     setSelectedProductForInquiry(product);
     setConfigSummaryForInquiry(null);
-    setConfigPdfForInquiry(null);
     setIsContactModalOpen(true);
   };
 
-  const handleOpenInquiryWithSummary = (summary: string, pdfFile?: File) => {
+  const handleOpenInquiryWithSummary = (summary: string) => {
     setSelectedProductForInquiry(null);
     setConfigSummaryForInquiry(summary);
-    setConfigPdfForInquiry(pdfFile || null);
     setIsContactModalOpen(true);
   };
 
@@ -142,7 +157,7 @@ export default function App() {
         );
 
       case 'catalog': {
-        const isProduct = pageParam && products.some(p => !p.archived && (p.slug === pageParam || p.id === pageParam));
+        const isProduct = pageParam && products.some(p => p.slug === pageParam || p.id === pageParam);
         if (isProduct) {
           return (
             <ProductDetailPage
@@ -249,13 +264,13 @@ export default function App() {
   };
 
   return (
-    <div className="ecolife-liquid-canvas min-h-screen text-[#F5F5F5] selection:bg-[#FFD21A] selection:text-black font-['Montserrat',sans-serif]">
-      <SeoManager page={activePage} param={pageParam} language={currentLang} product={seoProduct} />
-      {activePage !== 'admin' && <AmbientLightingBackdrop />}
+    <div className="min-h-screen bg-[var(--ed-bg)] text-[var(--ed-ivory)] selection:bg-[var(--ed-amber)] selection:text-[#1d1d1b]">
       {/* Global Header */}
       <Header
         currentLang={currentLang}
         onLanguageChange={handleLanguageChange}
+        currentTheme={theme}
+        onToggleTheme={handleToggleTheme}
         activePage={activePage}
         onNavigate={handleNavigate}
         onOpenContact={handleOpenContact}
@@ -263,13 +278,16 @@ export default function App() {
       />
 
       {/* Main Routed Page Content */}
-      <main className={`relative min-h-screen ${activePage === 'admin' ? '' : 'z-10 liquid-public-pages'}`}>
-        {renderPage()}
+      <main className="min-h-screen">
+        <Suspense fallback={<div className="min-h-screen bg-[var(--ed-bg)]" aria-label="Səhifə yüklənir" />}>
+          {renderPage()}
+        </Suspense>
       </main>
 
       {/* Global Footer */}
       <Footer
         currentLang={currentLang}
+        currentTheme={theme}
         onNavigate={handleNavigate}
         onOpenContact={handleOpenContact}
       />
@@ -285,7 +303,6 @@ export default function App() {
         currentLang={currentLang}
         prefilledProduct={selectedProductForInquiry}
         configSummary={configSummaryForInquiry}
-        configPdf={configPdfForInquiry}
       />
 
       {/* Global Search Modal */}

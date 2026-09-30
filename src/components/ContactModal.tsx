@@ -3,8 +3,6 @@ import { Language, Product } from '../types';
 import { translations } from '../data/translations';
 import { useData } from '../context/DataContext';
 import { getLocalizedText } from '../utils/lang';
-import { SITE_CONFIG } from '../config/siteConfig';
-import { uploadFile } from '../lib/storage';
 import {
   sanitizeEmail,
   sanitizePhone,
@@ -12,7 +10,7 @@ import {
   checkRateLimit,
   getClientFingerprint,
 } from '../utils/sanitize';
-import { X, CheckCircle, Send, Phone, Layers, ShieldCheck, Box, Sliders, FileDown } from 'lucide-react';
+import { X, CheckCircle, Send, Phone, Layers, ShieldCheck, Box, Sliders } from 'lucide-react';
 
 interface ContactModalProps {
   isOpen: boolean;
@@ -20,7 +18,6 @@ interface ContactModalProps {
   currentLang: Language;
   prefilledProduct?: Product | null;
   configSummary?: string | null;
-  configPdf?: File | null;
 }
 
 export const ContactModal: React.FC<ContactModalProps> = ({
@@ -28,8 +25,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   onClose,
   currentLang,
   prefilledProduct,
-  configSummary,
-  configPdf
+  configSummary
 }) => {
   const t = translations[currentLang];
   const { addInquiry } = useData();
@@ -46,13 +42,11 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Sync default message and state when modal opens or prefilled item changes
   React.useEffect(() => {
     if (isOpen) {
       setIsSubmitted(false);
-      setSubmitError(null);
       let defaultMsg = '';
       if (prefilledProduct) {
         defaultMsg = currentLang === 'az'
@@ -109,14 +103,6 @@ export const ContactModal: React.FC<ContactModalProps> = ({
     setIsSubmitting(true);
     try {
       const fingerprint = getClientFingerprint();
-      let configPdfUrl: string | undefined;
-      if (configPdf) {
-        const upload = await uploadFile(configPdf, 'inquiries');
-        if (!upload.success || !upload.url) {
-          throw new Error(upload.error || 'Konfiqurasiya PDF-i yüklənə bilmədi.');
-        }
-        configPdfUrl = upload.url;
-      }
       await addInquiry({
         name: `${cleanFirstName} ${cleanLastName}`.trim() || 'Adsız Müştəri',
         email: cleanEmail,
@@ -130,16 +116,13 @@ export const ContactModal: React.FC<ContactModalProps> = ({
         productCategory: prefilledProduct?.category,
         productSpecs: prefilledProduct?.specs,
         configSummary: configSummary ? sanitizeText(configSummary, 1000) : undefined,
-        configPdfUrl,
-        configPdfName: configPdf?.name,
         ipHash: fingerprint,
       } as any);
-      setIsSubmitted(true);
     } catch (err) {
       console.error('Failed to submit inquiry:', err);
-      setSubmitError(err instanceof Error ? err.message : 'Sorğu göndərilə bilmədi. Yenidən cəhd edin.');
     } finally {
       setIsSubmitting(false);
+      setIsSubmitted(true);
     }
   };
 
@@ -149,15 +132,18 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#141412]/92 backdrop-blur-md animate-fadeIn">
       <div 
         id="ecolife-inquiry-modal"
-        className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-white/20 bg-[#0E1013] p-5 text-[#F5F5F5] shadow-2xl sm:p-8"
+        className="relative w-full max-w-2xl bg-[#24231f] border border-[var(--ed-line)] rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.85)] p-6 sm:p-8 max-h-[92vh] overflow-y-auto text-[var(--ed-ivory)] transition-all"
       >
+        {/* Top subtle linear LED light accent */}
+        <div className="absolute top-0 left-12 right-12 h-[2px] bg-gradient-to-r from-transparent via-[#FFD21A]/60 to-transparent pointer-events-none" />
+
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 z-20 rounded-full border border-white/10 bg-white/[.06] p-2 text-gray-400 transition-all hover:bg-white/15 hover:text-white"
+          className="absolute top-4 right-4 text-[var(--ed-mute)] hover:text-amber-warm p-2 rounded-full hover:bg-white/5 transition-colors z-20"
           aria-label="Close"
         >
           <X className="w-5 h-5" />
@@ -165,24 +151,24 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
         {isSubmitted ? (
           <div className="py-12 text-center space-y-5">
-            <div className="w-16 h-16 bg-[#FFD21A]/10 border border-[#FFD21A] text-[#FFD21A] flex items-center justify-center mx-auto">
+            <div className="w-16 h-16 bg-[rgba(245,166,35,0.1)] border border-[var(--ed-amber)] text-amber-warm rounded-full flex items-center justify-center mx-auto">
               <CheckCircle className="w-8 h-8" />
             </div>
-            <h3 className="text-2xl font-bold text-white uppercase font-mono">
+            <h3 className="ed-display-sm font-display text-ivory">
               {currentLang === 'az' ? 'Sorğunuz Uğurla Qəbul Edildi!' : currentLang === 'ru' ? 'Запрос успешно отправлен!' : 'Inquiry Successfully Received!'}
             </h3>
-            <p className="text-sm text-gray-300 max-w-md mx-auto">
+            <p className="text-sm text-soft max-w-md mx-auto">
               {t.contact.form.success}
             </p>
             {prefilledProduct && (
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 text-xs text-[#FFD21A] font-mono">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-[var(--ed-line)] text-xs text-amber-warm font-mono-tech">
                 <span>{prefilledProduct.name} [{prefilledProduct.code}]</span>
               </div>
             )}
             <div className="pt-4">
               <button
                 onClick={handleReset}
-                className="bg-[#FFD21A] text-black font-bold text-xs uppercase tracking-wider px-8 py-3 hover:bg-[#F0C413] transition-colors"
+                className="ed-btn-primary"
               >
                 {currentLang === 'az' ? 'Pəncərəni Bağla' : currentLang === 'ru' ? 'Закрыть' : 'Close Window'}
               </button>
@@ -191,40 +177,41 @@ export const ContactModal: React.FC<ContactModalProps> = ({
         ) : (
           <div>
             {/* Header */}
-            <div className="space-y-1.5 pb-4 border-b border-white/10">
+            <div className="space-y-2 pb-5 border-b border-[var(--ed-line)]">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-mono font-bold uppercase tracking-widest text-[#FFD21A] bg-[#FFD21A]/10 px-2.5 py-0.5 border border-[#FFD21A]/30">
+                <span className="font-micro text-[9px] text-amber-warm flex items-center gap-1.5">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--ed-amber)]" />
                   {t.nav.writeUs}
                 </span>
                 {prefilledProduct && (
-                  <span className="text-xs text-gray-400 font-mono">
+                  <span className="text-[11px] text-mute font-mono-tech">
                     [{prefilledProduct.code}]
                   </span>
                 )}
               </div>
-              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight uppercase">
+              <h2 className="ed-display-sm font-display text-ivory tracking-tight">
                 {prefilledProduct 
                   ? `${prefilledProduct.name} - ${t.productDetail.requestQuote}`
                   : configSummary 
                     ? t.configurator.sendInquiry 
                     : t.contact.title}
               </h2>
-              <p className="text-xs text-gray-400 font-mono">
+              <p className="text-xs text-mute font-light">
                 {t.contact.subtitle}
               </p>
             </div>
 
             {/* REAL SELECTED PRODUCT CARD PREVIEW */}
             {prefilledProduct && (
-              <div className="mt-4 p-3.5 sm:p-4 bg-[#08090A] border border-[#FFD21A]/30 flex flex-col sm:flex-row items-start sm:items-center gap-4 shadow-lg">
+              <div className="mt-4 p-4 bg-[#2b2a26] border border-[var(--ed-line)] rounded-xl flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all">
                 {/* Product Thumbnail */}
-                <div className="relative w-20 h-20 sm:w-24 sm:h-24 overflow-hidden bg-black/60 border border-white/10 flex-shrink-0 flex items-center justify-center">
+                <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-black/60 border border-white/10 flex-shrink-0 flex items-center justify-center">
                   <img
                     src={prefilledProduct.image || (prefilledProduct.gallery && prefilledProduct.gallery[0]) || 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=300&q=80'}
                     alt={prefilledProduct.name}
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute top-1 left-1 bg-black/80 px-1.5 py-0.5 text-[9px] font-mono text-[#FFD21A] font-bold">
+                  <div className="absolute top-1 left-1 bg-black/80 px-1.5 py-0.5 rounded text-[9px] font-mono-tech text-[#FFD21A] font-bold">
                     {prefilledProduct.code}
                   </div>
                 </div>
@@ -235,7 +222,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                     <h3 className="text-sm sm:text-base font-bold text-white uppercase tracking-tight truncate">
                       {prefilledProduct.name}
                     </h3>
-                    <span className="text-[10px] font-mono px-2 py-0.5 bg-white/10 text-gray-300">
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-white/10 text-gray-300">
                       {getLocalizedText(prefilledProduct.categoryName, currentLang)}
                     </span>
                   </div>
@@ -247,22 +234,22 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                   {/* Spec badges */}
                   <div className="flex flex-wrap gap-1.5 pt-1 text-[10px] font-mono text-gray-300">
                     {prefilledProduct.specs.dimensions && (
-                      <span className="px-2 py-0.5 bg-black/40 border border-white/5 text-[#FFD21A]">
+                      <span className="px-2 py-0.5 rounded bg-black/40 border border-white/5 text-[#FFD21A]">
                         {prefilledProduct.specs.dimensions}
                       </span>
                     )}
                     {prefilledProduct.specs.mounting && (
-                      <span className="px-2 py-0.5 bg-black/40 border border-white/5 text-gray-300">
+                      <span className="px-2 py-0.5 rounded bg-black/40 border border-white/5 text-gray-300">
                         {prefilledProduct.specs.mounting}
                       </span>
                     )}
                     {prefilledProduct.specs.ipRating && (
-                      <span className="px-2 py-0.5 bg-black/40 border border-white/5 text-gray-300">
+                      <span className="px-2 py-0.5 rounded bg-black/40 border border-white/5 text-gray-300">
                         {prefilledProduct.specs.ipRating}
                       </span>
                     )}
                     {prefilledProduct.specs.power && (
-                      <span className="px-2 py-0.5 bg-black/40 border border-white/5 text-emerald-400">
+                      <span className="px-2 py-0.5 rounded bg-black/40 border border-white/5 text-emerald-400">
                         {prefilledProduct.specs.power}
                       </span>
                     )}
@@ -273,31 +260,22 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
             {/* Custom Configuration Summary Banner if from Configurator */}
             {!prefilledProduct && configSummary && (
-              <div className="mt-4 p-3.5 bg-[#08090A] border border-[#FFD21A]/30 space-y-1">
-                <div className="text-[11px] font-mono font-bold text-[#FFD21A] uppercase tracking-wider flex items-center gap-1.5">
+              <div className="mt-4 p-3.5 bg-[#16181F] border border-emerald-500/30 rounded-xl space-y-1">
+                <div className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
                   <Sliders className="w-3.5 h-3.5" />
                   <span>Xüsusi Konfiqurasiya</span>
                 </div>
                 <div className="text-xs font-mono text-gray-200 whitespace-pre-line leading-relaxed">
                   {configSummary}
                 </div>
-                {configPdf && (
-                  <div className="pt-2 flex items-center gap-2 text-[11px] font-mono text-emerald-300">
-                    <FileDown className="w-3.5 h-3.5" />
-                    <span>PDF hesabatı bu müraciətə əlavə ediləcək: {configPdf.name}</span>
-                  </div>
-                )}
               </div>
             )}
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-              {submitError && (
-                <p className="border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">{submitError}</p>
-              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+                  <label className="block font-micro text-[9px] text-mute mb-2">
                     {t.contact.form.firstName} *
                   </label>
                   <input
@@ -306,11 +284,11 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                     placeholder="Adınız"
-                    className="w-full bg-[#18191E] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#FFD21A] transition-colors"
+                    className="ed-input"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+                  <label className="block font-micro text-[9px] text-mute mb-2">
                     {t.contact.form.lastName}
                   </label>
                   <input
@@ -318,14 +296,14 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                     placeholder="Soyadınız"
-                    className="w-full bg-[#18191E] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#FFD21A] transition-colors"
+                    className="ed-input"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-1.5">
+                  <label className="block font-micro text-[9px] text-mute mb-2">
                     {t.contact.form.email} *
                   </label>
                   <input
@@ -334,11 +312,11 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="example@mail.com"
-                    className="w-full bg-[#08090A] border border-white/10 px-3.5 py-2.5 text-xs font-mono text-white focus:outline-none focus:border-[#FFD21A] transition-colors"
+                    className="ed-input"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-1.5">
+                  <label className="block font-micro text-[9px] text-mute mb-2">
                     {t.contact.form.phone} *
                   </label>
                   <input
@@ -347,14 +325,14 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="+994 50 000 00 00"
-                    className="w-full bg-[#08090A] border border-white/10 px-3.5 py-2.5 text-xs font-mono text-white focus:outline-none focus:border-[#FFD21A] transition-colors"
+                    className="ed-input"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-1.5">
+                  <label className="block font-micro text-[9px] text-mute mb-2">
                     {t.contact.form.company}
                   </label>
                   <input
@@ -362,17 +340,17 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                     value={formData.company}
                     onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                     placeholder="Memarlıq Bürosu / Şirkət"
-                    className="w-full bg-[#08090A] border border-white/10 px-3.5 py-2.5 text-xs font-mono text-white focus:outline-none focus:border-[#FFD21A] transition-colors"
+                    className="ed-input"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-1.5">
+                  <label className="block font-micro text-[9px] text-mute mb-2">
                     {t.contact.form.projectType}
                   </label>
                   <select
                     value={formData.projectType}
                     onChange={(e) => setFormData({ ...formData, projectType: e.target.value })}
-                    className="w-full bg-[#08090A] border border-white/10 px-3.5 py-2.5 text-xs font-mono text-white focus:outline-none focus:border-[#FFD21A] transition-colors"
+                    className="ed-input"
                   >
                     <option value="commercial">Ticarət & Retail</option>
                     <option value="office">Ofis & Biznes Mərkəzi</option>
@@ -384,7 +362,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-1.5">
+                <label className="block font-micro text-[9px] text-mute mb-2">
                   {t.contact.form.message} *
                 </label>
                 <textarea
@@ -393,23 +371,23 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                   placeholder="Layihənizin detallarını, tələb olunan metrajı və ya xüsusi qeydlərinizi daxil edin..."
-                  className="w-full bg-[#08090A] border border-white/10 px-3.5 py-2.5 text-xs font-mono text-white focus:outline-none focus:border-[#FFD21A] transition-colors resize-none"
+                  className="ed-input resize-none"
                 />
               </div>
 
               <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <a 
-                  href={SITE_CONFIG.phone.href}
-                  className="text-xs font-mono text-gray-400 hover:text-[#FFD21A] flex items-center gap-2 transition-colors"
+                  href="tel:+994504507007"
+                  className="text-xs text-mute hover:text-amber-warm flex items-center gap-2 transition-colors"
                 >
-                  <Phone className="w-3.5 h-3.5 text-[#FFD21A]" />
-                  <span>{SITE_CONFIG.phone.display}</span>
+                  <Phone className="w-3.5 h-3.5 text-amber-warm" />
+                  <span className="font-mono-tech">+994 50 450 70 07</span>
                 </a>
 
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#FFD21A] text-black font-bold text-xs uppercase tracking-wider px-8 py-3.5 hover:bg-[#F0C413] transition-all shadow-[0_0_20px_rgba(255,210,26,0.25)] disabled:opacity-50 cursor-pointer"
+                  className="ed-btn-primary w-full sm:w-auto justify-center disabled:opacity-50 cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
                   <span>{isSubmitting ? t.contact.form.submitting : t.contact.form.submit}</span>

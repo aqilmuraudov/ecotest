@@ -1,96 +1,47 @@
-/**
- * Cloudinary unsigned upload integration.
- *
- * This restores the original upload path: new product/blog/project images
- * are sent directly to Cloudinary (client-side, unsigned upload) instead of
- * Supabase Storage. Existing images already stored as Cloudinary URLs in
- * Supabase (in the `image`/`gallery` columns) are unaffected either way —
- * the app just renders whatever URL string is saved.
- *
- * Config is stored in localStorage so it can be changed from the Admin
- * Panel without a code edit (same pattern as getStorageBucketName/
- * setStorageBucketName in supabase.ts), defaulting to the values provided.
- */
+const ENV_CLOUD_NAME = import.meta.env?.VITE_CLOUDINARY_CLOUD_NAME as string | undefined;
+const ENV_UPLOAD_PRESET = import.meta.env?.VITE_CLOUDINARY_UPLOAD_PRESET as string | undefined;
 
-const CLOUDINARY_CONFIG_KEY = 'ecolife_cloudinary_config';
-const DEFAULT_CLOUD_NAME = 'sdektval';
-const DEFAULT_UPLOAD_PRESET = 'ecolife_preset';
+export const CLOUDINARY_CLOUD_NAME = ENV_CLOUD_NAME || localStorage.getItem('cloudinary_cloud_name') || '';
+export const CLOUDINARY_UPLOAD_PRESET = ENV_UPLOAD_PRESET || localStorage.getItem('cloudinary_upload_preset') || '';
 
-export interface CloudinaryConfig {
-  cloudName: string;
-  uploadPreset: string;
+export function isCloudinaryConfigured(): boolean {
+  return Boolean(CLOUDINARY_CLOUD_NAME && CLOUDINARY_UPLOAD_PRESET);
 }
 
-export function getCloudinaryConfig(): CloudinaryConfig {
-  try {
-    const saved = localStorage.getItem(CLOUDINARY_CONFIG_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed?.cloudName && parsed?.uploadPreset) return parsed;
-    }
-  } catch {
-    // fall through to defaults
+export function saveCloudinaryConfig(cloudName: string, uploadPreset: string) {
+  localStorage.setItem('cloudinary_cloud_name', cloudName.trim());
+  localStorage.setItem('cloudinary_upload_preset', uploadPreset.trim());
+  setTimeout(() => window.location.reload(), 500);
+}
+
+export async function uploadFileToCloudinary(file: File, folder: string = 'ecolife'): Promise<{ success: boolean; url?: string; error?: string }> {
+  if (!isCloudinaryConfigured()) {
+    return { success: false, error: 'Cloudinary API mlumatlar daxil edilmyib.' };
   }
-  return { cloudName: DEFAULT_CLOUD_NAME, uploadPreset: DEFAULT_UPLOAD_PRESET };
-}
 
-export function setCloudinaryConfig(config: CloudinaryConfig): void {
   try {
-    localStorage.setItem(CLOUDINARY_CONFIG_KEY, JSON.stringify(config));
-  } catch {
-    // ignore storage errors (private mode, quota, etc.)
-  }
-}
-
-/**
- * Upload a file directly to Cloudinary via an unsigned upload preset.
- * Mirrors the return shape of uploadFileToSupabase() in supabase.ts so
- * storage.ts can route between providers transparently.
- */
-export async function uploadFileToCloudinary(
-  file: File,
-  folder: string = 'products'
-): Promise<{ success: boolean; url?: string; path?: string; error?: string }> {
-  try {
-    if (file.size > 15 * 1024 * 1024) {
-      return { success: false, error: 'Faylın həcmi 15 MB-dan çox ola bilməz.' };
-    }
-
-    const { cloudName, uploadPreset } = getCloudinaryConfig();
-    if (!cloudName || !uploadPreset) {
-      return { success: false, error: 'Cloudinary Cloud Name və ya Upload Preset təyin olunmayıb.' };
-    }
-
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('upload_preset', uploadPreset);
-    formData.append('folder', `ecolife/${folder}`);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    formData.append('folder', folder);
 
-    const resourceType = file.type === 'application/pdf' ? 'raw' : file.type.startsWith('video/') ? 'video' : 'image';
-    const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
-      { method: 'POST', body: formData }
-    );
+    const response = await fetch("https://api.cloudinary.com/v1_1/" + CLOUDINARY_CLOUD_NAME + "/image/upload", {
+      method: 'POST',
+      body: formData,
+    });
 
     const data = await response.json();
 
     if (!response.ok) {
-      const message: string = data?.error?.message || 'Cloudinary yükləmə xətası.';
-      let hint = message;
-      if (message.toLowerCase().includes('preset')) {
-        hint = `Upload Preset "${uploadPreset}" tapılmadı və ya "Unsigned" rejimində deyil. Cloudinary panelində Settings -> Upload -> Upload presets bölməsindən yoxlayın.`;
-      } else if (message.toLowerCase().includes('cloud')) {
-        hint = `Cloud Name "${cloudName}" düzgün deyil. Cloudinary Dashboard-da Cloud Name-i yenidən yoxlayın.`;
-      }
-      return { success: false, error: hint };
+      return { success: false, error: data.error?.message || 'Cloudinary upload error' };
     }
 
-    return {
-      success: true,
-      url: data.secure_url,
-      path: data.public_id
+    return { 
+      success: true, 
+      url: data.secure_url 
     };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Cloudinary yükləmə zamanı gözlənilməz xəta baş verdi.' };
+    console.error('Cloudinary upload exception:', err);
+    return { success: false, error: err?.message || 'Network error' };
   }
 }

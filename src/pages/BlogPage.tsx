@@ -69,7 +69,7 @@ export const BlogPage: React.FC<BlogPageProps> = ({ currentLang, onNavigate, ini
                 setActiveSlug(undefined);
                 onNavigate('blog');
               }}
-              className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-gray-400 hover:text-[#FFD21A] transition-colors"
+              className="inline-flex items-center gap-2 text-xs font-mono-tech uppercase tracking-wider text-gray-400 hover:text-[#FFD21A] transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>{currentLang === 'az' ? 'Bütün Məqalələrə Qayıt' : currentLang === 'ru' ? 'Назад к статьям' : 'Back to Articles'}</span>
@@ -77,7 +77,7 @@ export const BlogPage: React.FC<BlogPageProps> = ({ currentLang, onNavigate, ini
 
             <button
               onClick={handleShare}
-              className="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-xs px-3.5 py-1.5 rounded-lg text-gray-300 transition-colors"
+              className="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-xs px-3.5 py-1.5 rounded-lg text-gray-300 transition-colors font-mono-tech"
             >
               {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5 text-[#FFD21A]" />}
               <span>{copiedLink ? (currentLang === 'az' ? 'Kopyalandı' : 'Copied') : (currentLang === 'az' ? 'Paylaş' : 'Share')}</span>
@@ -86,15 +86,16 @@ export const BlogPage: React.FC<BlogPageProps> = ({ currentLang, onNavigate, ini
 
           {/* Article Header */}
           <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 bg-[#FFD21A]/10 border border-[#FFD21A]/30 text-[#FFD21A] px-3 py-1 rounded text-xs font-mono uppercase font-bold">
+            <div className="inline-flex items-center gap-2 bg-[#FFD21A]/10 border border-[#FFD21A]/30 text-[#FFD21A] px-3 py-1 rounded-sm text-[10px] font-mono-tech uppercase font-bold tracking-widest">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FFD21A]" />
               <span>{activePost.category}</span>
             </div>
 
-            <h1 className="text-2xl sm:text-4xl font-extrabold text-white leading-tight">
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-editorial-heading font-bold text-white leading-tight">
               {getLocalizedText(activePost.title, currentLang)}
             </h1>
 
-            <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-gray-400 pt-2 border-b border-white/10 pb-4">
+            <div className="flex flex-wrap items-center gap-4 text-xs font-mono-tech text-gray-400 pt-2 border-b border-white/10 pb-4">
               <span className="flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-[#FFD21A]" />
                 {activePost.date}
@@ -217,18 +218,20 @@ export const BlogPage: React.FC<BlogPageProps> = ({ currentLang, onNavigate, ini
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
         
         {/* Header Banner */}
-        <div className="bg-[#101115] border border-white/10 rounded-2xl p-8 sm:p-12 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-[#FFD21A]/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="bg-[#0E0F14] border border-white/10 rounded-2xl p-8 sm:p-12 shadow-2xl relative overflow-hidden">
+          {/* Top linear LED glow line */}
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#FFD21A]/70 to-transparent pointer-events-none" />
+          <div className="absolute top-0 right-0 w-96 h-96 bg-[#FFD21A]/5 rounded-full blur-3xl pointer-events-none" />
           
           <div className="space-y-3 relative z-10 max-w-2xl">
-            <div className="inline-flex items-center gap-2 bg-[#FFD21A]/10 border border-[#FFD21A]/30 px-3 py-1 rounded text-xs font-mono uppercase font-bold text-[#FFD21A]">
-              <BookOpen className="w-3.5 h-3.5" />
+            <div className="inline-flex items-center gap-2 bg-[#FFD21A]/10 border border-[#FFD21A]/30 px-3 py-1 rounded-sm text-[10px] font-mono-tech uppercase font-bold tracking-widest text-[#FFD21A]">
+              <span className="text-[#FFD21A]">||||</span>
               <span>Memarlıq & İşıq Məqalələri</span>
             </div>
-            <h1 className="text-3xl sm:text-5xl font-extrabold uppercase tracking-tight text-white">
+            <h1 className="text-3xl sm:text-5xl font-editorial-heading font-bold uppercase tracking-tight text-white">
               {currentLang === 'az' ? 'Xəbərlər & Mühəndislik Bloqu' : currentLang === 'ru' ? 'Новости и Блог' : 'News & Architecture Blog'}
             </h1>
-            <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
+            <p className="text-xs sm:text-sm text-gray-300 leading-relaxed font-light">
               Xətti LED optikası, Dialux hesablamaları, CRI standartları və müasir interyer işıqlandırma həlləri haqqında ekspert yazıları.
             </p>
           </div>
@@ -240,10 +243,10 @@ export const BlogPage: React.FC<BlogPageProps> = ({ currentLang, onNavigate, ini
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-mono uppercase tracking-wider transition-all border ${
+              className={`px-4 py-2 rounded-xl text-xs font-mono-tech uppercase tracking-wider transition-all border ${
                 selectedCategory === cat.id
-                  ? 'bg-[#FFD21A] text-black border-[#FFD21A] font-bold shadow-[0_0_15px_rgba(255,210,26,0.25)]'
-                  : 'bg-[#101115] text-gray-400 border-white/10 hover:border-white/20 hover:text-white'
+                  ? 'bg-[#FFD21A] text-black border-[#FFD21A] font-bold shadow-[0_0_20px_rgba(255,210,26,0.25)]'
+                  : 'bg-[#0E0F14] text-gray-400 border-white/10 hover:border-white/20 hover:text-white'
               }`}
             >
               {cat.label}
@@ -260,47 +263,51 @@ export const BlogPage: React.FC<BlogPageProps> = ({ currentLang, onNavigate, ini
                 setActiveSlug(post.slug);
                 onNavigate('blog', post.slug);
               }}
-              className="bg-[#101115] border border-white/10 hover:border-[#FFD21A]/50 rounded-2xl overflow-hidden flex flex-col justify-between group cursor-pointer transition-all hover:scale-[1.01] shadow-xl"
+              className="bg-[#0E0F14] border border-white/10 hover:border-[#FFD21A]/40 rounded-2xl overflow-hidden flex flex-col justify-between group cursor-pointer transition-all duration-300 hover:shadow-[0_15px_40px_rgba(0,0,0,0.8)] relative"
             >
+              {/* Top subtle linear reveal on card hover */}
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#FFD21A] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10" />
+
               <div>
-                <div className="relative h-52 overflow-hidden">
+                <div className="relative h-56 overflow-hidden">
                   <img
                     src={post.coverImage}
                     alt={getLocalizedText(post.title, 'az')}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                   />
-                  <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded text-[10px] font-mono uppercase text-[#FFD21A] border border-white/10">
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0E0F14] via-transparent to-transparent opacity-80" />
+                  <div className="absolute top-3 left-3 bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-sm text-[9px] font-mono-tech uppercase text-[#FFD21A] border border-[#FFD21A]/30">
                     {post.category}
                   </div>
                 </div>
 
                 <div className="p-6 space-y-3">
-                  <div className="flex items-center gap-3 text-[11px] font-mono text-gray-400">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3 text-[#FFD21A]" />
+                  <div className="flex items-center gap-3 text-[11px] font-mono-tech text-gray-400">
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-[#FFD21A]" />
                       {post.date}
                     </span>
                     <span>•</span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-[#FFD21A]" />
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-[#FFD21A]" />
                       {post.readTime}
                     </span>
                   </div>
 
-                  <h3 className="text-base font-bold text-white group-hover:text-[#FFD21A] transition-colors leading-snug line-clamp-2">
+                  <h3 className="text-lg font-editorial-heading font-bold text-white group-hover:text-[#FFD21A] transition-colors leading-snug line-clamp-2">
                     {getLocalizedText(post.title, currentLang)}
                   </h3>
 
-                  <p className="text-xs text-gray-400 leading-relaxed line-clamp-3">
+                  <p className="text-xs text-gray-400 leading-relaxed line-clamp-3 font-light">
                     {getLocalizedText(post.summary, currentLang)}
                   </p>
                 </div>
               </div>
 
               <div className="p-6 pt-0 border-t border-white/5 mt-4 flex items-center justify-between">
-                <span className="text-[11px] font-mono text-gray-400 truncate max-w-[150px]">{post.author}</span>
-                <span className="text-xs font-bold text-[#FFD21A] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                  <span>Oxu</span>
+                <span className="text-[11px] font-mono-tech text-gray-400 truncate max-w-[150px]">{post.author}</span>
+                <span className="text-xs font-mono-tech uppercase font-bold text-[#FFD21A] flex items-center gap-1.5 group-hover:translate-x-1 transition-transform">
+                  <span>{currentLang === 'az' ? 'Oxu' : currentLang === 'ru' ? 'Читать' : 'Read'}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </span>
               </div>

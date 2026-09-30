@@ -36,16 +36,16 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     const q = query.toLowerCase();
 
     return {
-      products: products.filter(p => 
-        p.name.toLowerCase().includes(q) || 
-        p.code.toLowerCase().includes(q) || 
+      products: products.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        p.code.toLowerCase().includes(q) ||
         getLocalizedText(p.categoryName, currentLang).toLowerCase().includes(q)
       ).slice(0, 4),
-      projects: projects.filter(pr => 
-        (typeof pr.title === 'string' ? pr.title : getLocalizedText(pr.title, currentLang)).toLowerCase().includes(q) || 
+      projects: projects.filter(pr =>
+        (typeof pr.title === 'string' ? pr.title : getLocalizedText(pr.title, currentLang)).toLowerCase().includes(q) ||
         pr.location.toLowerCase().includes(q)
       ).slice(0, 3),
-      solutions: solutions.filter(s => 
+      solutions: solutions.filter(s =>
         getLocalizedText(s.title, currentLang).toLowerCase().includes(q)
       ).slice(0, 2)
     };
@@ -59,104 +59,110 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div 
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4 bg-[#141412]/90 backdrop-blur-md animate-fadeIn">
+      <div
         id="ecolife-global-search-modal"
-        className="w-full max-w-2xl overflow-hidden rounded-[28px] border border-white/20 bg-[linear-gradient(145deg,rgba(255,255,255,.14),rgba(72,43,28,.52))] text-[#F5F5F5] shadow-2xl backdrop-blur-2xl"
+        className="relative w-full max-w-2xl bg-[#24231f] border border-[var(--ed-line)] rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.85)] overflow-hidden text-[var(--ed-ivory)]"
       >
-        {/* Search Input Bar */}
-        <div className="relative border-b border-white/10 p-4 flex items-center gap-3">
-          <Search className="w-5 h-5 text-[#FFD21A] flex-shrink-0" />
+        {/* Search input */}
+        <div className="relative border-b border-[var(--ed-line)] p-5 flex items-center gap-3">
+          <Search className="w-5 h-5 text-amber-warm flex-shrink-0" />
           <input
             type="text"
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t.catalog.searchPlaceholder}
-            className="w-full bg-transparent text-base text-white placeholder-gray-400 focus:outline-none font-mono"
+            className="w-full bg-transparent text-lg text-[var(--ed-ivory)] placeholder-[var(--ed-faint)] focus:outline-none font-light"
           />
-          <button 
+          <button
             onClick={onClose}
-            className="rounded-full border border-white/10 bg-white/[.06] p-2 text-gray-400 transition-all hover:bg-white/15 hover:text-white"
+            className="text-[var(--ed-mute)] hover:text-amber-warm p-1.5 rounded-full hover:bg-white/5 transition-colors"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Results Container */}
+        {/* Results */}
         <div className="max-h-[60vh] overflow-y-auto p-4 space-y-5">
           {query.trim() === '' ? (
-            <div className="py-8 text-center text-xs text-gray-400 space-y-2 font-mono">
+            <div className="py-8 text-center text-xs text-mute space-y-3">
               <div>
-                {currentLang === 'az' 
-                  ? 'Məhsul adı (məs. Linear 40), kod və ya layihə adı daxil edin.'
-                  : currentLang === 'ru' 
-                    ? 'Введите название продукта (напр. Linear 40), артикул или название проекта.'
-                    : 'Enter a product name (e.g. Linear 40), code, or project title.'}
+                {currentLang === 'az'
+                  ? 'Məhsul adı, kod və ya layihə adı daxil edin.'
+                  : currentLang === 'ru'
+                    ? 'Введите название продукта, артикул или название проекта.'
+                    : 'Enter a product name, code, or project title.'}
               </div>
               <div className="flex justify-center gap-2 pt-2">
-                <button onClick={() => setQuery('Linear')} className="rounded-full border border-white/15 bg-white/[.07] px-3 py-1.5 transition-all hover:border-[#FFD21A] hover:bg-white/15 hover:text-[#FFD21A]">Linear</button>
-                <button onClick={() => setQuery('Rail')} className="rounded-full border border-white/15 bg-white/[.07] px-3 py-1.5 transition-all hover:border-[#FFD21A] hover:bg-white/15 hover:text-[#FFD21A]">Ultra Rail</button>
-                <button onClick={() => setQuery('Ofis')} className="rounded-full border border-white/15 bg-white/[.07] px-3 py-1.5 transition-all hover:border-[#FFD21A] hover:bg-white/15 hover:text-[#FFD21A]">Ofis</button>
+                {['Linear', 'Rail', 'Ofis'].map(term => (
+                  <button
+                    key={term}
+                    onClick={() => setQuery(term)}
+                    className="ed-pill !py-1 !px-3.5 !text-[11px]"
+                  >
+                    {term}
+                  </button>
+                ))}
               </div>
             </div>
           ) : (
             <>
-              {/* Products Results */}
+              {/* Products */}
               {results.products.length > 0 && (
                 <div className="space-y-2">
-                  <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#FFD21A]">
+                  <div className="font-micro text-[9px] text-amber-warm">
                     {currentLang === 'az' ? 'Məhsullar' : currentLang === 'ru' ? 'Продукты' : 'Products'} ({results.products.length})
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     {results.products.map(p => (
                       <button
                         key={p.id}
                         onClick={() => handleSelect('catalog', p.slug)}
-                        className="group flex w-full items-center justify-between rounded-2xl border border-white/10 bg-black/20 p-2.5 text-left transition-all hover:border-[#FFD21A]/60 hover:bg-white/10"
+                        className="w-full flex items-center justify-between p-3 rounded-xl border border-transparent hover:border-[var(--ed-line)] hover:bg-white/[0.03] transition-all text-left group"
                       >
                         <div className="flex items-center gap-3">
-                          <img 
-                            src={p.image || 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=200&q=80'} 
-                            alt="" 
-                            className="w-10 h-8 object-cover bg-[#16181D]"
+                          <img
+                            src={p.image || 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=200&q=80'}
+                            alt=""
+                            className="w-12 h-10 object-cover rounded-lg bg-[var(--ed-raise)]"
                             onError={(e) => {
                               (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=200&q=80';
                             }}
                           />
                           <div>
-                            <div className="text-xs font-bold text-white group-hover:text-[#FFD21A]">{p.name}</div>
-                            <div className="text-[10px] text-gray-400 font-mono">{p.code}</div>
+                            <div className="text-xs font-medium text-[var(--ed-ivory)] group-hover:text-amber-warm transition-colors">{p.name}</div>
+                            <div className="font-mono-tech text-[10px] text-mute">{p.code}</div>
                           </div>
                         </div>
-                        <ArrowRight className="w-3.5 h-3.5 text-gray-500 group-hover:text-[#FFD21A]" />
+                        <ArrowRight className="w-4 h-4 text-mute group-hover:text-amber-warm group-hover:translate-x-0.5 transition-all" />
                       </button>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Projects Results */}
+              {/* Projects */}
               {results.projects.length > 0 && (
-                <div className="space-y-2 pt-2 border-t border-white/5">
-                  <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#FFD21A]">
+                <div className="space-y-2">
+                  <div className="font-micro text-[9px] text-amber-warm">
                     {currentLang === 'az' ? 'Layihələr' : currentLang === 'ru' ? 'Проекты' : 'Projects'} ({results.projects.length})
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     {results.projects.map(pr => (
                       <button
                         key={pr.id}
                         onClick={() => handleSelect('projects', pr.slug)}
-                        className="group flex w-full items-center justify-between rounded-2xl border border-white/10 bg-black/20 p-2.5 text-left transition-all hover:border-[#FFD21A]/60 hover:bg-white/10"
+                        className="w-full flex items-center justify-between p-3 rounded-xl border border-transparent hover:border-[var(--ed-line)] hover:bg-white/[0.03] transition-all text-left group"
                       >
                         <div>
-                          <div className="text-xs font-bold text-white group-hover:text-[#FFD21A]">
+                          <div className="text-xs font-medium text-[var(--ed-ivory)] group-hover:text-amber-warm transition-colors">
                             {typeof pr.title === 'string' ? pr.title : getLocalizedText(pr.title, currentLang)}
                           </div>
-                          <div className="text-[10px] font-mono text-gray-400">{pr.location}</div>
+                          <div className="font-mono-tech text-[10px] text-mute">{pr.location}</div>
                         </div>
-                        <ArrowRight className="w-3.5 h-3.5 text-gray-500 group-hover:text-[#FFD21A]" />
+                        <ArrowRight className="w-4 h-4 text-mute group-hover:text-amber-warm group-hover:translate-x-0.5 transition-all" />
                       </button>
                     ))}
                   </div>
@@ -164,8 +170,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               )}
 
               {results.products.length === 0 && results.projects.length === 0 && (
-                <div className="py-6 text-center text-xs text-gray-400 font-mono">
-                  {currentLang === 'az' 
+                <div className="py-6 text-center text-xs text-mute">
+                  {currentLang === 'az'
                     ? 'Nəticə tapılmadı. Zəhmət olmasa başqa axtarış sözü yoxlayın.'
                     : currentLang === 'ru'
                       ? 'Результаты не найдены. Попробуйте другой поисковый запрос.'

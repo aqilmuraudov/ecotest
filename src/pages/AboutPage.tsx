@@ -1,14 +1,9 @@
 import React from 'react';
 import { Language } from '../types';
 import { translations } from '../data/translations';
-import { 
-  DraftingCompass, 
-  ShieldCheck, 
-  Cpu, 
-  Users2, 
-  ArrowRight,
-  CheckCircle2
-} from 'lucide-react';
+import { FadeIn } from '../components/ui/FadeIn';
+import { EdButton, EdLink, EdHairline } from '../components/ed/EditorialUI';
+import { CheckCircle2 } from 'lucide-react';
 
 interface AboutPageProps {
   currentLang: Language;
@@ -23,134 +18,144 @@ export const AboutPage: React.FC<AboutPageProps> = ({
 }) => {
   const t = translations[currentLang];
 
-  return (
-    <div className="min-h-screen bg-[#08090A] text-[#F5F5F5] pt-24 pb-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Breadcrumb & Header */}
-        <div className="bg-[#0E1013] border border-white/10 p-6 sm:p-10 mb-10 shadow-2xl">
-          <div className="flex items-center space-x-2 text-xs font-mono uppercase text-gray-400 mb-3">
-            <button onClick={() => onNavigate('home')} className="hover:text-[#FFD21A] transition-colors">
-              {t.nav.home}
-            </button>
-            <span>/</span>
-            <span className="text-[#FFD21A]">{t.nav.about}</span>
-          </div>
+  const facilityPoints = [
+    currentLang === 'az' ? 'Bakıda müasir avropasayağı alüminium profil emalı və yığım xətti' : currentLang === 'ru' ? 'Современная линия сборки и обработки алюминиевых профилей в Баку' : 'Modern European-standard aluminum profile processing line in Baku',
+    currentLang === 'az' ? 'Dialux Evo proqramında dəqiq fotometrik hesabat və lüks xəritələri' : currentLang === 'ru' ? 'Точные фотометрические расчеты и карты освещенности в Dialux Evo' : 'Accurate photometric calculations and lux maps in Dialux Evo',
+    currentLang === 'az' ? 'CRI 95+ və UGR < 19 optika standartları' : currentLang === 'ru' ? 'Стандарты оптики CRI 95+ и UGR < 19' : 'CRI 95+ and UGR < 19 glare-free optical standards',
+    currentLang === 'az' ? 'İstənilən ölçüdə və həndəsi konfiqurasiyada fərdi istehsal' : currentLang === 'ru' ? 'Индивидуальное производство любых размеров и геометрических форм' : 'Custom fabrication to any continuous length and geometric angle'
+  ];
 
-          <div className="max-w-2xl space-y-3">
-            <div className="inline-flex items-center gap-2 bg-[#FFD21A]/10 border border-[#FFD21A]/30 px-3 py-1 text-xs font-mono font-bold uppercase tracking-wider text-[#FFD21A]">
-              <span>ECOLIFE AZƏRBAYCAN</span>
-            </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white uppercase tracking-tight">
-              {t.about.title}
+  const pillars = [
+    { label: t.whyUs.highQuality, desc: t.whyUs.highQualityDesc },
+    { label: t.about.values.engineering, desc: t.about.values.engineeringDesc },
+    { label: t.whyUs.warranty, desc: t.whyUs.warrantyDesc },
+    { label: t.whyUs.expertSupport, desc: t.whyUs.expertSupportDesc },
+  ];
+
+  return (
+    <div className="bg-[var(--ed-bg)] text-[var(--ed-ivory)] pt-32 pb-24">
+      <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
+
+        {/* Header */}
+        <div className="mb-20">
+          <FadeIn>
+            <p className="font-micro text-amber-warm mb-5">04 — {t.nav.about}</p>
+            <h1 className="ed-display-lg font-display text-ivory">
+              {currentLang === 'az' ? 'işığın' : currentLang === 'ru' ? 'архитектура' : 'the architecture'}
+              <br />
+              <span className="text-soft">{currentLang === 'az' ? 'arxitekturası' : currentLang === 'ru' ? 'света' : 'of light'}</span>
             </h1>
-            <p className="text-sm sm:text-base text-gray-300 font-normal leading-relaxed">
+            <p className="text-sm text-mute mt-6 max-w-lg leading-relaxed">
               {t.about.subtitle}
             </p>
-          </div>
+          </FadeIn>
         </div>
 
-        {/* Narrative & Factory Showcase */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center mb-16">
-          <div className="lg:col-span-6 space-y-6">
-            <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">
-              {t.about.storyTitle}
-            </h2>
-            <p className="text-sm text-gray-300 leading-relaxed">
-              {t.about.storyP1}
-            </p>
-            <p className="text-sm text-gray-300 leading-relaxed">
-              {t.about.storyP2}
-            </p>
+        {/* Story + facility imagery */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-14 mb-28">
+          <div className="lg:col-span-6">
+            <FadeIn>
+              <p className="font-micro text-amber-warm mb-6">{t.about.storyTitle}</p>
+              <p className="text-base text-soft leading-relaxed">
+                {t.about.storyP1}
+              </p>
+              <p className="text-sm text-mute leading-relaxed mt-6">
+                {t.about.storyP2}
+              </p>
+            </FadeIn>
 
-            <div className="space-y-3 pt-2">
-              {[
-                currentLang === 'az' ? 'Bakıda müasir avropasayağı alüminium profil emalı və yığım xətti' : currentLang === 'ru' ? 'Современная линия сборки и обработки алюминиевых профилей в Баку' : 'Modern European-standard aluminum profile processing line in Baku',
-                currentLang === 'az' ? 'Dialux Evo proqramında dəqiq fotometrik hesabat və lüks xəritələri' : currentLang === 'ru' ? 'Точные фотометрические расчеты и карты освещенности в Dialux Evo' : 'Accurate photometric calculations and lux maps in Dialux Evo',
-                currentLang === 'az' ? 'CRI 95+ və UGR < 16 optika standartları' : currentLang === 'ru' ? 'Стандарты оптики CRI 95+ и UGR < 16' : 'CRI 95+ and UGR < 16 glare-free optical standards',
-                currentLang === 'az' ? 'İstənilən ölçüdə və həndəsi konfiqurasiyada fərdi istehsal' : currentLang === 'ru' ? 'Индивидуальное производство любых размеров и геометрических форм' : 'Custom fabrication to any continuous length and geometric angle'
-              ].map((item, idx) => (
-                <div key={idx} className="flex items-start gap-2.5 text-xs text-gray-300">
-                  <CheckCircle2 className="w-4 h-4 text-[#FFD21A] flex-shrink-0 mt-0.5" />
-                  <span>{item}</span>
+            <FadeIn delay={0.1}>
+              <div className="mt-12 space-y-0 border-t border-[var(--ed-line)]">
+                {facilityPoints.map((item, idx) => (
+                  <div key={idx} className="flex items-start gap-5 py-4 border-b border-[var(--ed-line)]">
+                    <CheckCircle2 className="w-4 h-4 text-amber-warm flex-shrink-0 mt-0.5" />
+                    <span className="text-xs text-soft leading-relaxed">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </FadeIn>
+          </div>
+
+          <div className="lg:col-span-6">
+            <FadeIn direction="left" delay={0.1}>
+              <div className="relative aspect-[4/3] overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1200&q=80"
+                  alt="Ecolife facility"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-6 mt-6">
+                <div className="aspect-[4/3] overflow-hidden">
+                  <img
+                    src="https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=700&q=80"
+                    alt="Ecolife assembly"
+                    loading="lazy"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="lg:col-span-6 aspect-[4/3] overflow-hidden border border-white/10 relative shadow-2xl">
-            <img 
-              src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1200&q=80" 
-              alt="Ecolife Engineering Facility" 
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-6">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#FFD21A]">
-                Ecolife • {t.whyUs.imageTagline}
-              </span>
-            </div>
+                <div className="aspect-[4/3] overflow-hidden">
+                  <img
+                    src="https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&w=700&q=80"
+                    alt="Ecolife workshop"
+                    loading="lazy"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            </FadeIn>
           </div>
         </div>
 
-        {/* 4 Pillars of Excellence */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-          <div className="bg-[#0E1013] border border-white/10 p-6 space-y-3">
-            <div className="w-10 h-10 bg-[#FFD21A]/10 text-[#FFD21A] flex items-center justify-center">
-              <DraftingCompass className="w-5 h-5 stroke-[1.5]" />
-            </div>
-            <h3 className="text-sm font-mono font-bold text-white uppercase">{t.stats.experience}</h3>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              {t.whyUs.customSolutionsDesc}
-            </p>
-          </div>
+        {/* Pillars — large typography list */}
+        <div className="mb-28">
+          <FadeIn>
+            <h2 className="ed-display-md font-display text-ivory mb-14">
+              {t.about.values.engineering}
+            </h2>
+          </FadeIn>
 
-          <div className="bg-[#0E1013] border border-white/10 p-6 space-y-3">
-            <div className="w-10 h-10 bg-[#FFD21A]/10 text-[#FFD21A] flex items-center justify-center">
-              <Cpu className="w-5 h-5 stroke-[1.5]" />
-            </div>
-            <h3 className="text-sm font-mono font-bold text-white uppercase">{t.about.values.engineering}</h3>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              {t.about.values.engineeringDesc}
-            </p>
-          </div>
-
-          <div className="bg-[#0E1013] border border-white/10 p-6 space-y-3">
-            <div className="w-10 h-10 bg-[#FFD21A]/10 text-[#FFD21A] flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5 stroke-[1.5]" />
-            </div>
-            <h3 className="text-sm font-mono font-bold text-white uppercase">{t.whyUs.warranty}</h3>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              {t.whyUs.warrantyDesc}
-            </p>
-          </div>
-
-          <div className="bg-[#0E1013] border border-white/10 p-6 space-y-3">
-            <div className="w-10 h-10 bg-[#FFD21A]/10 text-[#FFD21A] flex items-center justify-center">
-              <Users2 className="w-5 h-5 stroke-[1.5]" />
-            </div>
-            <h3 className="text-sm font-mono font-bold text-white uppercase">{t.whyUs.expertSupport}</h3>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              {t.whyUs.expertSupportDesc}
-            </p>
+          <div>
+            {pillars.map((pillar, i) => (
+              <FadeIn key={pillar.label} delay={0.05 * i}>
+                <div className="group py-8 border-t border-[var(--ed-line)]">
+                  <div className="flex items-baseline justify-between gap-8">
+                    <h3 className="ed-display-sm font-display text-ivory group-hover:text-amber-warm transition-colors duration-300">
+                      {pillar.label}
+                    </h3>
+                    <span className="font-mono-tech text-xs text-mute">{String(i + 1).padStart(2, '0')}</span>
+                  </div>
+                  <p className="text-xs text-mute leading-relaxed mt-4 max-w-xl">
+                    {pillar.desc}
+                  </p>
+                </div>
+              </FadeIn>
+            ))}
+            <div className="border-t border-[var(--ed-line)]" />
           </div>
         </div>
 
         {/* CTA */}
-        <div className="bg-[#0E1013] border border-[#FFD21A]/40 p-8 sm:p-12 text-center space-y-6">
-          <h3 className="text-2xl sm:text-3xl font-extrabold text-white uppercase">
-            {t.home.contactBannerTitle}
-          </h3>
-          <p className="text-xs sm:text-sm text-gray-300 max-w-xl mx-auto">
-            {t.home.contactBannerSubtitle}
-          </p>
-          <button
-            onClick={onOpenContact}
-            className="inline-flex items-center gap-2 bg-[#FFD21A] text-black font-bold text-xs uppercase tracking-wider px-8 py-4 hover:bg-[#F0C413] transition-all shadow-[0_0_20px_rgba(255,210,26,0.25)] cursor-pointer"
-          >
-            <span>{t.nav.writeUs}</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
+        <FadeIn>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+            <h2 className="ed-display-lg font-display text-ivory">
+              {t.home.contactBannerTitle}
+            </h2>
+            <div>
+              <p className="text-sm text-mute leading-relaxed max-w-md">
+                {t.home.contactBannerSubtitle}
+              </p>
+              <div className="mt-8 flex items-center gap-6">
+                <EdButton arrow onClick={onOpenContact}>
+                  {t.nav.writeUs}
+                </EdButton>
+                <EdLink onClick={() => onNavigate('contact')}>
+                  {t.contact.directInfo}
+                </EdLink>
+              </div>
+            </div>
+          </div>
+        </FadeIn>
 
       </div>
     </div>

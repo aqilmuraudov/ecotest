@@ -1,10 +1,21 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Product, BlogPost, Project, Inquiry, CategoryItem } from '../types';
-import { products as initialProducts } from '../data/products';
+import { products as initialProducts, productCategoriesList } from '../data/products';
 import { blogPosts as initialBlogPosts } from '../data/blog';
 import { projects as initialProjects } from '../data/projects';
 import { supabase } from '../lib/supabase';
 import { idbStorage } from '../utils/indexedDBStorage';
+
+// Convert productCategoriesList to CategoryItem array (excluding 'all')
+const defaultCategories: CategoryItem[] = productCategoriesList
+  .filter(c => c.id !== 'all')
+  .map((c, idx) => ({
+    id: c.id,
+    nameAz: c.nameAz,
+    nameEn: c.nameEn,
+    nameRu: c.nameRu,
+    order: idx + 1
+  }));
 
 interface DataContextType {
   products: Product[];
@@ -23,8 +34,6 @@ interface DataContextType {
   deleteProduct: (id: string) => Promise<{ success: boolean; error?: string }>;
   deleteAllProducts: () => Promise<{ success: boolean; error?: string }>;
   bulkImportProducts: (products: Product[]) => Promise<{ success: boolean; count: number; error?: string }>;
-  bulkUpdateProducts: (ids: string[], changes: Partial<Product>) => Promise<{ success: boolean; count: number; error?: string }>;
-  bulkDeleteProducts: (ids: string[]) => Promise<{ success: boolean; count: number; error?: string }>;
 
   // Category Operations
   addCategory: (category: CategoryItem) => Promise<{ success: boolean; error?: string }>;
@@ -68,10 +77,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (Array.isArray(parsed)) return parsed;
       }
     } catch {}
-    // Kataloq yalnız real mənbədən (IndexedDB cache və ya Supabase) gələn
-    // məhsulları göstərməlidir. Statik seed məlumatlarını ilkin UI fallback-i
-    // kimi istifadə etmək istifadəçiyə demo kataloq göstərirdi.
-    return [];
+    return initialProducts;
   });
 
   const [categories, setCategories] = useState<CategoryItem[]>(() => {
@@ -79,9 +85,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const saved = localStorage.getItem(LOCAL_STORAGE_CATEGORIES);
       if (saved) return JSON.parse(saved);
     } catch {}
-    // Kateqoriyalar da yalnız real mənbədən yüklənir; demo kateqoriyalar
-    // ilkin render zamanı göstərilmir.
-    return [];
+    return defaultCategories;
   });
 
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>(() => {
@@ -160,12 +164,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       files: Array.isArray(dbRow.files) ? dbRow.files : [],
       featured: Boolean(dbRow.featured),
       isNew: Boolean(dbRow.is_new ?? dbRow.isNew),
-      applications: Array.isArray(dbRow.applications) ? dbRow.applications : [],
-      price: dbRow.price === null || dbRow.price === undefined || dbRow.price === '' ? undefined : Number(dbRow.price),
-      archived: Boolean(dbRow.archived),
-      archivedAt: dbRow.archived_at || undefined,
-      createdAt: dbRow.created_at || undefined,
-      updatedAt: dbRow.updated_at || undefined
+      applications: Array.isArray(dbRow.applications) ? dbRow.applications : []
     };
   };
 
@@ -200,9 +199,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       featured: Boolean(p.featured),
       is_new: Boolean(p.isNew ?? p.is_new),
       applications: Array.isArray(p.applications) ? p.applications : [],
-      price: typeof p.price === 'number' && Number.isFinite(p.price) ? p.price : null,
-      archived: Boolean(p.archived),
-      archived_at: p.archivedAt || null,
       updated_at: new Date().toISOString()
     };
   };
@@ -377,8 +373,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           projectType: d.project_type,
           roomPreset: d.room_preset,
           configSummary: d.config_summary,
-          configPdfUrl: d.config_pdf_url,
-          configPdfName: d.config_pdf_name,
           status: d.status || 'new',
           createdAt: d.created_at || new Date().toISOString()
         }));
@@ -444,8 +438,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             projectType: newRow.project_type,
             roomPreset: newRow.room_preset,
             configSummary: newRow.config_summary,
-            configPdfUrl: newRow.config_pdf_url,
-            configPdfName: newRow.config_pdf_name,
             status: newRow.status || 'new',
             createdAt: newRow.created_at || new Date().toISOString()
           };
@@ -647,67 +639,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true };
     } catch (e: any) {
       return { success: true, error: e?.message };
-    }
-  };
-
-  const bulkUpdateProducts = async (ids: string[], changes: Partial<Product>): Promise<{ success: boolean; count: number; error?: string }> => {
-    const uniqueIds = [...new Set(ids)].filter(Boolean);
-    if (uniqueIds.length === 0) return { success: false, count: 0, error: 'Əməliyyat üçün məhsul seçilməyib.' };
-
-    const selectedIds = new Set(uniqueIds);
-    const targets = products.filter(product => selectedIds.has(product.id));
-    if (targets.length === 0) return { success: false, count: 0, error: 'Seçilmiş məhsullar tapılmadı.' };
-
-    const now = new Date().toISOString();
-    const normalizedChanges = {
-      ...changes,
-      ...(changes.archived === true && !changes.archivedAt ? { archivedAt: now } : {}),
-      ...(changes.archived === false ? { archivedAt: undefined } : {})
-    };
-    const updatedProducts = products.map(product => selectedIds.has(product.id)
-      ? { ...product, ...normalizedChanges, updatedAt: now }
-      : product
-    );
-    const rows = updatedProducts.filter(product => selectedIds.has(product.id)).map(mapProductToDb);
-
-    try {
-      for (let index = 0; index < rows.length; index += 50) {
-        const { error } = await supabase
-          .from('products')
-          .upsert(rows.slice(index, index + 50), { onConflict: 'id' });
-        if (error) throw error;
-      }
-
-      setProducts(updatedProducts);
-      await saveToStorage(LOCAL_STORAGE_PRODUCTS, updatedProducts);
-      return { success: true, count: targets.length };
-    } catch (error: any) {
-      await refreshData();
-      return { success: false, count: 0, error: error?.message || 'Toplu yeniləmə alınmadı.' };
-    }
-  };
-
-  const bulkDeleteProducts = async (ids: string[]): Promise<{ success: boolean; count: number; error?: string }> => {
-    const uniqueIds = [...new Set(ids)].filter(Boolean);
-    if (uniqueIds.length === 0) return { success: false, count: 0, error: 'Əməliyyat üçün məhsul seçilməyib.' };
-
-    const selectedIds = new Set(uniqueIds);
-    const targets = products.filter(product => selectedIds.has(product.id));
-    if (targets.length === 0) return { success: false, count: 0, error: 'Seçilmiş məhsullar tapılmadı.' };
-
-    try {
-      for (let index = 0; index < uniqueIds.length; index += 100) {
-        const { error } = await supabase.from('products').delete().in('id', uniqueIds.slice(index, index + 100));
-        if (error) throw error;
-      }
-
-      const updatedProducts = products.filter(product => !selectedIds.has(product.id));
-      setProducts(updatedProducts);
-      await saveToStorage(LOCAL_STORAGE_PRODUCTS, updatedProducts);
-      return { success: true, count: targets.length };
-    } catch (error: any) {
-      await refreshData();
-      return { success: false, count: 0, error: error?.message || 'Toplu silmə alınmadı.' };
     }
   };
 
@@ -920,8 +851,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         project_type: inqData.projectType || null,
         room_preset: inqData.roomPreset || null,
         config_summary: inqData.configSummary || null,
-        config_pdf_url: inqData.configPdfUrl || null,
-        config_pdf_name: inqData.configPdfName || null,
         status: 'new',
         ip_hash: (inqData as any).ipHash || null,
         user_agent: typeof navigator !== 'undefined' ? navigator.userAgent.substring(0, 250) : null,
@@ -1033,8 +962,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteProduct,
         deleteAllProducts,
         bulkImportProducts,
-      bulkUpdateProducts,
-      bulkDeleteProducts,
         addCategory,
         updateCategory,
         deleteCategory,

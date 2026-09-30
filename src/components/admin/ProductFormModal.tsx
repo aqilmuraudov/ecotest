@@ -27,7 +27,6 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [name, setName] = useState(product?.name || '');
   const [code, setCode] = useState(product?.code || '');
   const [slug, setSlug] = useState(product?.slug || '');
-  const [price, setPrice] = useState(product?.price !== undefined ? String(product.price) : '');
 
   const initialCategories = (() => {
     if (product?.categories && Array.isArray(product.categories) && product.categories.length > 0) {
@@ -138,7 +137,6 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     });
 
     const finalMainImage = mainImage.trim() || additionalImages[0] || 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1000&q=80';
-    const parsedPrice = price.trim() === '' ? undefined : Number(price.replace(',', '.'));
     
     // Construct unified gallery array starting strictly with the main image
     const finalGallery = [
@@ -174,8 +172,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       },
       files: productFiles,
       featured,
-      isNew,
-      price: Number.isFinite(parsedPrice) && (parsedPrice as number) >= 0 ? parsedPrice : undefined
+      isNew
     };
 
     onSave(finalProduct);
@@ -507,18 +504,6 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-                <div>
-                  <label className="block text-[10px] font-mono uppercase text-gray-400 mb-1">Qiymət (AZN)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder="Məs. 125.00"
-                    className="w-full bg-[#16181F] border border-white/15 rounded-lg px-3 py-2 text-xs text-white focus:border-[#FFD21A] focus:outline-none font-mono"
-                  />
-                </div>
                 <div>
                   <label className="block text-[10px] font-mono uppercase text-gray-400 mb-1">{modalT.powerLabel}</label>
                   <input
