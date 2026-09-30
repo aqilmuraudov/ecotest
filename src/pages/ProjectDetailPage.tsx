@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Language } from '../types';
 import { translations } from '../data/translations';
 import { useData } from '../context/DataContext';
@@ -36,6 +36,40 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
     project?.productsUsed?.includes(prod.id) || project?.productsUsed?.includes(prod.name)
   );
 
+  // Unified view set: cover first, then remaining gallery photos
+  const allImages = Array.from(new Set([
+    ...(project?.coverImage ? [project.coverImage] : []),
+    ...(project?.gallery || [])
+  ]));
+  const sideImages = allImages.slice(1);
+  const MAX_SIDE = 5;
+  const visibleSide = sideImages.slice(0, MAX_SIDE);
+  const hiddenCount = sideImages.length - visibleSide.length;
+
+  const openLightbox = useCallback((img: string) => {
+    setLightboxImg(img);
+  }, []);
+
+  const navigateLightbox = useCallback((dir: 1 | -1) => {
+    setLightboxImg(prev => {
+      if (!prev) return prev;
+      const idx = allImages.indexOf(prev);
+      if (idx === -1) return prev;
+      return allImages[(idx + dir + allImages.length) % allImages.length];
+    });
+  }, [allImages]);
+
+  useEffect(() => {
+    if (!lightboxImg) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') { e.preventDefault(); navigateLightbox(1); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); navigateLightbox(-1); }
+      else if (e.key === 'Escape') { e.preventDefault(); setLightboxImg(null); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightboxImg, navigateLightbox]);
+
   return (
     <div className="bg-[var(--ed-bg)] text-[var(--ed-ivory)] pt-32 pb-24">
       <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
@@ -59,32 +93,116 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
           </button>
         </div>
 
-        {/* Cinematic hero with overlapping title */}
-        <div className="relative mb-16">
-          <FadeIn>
-            <div
-              onClick={() => setLightboxImg(project.coverImage)}
-              className="relative aspect-[16/10] lg:aspect-[21/9] overflow-hidden cursor-zoom-in"
-            >
-              <img
-                src={project.coverImage}
-                alt={project.title}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#1d1d1b]/90 via-transparent to-transparent" />
-            </div>
-          </FadeIn>
+        {/* Editorial split hero: cover left, gallery column right */}
+        <div className="relative mb-12 lg:mb-16">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
 
-          {/* Overlapping title block */}
-          <div className="lg:absolute lg:bottom-0 lg:left-12 lg:right-12 lg:p-10 p-6 -mt-16 lg:mt-0 relative z-10">
-            <FadeIn delay={0.15}>
-              <p className="font-micro text-amber-warm mb-4">
-                {project.categoryName[currentLang]} — {project.year}
-              </p>
-              <h1 className="ed-display-lg font-display text-ivory">
-                {project.title}
-              </h1>
-            </FadeIn>
+            {/* Cover — left, dominant */}
+            <div className="lg:col-span-7">
+              <FadeIn>
+                <div className="lg:sticky lg:top-24">
+                  <div
+                    onClick={() => openLightbox(project.coverImage)}
+                    className="relative aspect-[16/10] lg:aspect-[4/3] overflow-hidden cursor-zoom-in group"
+                  >
+                    <img
+                      src={project.coverImage}
+                      alt={project.title}
+                      className="w-full h-full object-cover transition-transform duration-[1100ms] group-hover:scale-[1.03]"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#1d1d1b]/90 via-transparent to-transparent" />
+                    {sideImages.length > 0 && (
+                      <div className="absolute bottom-4 right-4 z-10 font-mono-tech text-[10px] tracking-widest text-ivory/80 bg-[#141412]/70 backdrop-blur-sm px-3 py-1.5">
+                        1 / {allImages.length}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Overlapping title block */}
+                  <div className="relative z-10 -mt-10 sm:-mt-14 p-1">
+                    <FadeIn delay={0.15}>
+                      <p className="font-micro text-amber-warm mb-4">
+                        {project.categoryName[currentLang]} — {project.year}
+                      </p>
+                      <h1 className="ed-display-md lg:ed-display-lg font-display text-ivory">
+                        {project.title}
+                      </h1>
+                    </FadeIn>
+                  </div>
+                </div>
+              </FadeIn>
+            </div>
+
+            {/* Gallery — right column, immediately visible */}
+            {sideImages.length > 0 && (
+              <div className="lg:col-span-5">
+                <FadeIn delay={0.1}>
+                  <div className="flex items-center justify-between mb-4 lg:mb-5">
+                    <p className="font-micro text-[9px] text-mute">{t.projects.galleryTitle}</p>
+                    <span className="font-mono-tech text-[10px] text-mute">{sideImages.length} foto</span>
+                  </div>
+                </FadeIn>
+                <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 lg:gap-4">
+                  {visibleSide.map((img, idx) => (
+                    <FadeIn key={idx} delay={0.08 * Math.min(idx, 4)} className={idx === 0 ? 'col-span-2' : ''}>
+                      <button
+                        onClick={() => openLightbox(img)}
+                        className="group relative w-full overflow-hidden cursor-zoom-in aspect-[16/10]"
+                      >
+                        <img
+                          src={img}
+                          alt={`Gallery ${idx + 1}`}
+                          loading="lazy"
+                          className="w-full h-full object-cover transition-transform duration-[1100ms] group-hover:scale-[1.03]"
+                        />
+                        <div className="absolute inset-0 bg-[#1d1d1b]/0 group-hover:bg-[#1d1d1b]/10 transition-colors duration-300" />
+                      </button>
+                    </FadeIn>
+                  ))}
+
+                  {/* Overflow tile — reveals remaining photos in lightbox */}
+                  {hiddenCount > 0 && (
+                    <FadeIn delay={0.08 * Math.min(MAX_SIDE, 4)}>
+                      <button
+                        onClick={() => openLightbox(sideImages[MAX_SIDE])}
+                        className="group relative w-full overflow-hidden cursor-zoom-in aspect-[16/10]"
+                      >
+                        <img
+                          src={sideImages[MAX_SIDE]}
+                          alt={`+${hiddenCount}`}
+                          loading="lazy"
+                          className="w-full h-full object-cover transition-transform duration-[1100ms] group-hover:scale-[1.03]"
+                        />
+                        <div className="absolute inset-0 bg-[#141412]/75 flex flex-col items-center justify-center gap-1">
+                          <span className="font-mono-tech text-2xl text-ivory">+{hiddenCount}</span>
+                          <span className="font-micro text-[9px] tracking-widest text-[var(--ed-soft)] group-hover:text-amber-warm transition-colors">
+                            {t.projects.galleryTitle}
+                          </span>
+                        </div>
+                      </button>
+                    </FadeIn>
+                  )}
+                </div>
+
+                {/* Contact CTA — fills empty space when gallery is short */}
+                <FadeIn delay={0.2}>
+                  <div className="hidden lg:block mt-8">
+                    <EdHairline amber />
+                    <h3 className="ed-display-sm font-display text-ivory mt-6">
+                      {t.projects.similarProjectCta}
+                    </h3>
+                    <p className="text-xs text-mute mt-3 leading-relaxed">
+                      {t.projects.similarProjectDesc}
+                    </p>
+                    <div className="mt-5">
+                      <EdButton arrow onClick={onOpenContact}>
+                        {t.projects.contactEngineer}
+                      </EdButton>
+                    </div>
+                  </div>
+                </FadeIn>
+              </div>
+            )}
           </div>
         </div>
 
@@ -129,6 +247,7 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
             </FadeIn>
           </div>
 
+
           {/* Metrics sidebar */}
           <div className="lg:col-span-5">
             <FadeIn delay={0.15}>
@@ -149,7 +268,7 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
 
             {/* Inquiry CTA */}
             <FadeIn delay={0.25}>
-              <div className="mt-12 lg:mt-16">
+              <div className="mt-12 lg:mt-16 lg:hidden">
                 <EdHairline amber />
                 <h3 className="ed-display-sm font-display text-ivory mt-8">
                   {t.projects.similarProjectCta}
@@ -166,42 +285,6 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
             </FadeIn>
           </div>
         </div>
-
-        {/* Gallery — large architectural compositions */}
-        {project.gallery && project.gallery.length > 0 && (
-          <div className="mb-24">
-            <FadeIn>
-              <div className="flex items-end justify-between mb-10">
-                <h2 className="ed-display-md font-display text-ivory">
-                  {currentLang === 'az' ? 'layihə' : currentLang === 'ru' ? 'проект' : 'project'}
-                  <br />
-                  <span className="text-soft">{currentLang === 'az' ? 'qalereyası' : currentLang === 'ru' ? 'галерея' : 'gallery'}</span>
-                </h2>
-                <span className="font-mono-tech text-xs text-mute">{project.gallery.length} foto</span>
-              </div>
-            </FadeIn>
-
-            <div className="space-y-6 lg:space-y-8">
-              {project.gallery.map((img, idx) => (
-                <FadeIn key={idx} delay={0.05 * Math.min(idx, 4)}>
-                  <button
-                    onClick={() => setLightboxImg(img)}
-                    className={`group relative w-full overflow-hidden cursor-zoom-in ${
-                      idx % 3 === 0 ? 'aspect-[16/9]' : 'aspect-[4/3] md:w-3/4'
-                    } ${idx % 3 === 1 ? 'md:ml-auto' : ''} ${idx % 3 === 2 ? 'md:w-3/4' : ''}`}
-                  >
-                    <img
-                      src={img}
-                      alt={`Gallery ${idx + 1}`}
-                      loading="lazy"
-                      className="w-full h-full object-cover transition-transform duration-[1100ms] group-hover:scale-[1.03]"
-                    />
-                  </button>
-                </FadeIn>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Systems used */}
         {usedProducts.length > 0 && (
@@ -248,6 +331,23 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
               alt="Full preview"
               className="max-h-[85vh] max-w-full object-contain"
             />
+            <button
+              onClick={() => navigateLightbox(-1)}
+              aria-label="Previous photo"
+              className="absolute left-2 lg:-left-16 top-1/2 -translate-y-1/2 p-2 text-[var(--ed-soft)] hover:text-amber-warm transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <button
+              onClick={() => navigateLightbox(1)}
+              aria-label="Next photo"
+              className="absolute right-2 lg:-right-16 top-1/2 -translate-y-1/2 p-2 text-[var(--ed-soft)] hover:text-amber-warm transition-colors"
+            >
+              <ArrowRight className="w-6 h-6" />
+            </button>
+          </div>
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 font-mono-tech text-[10px] tracking-widest text-[var(--ed-soft)]">
+            {allImages.indexOf(lightboxImg) + 1} / {allImages.length}
           </div>
         </div>
       )}
