@@ -418,13 +418,13 @@ export const adminTranslations = {
 
     // Image Upload Widget
     uploader: {
-      uploadTab: 'Fayl Yüklə (Supabase)',
+      uploadTab: 'Fayl Yüklə (Cloudinary)',
       urlTab: 'Xarici Link (URL)',
       dragActive: 'Faylı bura buraxın...',
       dragPrompt: 'Şəkli bura sürükləyin və ya',
       browseBtn: 'Kompüterdən seçin',
       fileLimit: 'PNG, JPG, WEBP, SVG • Maksimum 15 MB',
-      uploading: 'Şəkil Supabase Storage-ə yüklənir...',
+      uploading: 'Şəkil Cloudinary CDN-ə yüklənir...',
       uploadedSuccess: 'Şəkil uğurla yükləndi!',
       urlPlaceholder: 'https://images.unsplash.com/... və ya şəkil linki',
       previewBtn: 'Önbaxış',
@@ -852,13 +852,13 @@ export const adminTranslations = {
 
     // Image Upload Widget
     uploader: {
-      uploadTab: 'Upload File (Supabase)',
+      uploadTab: 'Upload File (Cloudinary)',
       urlTab: 'External URL',
       dragActive: 'Drop file here...',
       dragPrompt: 'Drag & drop image here, or',
       browseBtn: 'Browse computer',
       fileLimit: 'PNG, JPG, WEBP, SVG • Max 15 MB',
-      uploading: 'Uploading image to Supabase Storage...',
+      uploading: 'Uploading image to Cloudinary CDN...',
       uploadedSuccess: 'Image uploaded successfully!',
       urlPlaceholder: 'https://images.unsplash.com/... or image link',
       previewBtn: 'Preview',
@@ -1286,13 +1286,13 @@ export const adminTranslations = {
 
     // Image Upload Widget
     uploader: {
-      uploadTab: 'Загрузить Файл (Supabase)',
+      uploadTab: 'Загрузить Файл (Cloudinary)',
       urlTab: 'Внешняя Ссылка (URL)',
       dragActive: 'Перетащите файл сюда...',
       dragPrompt: 'Перетащите изображение сюда или',
       browseBtn: 'Выберите с компьютера',
       fileLimit: 'PNG, JPG, WEBP, SVG • Максимум 15 МБ',
-      uploading: 'Загрузка изображения в Supabase Storage...',
+      uploading: 'Загрузка изображения в Cloudinary CDN...',
       uploadedSuccess: 'Изображение успешно загружено!',
       urlPlaceholder: 'https://images.unsplash.com/... или ссылка на фото',
       previewBtn: 'Предпросмотр',
