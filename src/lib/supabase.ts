@@ -263,6 +263,7 @@ CREATE TABLE IF NOT EXISTS public.admin_users (
 
 -- ==========================================
 -- ROW LEVEL SECURITY (RLS) & ACCESS POLICIES
+-- TƏHLÜKƏSİZLİK: Şərti oxuma açıqdır, lakin yazma yalnız autentifikasiya olunmuş adminlər üçündür.
 -- ==========================================
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.articles ENABLE ROW LEVEL SECURITY;
@@ -271,103 +272,136 @@ ALTER TABLE public.inquiries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
 
--- Köhnə policy-ləri təmizlə
+-- Köhnə boş/təhlükəli siyasətləri təmizlə
 DROP POLICY IF EXISTS "Public Read Products" ON public.products;
-DROP POLICY IF EXISTS "Moderator Insert Products" ON public.products;
-DROP POLICY IF EXISTS "Moderator Update Products" ON public.products;
-DROP POLICY IF EXISTS "Admin Delete Products" ON public.products;
-DROP POLICY IF EXISTS "Public Insert/Update Products" ON public.products;
 DROP POLICY IF EXISTS "Allow All Products" ON public.products;
 DROP POLICY IF EXISTS "Allow All Select Products" ON public.products;
 DROP POLICY IF EXISTS "Allow All Insert Products" ON public.products;
 DROP POLICY IF EXISTS "Allow All Update Products" ON public.products;
 DROP POLICY IF EXISTS "Allow All Delete Products" ON public.products;
+DROP POLICY IF EXISTS "Secure Select Products" ON public.products;
+DROP POLICY IF EXISTS "Secure Modify Products" ON public.products;
 
 DROP POLICY IF EXISTS "Public Read Articles" ON public.articles;
-DROP POLICY IF EXISTS "Moderator Insert Articles" ON public.articles;
-DROP POLICY IF EXISTS "Moderator Update Articles" ON public.articles;
-DROP POLICY IF EXISTS "Admin Delete Articles" ON public.articles;
 DROP POLICY IF EXISTS "Allow All Articles" ON public.articles;
 DROP POLICY IF EXISTS "Allow All Select Articles" ON public.articles;
 DROP POLICY IF EXISTS "Allow All Insert Articles" ON public.articles;
 DROP POLICY IF EXISTS "Allow All Update Articles" ON public.articles;
 DROP POLICY IF EXISTS "Allow All Delete Articles" ON public.articles;
+DROP POLICY IF EXISTS "Secure Select Articles" ON public.articles;
+DROP POLICY IF EXISTS "Secure Modify Articles" ON public.articles;
 
 DROP POLICY IF EXISTS "Public Read Projects" ON public.projects;
-DROP POLICY IF EXISTS "Moderator Insert Projects" ON public.projects;
-DROP POLICY IF EXISTS "Moderator Update Projects" ON public.projects;
-DROP POLICY IF EXISTS "Admin Delete Projects" ON public.projects;
 DROP POLICY IF EXISTS "Allow All Projects" ON public.projects;
 DROP POLICY IF EXISTS "Allow All Select Projects" ON public.projects;
 DROP POLICY IF EXISTS "Allow All Insert Projects" ON public.projects;
 DROP POLICY IF EXISTS "Allow All Update Projects" ON public.projects;
 DROP POLICY IF EXISTS "Allow All Delete Projects" ON public.projects;
+DROP POLICY IF EXISTS "Secure Select Projects" ON public.projects;
+DROP POLICY IF EXISTS "Secure Modify Projects" ON public.projects;
 
 DROP POLICY IF EXISTS "Public Insert Inquiries" ON public.inquiries;
-DROP POLICY IF EXISTS "Moderator Read/Update Inquiries" ON public.inquiries;
-DROP POLICY IF EXISTS "Moderator Update Inquiries" ON public.inquiries;
-DROP POLICY IF EXISTS "Admin Delete Inquiries" ON public.inquiries;
 DROP POLICY IF EXISTS "Allow All Inquiries" ON public.inquiries;
 DROP POLICY IF EXISTS "Allow All Select Inquiries" ON public.inquiries;
 DROP POLICY IF EXISTS "Allow All Insert Inquiries" ON public.inquiries;
 DROP POLICY IF EXISTS "Allow All Update Inquiries" ON public.inquiries;
 DROP POLICY IF EXISTS "Allow All Delete Inquiries" ON public.inquiries;
+DROP POLICY IF EXISTS "Secure Insert Inquiries" ON public.inquiries;
+DROP POLICY IF EXISTS "Secure Manage Inquiries" ON public.inquiries;
 
 DROP POLICY IF EXISTS "Public Read Categories" ON public.categories;
-DROP POLICY IF EXISTS "Moderator Insert Categories" ON public.categories;
-DROP POLICY IF EXISTS "Moderator Update Categories" ON public.categories;
-DROP POLICY IF EXISTS "Admin Delete Categories" ON public.categories;
 DROP POLICY IF EXISTS "Allow All Categories" ON public.categories;
 DROP POLICY IF EXISTS "Allow All Select Categories" ON public.categories;
 DROP POLICY IF EXISTS "Allow All Insert Categories" ON public.categories;
 DROP POLICY IF EXISTS "Allow All Update Categories" ON public.categories;
 DROP POLICY IF EXISTS "Allow All Delete Categories" ON public.categories;
+DROP POLICY IF EXISTS "Secure Select Categories" ON public.categories;
+DROP POLICY IF EXISTS "Secure Modify Categories" ON public.categories;
 
-DROP POLICY IF EXISTS "Admin Self Read" ON public.admin_users;
-DROP POLICY IF EXISTS "Master Admin Read All" ON public.admin_users;
-DROP POLICY IF EXISTS "Master Admin Insert" ON public.admin_users;
-DROP POLICY IF EXISTS "Master Admin Delete" ON public.admin_users;
 DROP POLICY IF EXISTS "Allow All Admin Users" ON public.admin_users;
 DROP POLICY IF EXISTS "Allow All Select Admin Users" ON public.admin_users;
 DROP POLICY IF EXISTS "Allow All Insert Admin Users" ON public.admin_users;
 DROP POLICY IF EXISTS "Allow All Update Admin Users" ON public.admin_users;
 DROP POLICY IF EXISTS "Allow All Delete Admin Users" ON public.admin_users;
+DROP POLICY IF EXISTS "Secure Select Admin Users" ON public.admin_users;
+DROP POLICY IF EXISTS "Secure Modify Admin Users" ON public.admin_users;
 
--- 1. PRODUCTS: Tam oxuma, yazma, yeniləmə və silmə aktivdir
-CREATE POLICY "Allow All Select Products" ON public.products FOR SELECT USING (true);
-CREATE POLICY "Allow All Insert Products" ON public.products FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow All Update Products" ON public.products FOR UPDATE USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All Delete Products" ON public.products FOR DELETE USING (true);
+-- Admin yoxlama funksiyaları (SECURITY DEFINER rekursiyanın qarşısını alır)
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.admin_users
+    WHERE user_id = auth.uid()
+  );
+$$;
 
--- 2. ARTICLES (BLOG)
-CREATE POLICY "Allow All Select Articles" ON public.articles FOR SELECT USING (true);
-CREATE POLICY "Allow All Insert Articles" ON public.articles FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow All Update Articles" ON public.articles FOR UPDATE USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All Delete Articles" ON public.articles FOR DELETE USING (true);
+CREATE OR REPLACE FUNCTION public.is_master_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.admin_users
+    WHERE user_id = auth.uid() AND role = 'admin'
+  );
+$$;
 
--- 3. PROJECTS
-CREATE POLICY "Allow All Select Projects" ON public.projects FOR SELECT USING (true);
-CREATE POLICY "Allow All Insert Projects" ON public.projects FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow All Update Projects" ON public.projects FOR UPDATE USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All Delete Projects" ON public.projects FOR DELETE USING (true);
+-- 1. PRODUCTS: Hər kəs baxa bilər, yalnız adminlər dəyişdirə bilər
+CREATE POLICY "Secure Select Products" ON public.products 
+  FOR SELECT USING (true);
+CREATE POLICY "Secure Modify Products" ON public.products 
+  FOR ALL TO authenticated 
+  USING (public.is_admin()) 
+  WITH CHECK (public.is_admin());
 
--- 4. INQUIRIES (Sorğular)
-CREATE POLICY "Allow All Select Inquiries" ON public.inquiries FOR SELECT USING (true);
-CREATE POLICY "Allow All Insert Inquiries" ON public.inquiries FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow All Update Inquiries" ON public.inquiries FOR UPDATE USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All Delete Inquiries" ON public.inquiries FOR DELETE USING (true);
+-- 2. ARTICLES (BLOG): Hər kəs oxuya bilər, yalnız adminlər dəyişdirə bilər
+CREATE POLICY "Secure Select Articles" ON public.articles 
+  FOR SELECT USING (true);
+CREATE POLICY "Secure Modify Articles" ON public.articles 
+  FOR ALL TO authenticated 
+  USING (public.is_admin()) 
+  WITH CHECK (public.is_admin());
 
--- 5. CATEGORIES
-CREATE POLICY "Allow All Select Categories" ON public.categories FOR SELECT USING (true);
-CREATE POLICY "Allow All Insert Categories" ON public.categories FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow All Update Categories" ON public.categories FOR UPDATE USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All Delete Categories" ON public.categories FOR DELETE USING (true);
+-- 3. PROJECTS: Hər kəs baxa bilər, yalnız adminlər dəyişdirə bilər
+CREATE POLICY "Secure Select Projects" ON public.projects 
+  FOR SELECT USING (true);
+CREATE POLICY "Secure Modify Projects" ON public.projects 
+  FOR ALL TO authenticated 
+  USING (public.is_admin()) 
+  WITH CHECK (public.is_admin());
 
--- 6. ADMIN USERS
-CREATE POLICY "Allow All Select Admin Users" ON public.admin_users FOR SELECT USING (true);
-CREATE POLICY "Allow All Insert Admin Users" ON public.admin_users FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow All Update Admin Users" ON public.admin_users FOR UPDATE USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All Delete Admin Users" ON public.admin_users FOR DELETE USING (true);
+-- 4. INQUIRIES (Müştəri Sorğuları): Müştəri yalnız forma göndərə bilər (INSERT).
+-- Digər müştərilərin məlumatlarını görmək və ya silmək YALNIZ adminlər üçündür.
+CREATE POLICY "Secure Insert Inquiries" ON public.inquiries 
+  FOR INSERT WITH CHECK (true);
+CREATE POLICY "Secure Manage Inquiries" ON public.inquiries 
+  FOR ALL TO authenticated 
+  USING (public.is_admin()) 
+  WITH CHECK (public.is_admin());
+
+-- 5. CATEGORIES: Hər kəs baxa bilər, yalnız adminlər dəyişdirə bilər
+CREATE POLICY "Secure Select Categories" ON public.categories 
+  FOR SELECT USING (true);
+CREATE POLICY "Secure Modify Categories" ON public.categories 
+  FOR ALL TO authenticated 
+  USING (public.is_admin()) 
+  WITH CHECK (public.is_admin());
+
+-- 6. ADMIN USERS: Yalnız daxil olmuş adminlər baxa bilər; istifadəçi əlavə/silmə yalnız master admin üçündür
+CREATE POLICY "Secure Select Admin Users" ON public.admin_users 
+  FOR SELECT TO authenticated 
+  USING (auth.uid() = user_id OR public.is_master_admin());
+CREATE POLICY "Secure Modify Admin Users" ON public.admin_users 
+  FOR ALL TO authenticated 
+  USING (public.is_master_admin()) 
+  WITH CHECK (public.is_master_admin());
 
 -- ==========================================
 -- STORAGE BUCKET (Şəkil və Fayllar üçün)
@@ -376,7 +410,7 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('ecolife', 'ecolife', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
 
--- Storage: Tam oxuma və yükləmə icazəsi
+-- Storage köhnə siyasətləri təmizlə
 DROP POLICY IF EXISTS "Public Storage Access" ON storage.objects;
 DROP POLICY IF EXISTS "Public Read Storage" ON storage.objects;
 DROP POLICY IF EXISTS "Admin Upload Storage" ON storage.objects;
@@ -386,10 +420,15 @@ DROP POLICY IF EXISTS "Allow All Select Storage" ON storage.objects;
 DROP POLICY IF EXISTS "Allow All Insert Storage" ON storage.objects;
 DROP POLICY IF EXISTS "Allow All Update Storage" ON storage.objects;
 DROP POLICY IF EXISTS "Allow All Delete Storage" ON storage.objects;
+DROP POLICY IF EXISTS "Secure Read Storage" ON storage.objects;
+DROP POLICY IF EXISTS "Secure Modify Storage" ON storage.objects;
 
-CREATE POLICY "Allow All Select Storage" ON storage.objects FOR SELECT USING (bucket_id = 'ecolife');
-CREATE POLICY "Allow All Insert Storage" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'ecolife');
-CREATE POLICY "Allow All Update Storage" ON storage.objects FOR UPDATE USING (bucket_id = 'ecolife') WITH CHECK (bucket_id = 'ecolife');
-CREATE POLICY "Allow All Delete Storage" ON storage.objects FOR DELETE USING (bucket_id = 'ecolife');
+-- Storage: Şəkilləri hər kəs görə bilər, amma fayl yükləmə və silmə YALNIZ admin üçündür
+CREATE POLICY "Secure Read Storage" ON storage.objects 
+  FOR SELECT USING (bucket_id = 'ecolife');
+CREATE POLICY "Secure Modify Storage" ON storage.objects 
+  FOR ALL TO authenticated 
+  USING (bucket_id = 'ecolife' AND public.is_admin()) 
+  WITH CHECK (bucket_id = 'ecolife' AND public.is_admin());
 `;
 
