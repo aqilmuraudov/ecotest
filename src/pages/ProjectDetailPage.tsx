@@ -93,61 +93,108 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
           </button>
         </div>
 
-        {/* Editorial split hero: cover left, gallery column right */}
-        <div className="relative mb-12 lg:mb-16">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+        {/* Project Header: Category, Title & Metadata */}
+        <div className="mb-10 lg:mb-12">
+          <FadeIn>
+            <div className="flex flex-wrap items-center gap-3 mb-3">
+              <span className="font-micro text-amber-warm tracking-wider uppercase">
+                {project.categoryName[currentLang]}
+              </span>
+              <span className="text-[var(--ed-line)]">•</span>
+              <span className="font-mono-tech text-xs text-mute">
+                {project.year}
+              </span>
+            </div>
+            <h1 className="ed-display-md lg:ed-display-lg font-display text-ivory max-w-4xl">
+              {project.title}
+            </h1>
+          </FadeIn>
 
-            {/* Cover — left, dominant */}
-            <div className="lg:col-span-7">
-              <FadeIn>
-                <div className="lg:sticky lg:top-24">
-                  <div
-                    onClick={() => openLightbox(project.coverImage)}
-                    className="relative aspect-[16/10] lg:aspect-[4/3] overflow-hidden cursor-zoom-in group"
-                  >
-                    <img
-                      src={project.coverImage}
-                      alt={project.title}
-                      className="w-full h-full object-cover transition-transform duration-[1100ms] group-hover:scale-[1.03]"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#1d1d1b]/90 via-transparent to-transparent" />
-                    {sideImages.length > 0 && (
-                      <div className="absolute bottom-4 right-4 z-10 font-mono-tech text-[10px] tracking-widest text-ivory/80 bg-[#141412]/70 backdrop-blur-sm px-3 py-1.5">
-                        1 / {allImages.length}
-                      </div>
-                    )}
+          {/* Metadata strip directly under Title */}
+          <FadeIn delay={0.08}>
+            <div className="border-y border-[var(--ed-line)] py-4 sm:py-5 mt-6 sm:mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
+              {[
+                { icon: <MapPin className="w-3.5 h-3.5 text-amber-warm" />, label: t.projects.location, value: project.location },
+                { icon: <Building2 className="w-3.5 h-3.5 text-amber-warm" />, label: t.projects.client, value: project.client },
+                { icon: <Calendar className="w-3.5 h-3.5 text-amber-warm" />, label: t.projects.year, value: project.year },
+                ...(project.architect ? [{ icon: <ArrowRight className="w-3.5 h-3.5 text-amber-warm" />, label: t.projects.architect, value: project.architect }] : []),
+              ].slice(0, 4).map((item, i) => (
+                <div key={i}>
+                  <div className="flex items-center gap-2 mb-1">
+                    {item.icon}
+                    <span className="font-micro text-[9px] text-mute uppercase tracking-wider">{item.label}</span>
                   </div>
+                  <span className="text-xs sm:text-sm font-medium text-[var(--ed-ivory)]">{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </FadeIn>
+        </div>
 
-                  {/* Overlapping title block */}
-                  <div className="relative z-10 -mt-10 sm:-mt-14 p-1">
-                    <FadeIn delay={0.15}>
-                      <p className="font-micro text-amber-warm mb-4">
-                        {project.categoryName[currentLang]} — {project.year}
-                      </p>
-                      <h1 className="ed-display-md lg:ed-display-lg font-display text-ivory">
-                        {project.title}
-                      </h1>
-                    </FadeIn>
+        {/* Two-column layout: Left (Cover + Narrative) / Right (Gallery + Metrics + CTA) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 mb-20 items-start">
+          {/* Left Column: Main Cover Image + Narrative */}
+          <div className="lg:col-span-7 space-y-10">
+            <FadeIn>
+              <div
+                onClick={() => openLightbox(project.coverImage)}
+                className="relative aspect-[16/10] overflow-hidden cursor-zoom-in group border border-[var(--ed-line)]"
+              >
+                <img
+                  src={project.coverImage}
+                  alt={project.title}
+                  className="w-full h-full object-cover transition-transform duration-[1100ms] group-hover:scale-[1.03]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#1d1d1b]/60 via-transparent to-transparent" />
+                {sideImages.length > 0 && (
+                  <div className="absolute bottom-4 right-4 z-10 font-mono-tech text-[10px] tracking-widest text-ivory/90 bg-[#141412]/80 backdrop-blur-sm px-3 py-1.5 border border-white/10">
+                    1 / {allImages.length}
                   </div>
+                )}
+              </div>
+            </FadeIn>
+
+            {/* Concept and Engineering Narrative */}
+            <div className="space-y-8">
+              <FadeIn delay={0.1}>
+                <div>
+                  <p className="font-micro text-amber-warm mb-3 uppercase tracking-wider">{t.projects.conceptTitle}</p>
+                  <p className="text-base text-soft leading-relaxed whitespace-pre-line">
+                    {project.fullDescription[currentLang]}
+                  </p>
                 </div>
               </FadeIn>
-            </div>
 
-            {/* Gallery — right column, immediately visible */}
+              {project.lightingSolution && project.lightingSolution[currentLang] && (
+                <FadeIn delay={0.15}>
+                  <div className="pt-6 border-t border-[var(--ed-line)]">
+                    <p className="font-micro text-amber-warm mb-3 uppercase tracking-wider">{t.projects.engineeringTitle}</p>
+                    <p className="text-sm text-mute leading-relaxed whitespace-pre-line">
+                      {project.lightingSolution[currentLang]}
+                    </p>
+                  </div>
+                </FadeIn>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Gallery Photos + Metrics + CTA */}
+          <div className="lg:col-span-5 space-y-8">
             {sideImages.length > 0 && (
-              <div className="lg:col-span-5">
+              <div>
                 <FadeIn delay={0.1}>
-                  <div className="flex items-center justify-between mb-4 lg:mb-5">
-                    <p className="font-micro text-[9px] text-mute">{t.projects.galleryTitle}</p>
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="font-micro text-[9px] text-mute uppercase tracking-widest">{t.projects.galleryTitle}</p>
                     <span className="font-mono-tech text-[10px] text-mute">{sideImages.length} foto</span>
                   </div>
                 </FadeIn>
-                <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 lg:gap-4">
+
+                <div className="grid grid-cols-2 gap-3">
                   {visibleSide.map((img, idx) => (
-                    <FadeIn key={idx} delay={0.08 * Math.min(idx, 4)} className={idx === 0 ? 'col-span-2' : ''}>
+                    <FadeIn key={idx} delay={0.05 * Math.min(idx, 4)} className={idx === 0 ? 'col-span-2' : ''}>
                       <button
                         onClick={() => openLightbox(img)}
-                        className="group relative w-full overflow-hidden cursor-zoom-in aspect-[16/10]"
+                        className="group relative w-full overflow-hidden cursor-zoom-in aspect-[16/10] border border-[var(--ed-line)]"
                       >
                         <img
                           src={img}
@@ -155,17 +202,17 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
                           loading="lazy"
                           className="w-full h-full object-cover transition-transform duration-[1100ms] group-hover:scale-[1.03]"
                         />
-                        <div className="absolute inset-0 bg-[#1d1d1b]/0 group-hover:bg-[#1d1d1b]/10 transition-colors duration-300" />
+                        <div className="absolute inset-0 bg-[#1d1d1b]/0 group-hover:bg-[#1d1d1b]/20 transition-colors duration-300" />
                       </button>
                     </FadeIn>
                   ))}
 
-                  {/* Overflow tile — reveals remaining photos in lightbox */}
+                  {/* Overflow tile */}
                   {hiddenCount > 0 && (
-                    <FadeIn delay={0.08 * Math.min(MAX_SIDE, 4)}>
+                    <FadeIn delay={0.1}>
                       <button
                         onClick={() => openLightbox(sideImages[MAX_SIDE])}
-                        className="group relative w-full overflow-hidden cursor-zoom-in aspect-[16/10]"
+                        className="group relative w-full overflow-hidden cursor-zoom-in aspect-[16/10] border border-[var(--ed-line)]"
                       >
                         <img
                           src={sideImages[MAX_SIDE]}
@@ -173,7 +220,7 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
                           loading="lazy"
                           className="w-full h-full object-cover transition-transform duration-[1100ms] group-hover:scale-[1.03]"
                         />
-                        <div className="absolute inset-0 bg-[#141412]/75 flex flex-col items-center justify-center gap-1">
+                        <div className="absolute inset-0 bg-[#141412]/85 flex flex-col items-center justify-center gap-1 group-hover:bg-[#141412]/70 transition-colors">
                           <span className="font-mono-tech text-2xl text-ivory">+{hiddenCount}</span>
                           <span className="font-micro text-[9px] tracking-widest text-[var(--ed-soft)] group-hover:text-amber-warm transition-colors">
                             {t.projects.galleryTitle}
@@ -183,100 +230,37 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
                     </FadeIn>
                   )}
                 </div>
-
-                {/* Contact CTA — fills empty space when gallery is short */}
-                <FadeIn delay={0.2}>
-                  <div className="hidden lg:block mt-8">
-                    <EdHairline amber />
-                    <h3 className="ed-display-sm font-display text-ivory mt-6">
-                      {t.projects.similarProjectCta}
-                    </h3>
-                    <p className="text-xs text-mute mt-3 leading-relaxed">
-                      {t.projects.similarProjectDesc}
-                    </p>
-                    <div className="mt-5">
-                      <EdButton arrow onClick={onOpenContact}>
-                        {t.projects.contactEngineer}
-                      </EdButton>
-                    </div>
-                  </div>
-                </FadeIn>
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Metadata row */}
-        <div className="border-t border-[var(--ed-line)] py-6 grid grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-          {[
-            { icon: <MapPin className="w-3.5 h-3.5 text-amber-warm" />, label: t.projects.location, value: project.location },
-            { icon: <Building2 className="w-3.5 h-3.5 text-amber-warm" />, label: t.projects.client, value: project.client },
-            { icon: <Calendar className="w-3.5 h-3.5 text-amber-warm" />, label: t.projects.year, value: project.year },
-            ...(project.architect ? [{ icon: <ArrowRight className="w-3.5 h-3.5 text-amber-warm" />, label: t.projects.architect, value: project.architect }] : []),
-          ].slice(0, 4).map((item, i) => (
-            <div key={i}>
-              <div className="flex items-center gap-2 mb-2">
-                {item.icon}
-                <span className="font-micro text-[9px] text-mute">{item.label}</span>
-              </div>
-              <span className="text-sm text-[var(--ed-ivory)]">{item.value}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Narrative + metrics */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 mb-20">
-          <div className="lg:col-span-7 space-y-10">
-            <FadeIn>
-              <div>
-                <p className="font-micro text-amber-warm mb-5">{t.projects.conceptTitle}</p>
-                <p className="text-base text-soft leading-relaxed">
-                  {project.fullDescription[currentLang]}
-                </p>
-              </div>
-            </FadeIn>
-
-            <FadeIn delay={0.1}>
-              <div>
-                <EdHairline amber />
-                <p className="font-micro text-amber-warm mt-6 mb-3">{t.projects.engineeringTitle}</p>
-                <p className="text-sm text-mute leading-relaxed">
-                  {project.lightingSolution[currentLang]}
-                </p>
-              </div>
-            </FadeIn>
-          </div>
-
-
-          {/* Metrics sidebar */}
-          <div className="lg:col-span-5">
-            <FadeIn delay={0.15}>
-              {project.metrics && project.metrics.length > 0 && (
-                <div>
-                  <p className="font-micro text-amber-warm mb-6">{t.projects.metricsTitle}</p>
-                  <div className="border-t border-[var(--ed-line)]">
+            {/* Metrics */}
+            {project.metrics && project.metrics.length > 0 && (
+              <FadeIn delay={0.15}>
+                <div className="bg-[var(--ed-bg-2)] border border-[var(--ed-line)] p-6">
+                  <p className="font-micro text-amber-warm mb-4 uppercase tracking-wider">{t.projects.metricsTitle}</p>
+                  <div className="divide-y divide-[var(--ed-line)]">
                     {project.metrics.map((m, i) => (
-                      <div key={i} className="py-5 flex justify-between items-center border-b border-[var(--ed-line)]">
+                      <div key={i} className="py-3 flex justify-between items-center">
                         <span className="font-micro text-[9px] text-mute">{m.label[currentLang]}</span>
                         <span className="font-mono-tech text-sm text-[var(--ed-ivory)]">{m.value}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-              )}
-            </FadeIn>
+              </FadeIn>
+            )}
 
-            {/* Inquiry CTA */}
-            <FadeIn delay={0.25}>
-              <div className="mt-12 lg:mt-16 lg:hidden">
+            {/* CTA */}
+            <FadeIn delay={0.2}>
+              <div className="bg-[var(--ed-bg-2)] border border-[var(--ed-line)] p-6 lg:p-8">
                 <EdHairline amber />
-                <h3 className="ed-display-sm font-display text-ivory mt-8">
+                <h3 className="ed-display-sm font-display text-ivory mt-6">
                   {t.projects.similarProjectCta}
                 </h3>
-                <p className="text-xs text-mute mt-4 leading-relaxed">
+                <p className="text-xs text-mute mt-3 leading-relaxed">
                   {t.projects.similarProjectDesc}
                 </p>
-                <div className="mt-7">
+                <div className="mt-6">
                   <EdButton arrow onClick={onOpenContact}>
                     {t.projects.contactEngineer}
                   </EdButton>
