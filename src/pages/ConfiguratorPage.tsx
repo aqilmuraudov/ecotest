@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Language, ConfiguratorState } from '../types';
 import { translations } from '../data/translations';
+import { FadeIn } from '../components/ui/FadeIn';
+import { EdHairline } from '../components/ed/EditorialUI';
 import { 
   Sliders, 
   Send, 
@@ -12,7 +14,8 @@ import {
   Box,
   Layers,
   Check,
-  Eye
+  Eye,
+  ArrowRight
 } from 'lucide-react';
 
 interface ConfiguratorPageProps {
@@ -166,11 +169,11 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
   const visualWidthPercent = Math.min(92, Math.max(35, 35 + ((config.length - 500) / 9500) * 57));
 
   return (
-    <div className="min-h-screen bg-[var(--ed-bg)] text-[var(--ed-ivory)] pt-32 pb-24">
+    <div className="min-h-screen bg-[var(--ed-bg)] text-[var(--ed-ivory)] pt-28 sm:pt-32 pb-20 sm:pb-24">
       <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
         
-        {/* Header */}
-        <div className="mb-14">
+        {/* Header — Editorial open layout */}
+        <FadeIn className="mb-10 sm:mb-12">
           <div className="flex items-center gap-2 font-micro text-[9px] text-mute mb-5">
             <button onClick={() => onNavigate('home')} className="hover:text-amber-warm transition-colors">
               {t.nav.home}
@@ -181,9 +184,11 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
 
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
-              <p className="font-micro text-amber-warm mb-4">{t.configurator.badge}</p>
+              <p className="font-micro text-amber-warm mb-4">04 — {t.configurator.badge}</p>
               <h1 className="ed-display-lg font-display text-ivory">
-                {t.configurator.title}
+                {currentLang === 'az' ? 'xətti işıq' : currentLang === 'ru' ? 'линейный свет' : 'linear light'}
+                <br />
+                <span className="text-soft">{currentLang === 'az' ? 'konfiquratoru' : currentLang === 'ru' ? 'конфигуратор' : 'configurator'}</span>
               </h1>
               <p className="text-sm text-mute mt-5 max-w-2xl leading-relaxed">
                 {t.configurator.subtitle}
@@ -206,27 +211,31 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                 setDimLevel(100);
                 setViewMode('elevation');
               }}
-              className="self-start md:self-auto flex items-center gap-2 font-micro text-[10px] text-mute hover:text-ivory px-5 py-2.5 rounded-full bg-transparent border border-[var(--ed-line)] hover:border-[rgba(242,237,227,0.3)] transition-all"
+              className="ed-btn-ghost !text-xs !py-2.5 !px-5 self-start md:self-auto gap-2"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="w-3.5 h-3.5 text-mute" />
               <span>{t.configurator.reset}</span>
             </button>
           </div>
-        </div>
+        </FadeIn>
+
+        <EdHairline className="mb-8 sm:mb-10" />
 
         {/* 2-Column Responsive Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
           
           {/* Left Column: Configuration Controls */}
           <div className="lg:col-span-7 space-y-6">
             
             {/* 1. Profile Model Selection */}
-            <div className="bg-[#101114] border border-white/10 rounded-2xl p-6 shadow-xl space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-[#FFD21A]">
-                  {t.configurator.section1}
-                </h3>
-                <span className="text-xs font-mono text-gray-400">{t.configurator.sectionSize}</span>
+            <div className="bg-[var(--ed-bg-2)] border border-[var(--ed-line)] p-6 sm:p-7 space-y-6">
+              <div className="flex items-baseline justify-between pb-3 border-b border-[var(--ed-line)]">
+                <div className="flex items-center gap-3">
+                  <span className="font-mono-tech text-xs text-amber-warm tracking-wider">01</span>
+                  <span className="w-4 h-[1px] bg-[var(--ed-line)]" />
+                  <span className="font-mono-tech text-xs tracking-widest uppercase text-ivory">{t.configurator.section1}</span>
+                </div>
+                <span className="font-mono-tech text-[10px] text-mute uppercase tracking-widest">{t.configurator.sectionSize}</span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -239,56 +248,69 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                   <button
                     key={item.id}
                     onClick={() => setConfig({ ...config, profileType: item.id as any })}
-                    className={`p-3.5 rounded-xl border text-left transition-all ${
+                    className={`p-4 border text-left transition-all cursor-pointer relative ${
                       config.profileType === item.id 
-                        ? 'border-[#FFD21A] bg-[#FFD21A]/10 text-white ring-1 ring-[#FFD21A]' 
-                        : 'border-white/10 bg-black/40 text-gray-400 hover:text-white hover:border-white/20'
+                        ? 'border-[var(--ed-amber)] bg-[rgba(245,166,35,0.06)]' 
+                        : 'border-[var(--ed-line)] bg-transparent hover:border-[var(--ed-line-strong)] hover:bg-[var(--ed-bg-3)]/30'
                     }`}
                   >
-                    <div className="text-base sm:text-lg font-bold text-[#FFD21A] mb-1">{item.icon}</div>
-                    <div className="text-xs font-bold uppercase">{item.name}</div>
-                    <div className="text-[10px] text-gray-400 mt-0.5">{item.sub}</div>
+                    {config.profileType === item.id && (
+                      <div className="absolute top-0 left-0 right-0 h-[2px] bg-[var(--ed-amber)]" />
+                    )}
+                    <div className="text-base font-mono-tech text-amber-warm mb-2">{item.icon}</div>
+                    <div className="font-mono-tech text-xs text-ivory font-medium tracking-wide">{item.name}</div>
+                    <div className="font-mono-tech text-[10px] text-mute mt-1">{item.sub}</div>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* 2. Mounting & Geometric Shape */}
-            <div className="bg-[#101114] border border-white/10 rounded-2xl p-6 shadow-xl space-y-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-[#FFD21A]">
-                  {t.configurator.section2}
-                </h3>
+            <div className="bg-[var(--ed-bg-2)] border border-[var(--ed-line)] p-6 sm:p-7 space-y-6">
+              <div className="flex items-baseline justify-between pb-3 border-b border-[var(--ed-line)]">
+                <div className="flex items-center gap-3">
+                  <span className="font-mono-tech text-xs text-amber-warm tracking-wider">02</span>
+                  <span className="w-4 h-[1px] bg-[var(--ed-line)]" />
+                  <span className="font-mono-tech text-xs tracking-widest uppercase text-ivory">{t.configurator.section2}</span>
+                </div>
               </div>
 
               {/* Mounting Typology */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {[
-                  { id: 'suspended', label: t.configurator.mountings.suspended },
-                  { id: 'recessed', label: t.configurator.mountings.recessed },
-                  { id: 'surface', label: t.configurator.mountings.surface },
-                ].map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => setConfig({ ...config, mounting: m.id as any })}
-                    className={`p-3 rounded-xl text-xs font-semibold border transition-all text-center flex items-center justify-center gap-2 ${
-                      config.mounting === m.id 
-                        ? 'border-[#FFD21A] bg-[#FFD21A]/15 text-[#FFD21A] ring-1 ring-[#FFD21A]' 
-                        : 'border-white/10 bg-black/40 text-gray-400 hover:text-white hover:border-white/20'
-                    }`}
-                  >
-                    {config.mounting === m.id && <Check className="w-3.5 h-3.5 text-[#FFD21A]" />}
-                    <span>{m.label}</span>
-                  </button>
-                ))}
+              <div>
+                <label className="block font-micro text-[10px] text-mute uppercase tracking-widest mb-3">
+                  {t.configurator.mountings.suspended.split(' ')[0]} TYPOLOGY
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {[
+                    { id: 'suspended', label: t.configurator.mountings.suspended },
+                    { id: 'recessed', label: t.configurator.mountings.recessed },
+                    { id: 'surface', label: t.configurator.mountings.surface },
+                  ].map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => setConfig({ ...config, mounting: m.id as any })}
+                      className={`p-3.5 border text-xs font-mono-tech tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer relative ${
+                        config.mounting === m.id 
+                          ? 'border-[var(--ed-amber)] bg-[rgba(245,166,35,0.06)] text-amber-warm font-medium' 
+                          : 'border-[var(--ed-line)] bg-transparent text-mute hover:text-ivory hover:border-[var(--ed-line-strong)]'
+                      }`}
+                    >
+                      {config.mounting === m.id && (
+                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-[var(--ed-amber)]" />
+                      )}
+                      {config.mounting === m.id && <Check className="w-3.5 h-3.5 text-amber-warm" />}
+                      <span>{m.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Geometry Selection */}
-              <div className="pt-2">
-                <label className="block text-xs font-medium text-gray-400 mb-2.5">
+              <div className="pt-4 border-t border-[var(--ed-line)]">
+                <label className="block font-micro text-[10px] text-mute uppercase tracking-widest mb-3">
                   {t.configurator.shapeTitle}
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   {[
                     { id: 'straight', label: t.configurator.shapes.straight },
                     { id: 'l-corner', label: t.configurator.shapes.lCorner },
@@ -297,13 +319,16 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                     <button
                       key={s.id}
                       onClick={() => setShape(s.id as any)}
-                      className={`p-3 rounded-lg text-xs border transition-all flex items-center justify-center gap-2 ${
+                      className={`p-3 border text-xs font-mono-tech tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer relative ${
                         shape === s.id 
-                          ? 'border-white text-white bg-white/10 font-bold ring-1 ring-white/20' 
-                          : 'border-white/10 bg-black/40 text-gray-400 hover:text-white hover:border-white/20'
+                          ? 'border-[var(--ed-amber)] bg-[rgba(245,166,35,0.06)] text-amber-warm font-medium' 
+                          : 'border-[var(--ed-line)] bg-transparent text-mute hover:text-ivory hover:border-[var(--ed-line-strong)]'
                       }`}
                     >
-                      {shape === s.id && <Check className="w-3.5 h-3.5 text-white" />}
+                      {shape === s.id && (
+                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-[var(--ed-amber)]" />
+                      )}
+                      {shape === s.id && <Check className="w-3.5 h-3.5 text-amber-warm" />}
                       <span>{s.label}</span>
                     </button>
                   ))}
@@ -311,11 +336,11 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
               </div>
 
               {/* Length Slider */}
-              <div className="pt-4 border-t border-white/10">
-                <div className="flex justify-between items-center text-xs mb-2.5">
-                  <span className="text-gray-300 font-bold uppercase">{t.configurator.lengthTitle}</span>
-                  <span className="text-lg font-mono font-bold text-[#FFD21A]">
-                    {config.length} mm <span className="text-xs text-gray-400 font-normal">({(config.length / 1000).toFixed(2)} {t.configurator.meterUnit})</span>
+              <div className="pt-4 border-t border-[var(--ed-line)]">
+                <div className="flex justify-between items-baseline mb-3">
+                  <span className="font-micro text-[10px] text-mute uppercase tracking-widest">{t.configurator.lengthTitle}</span>
+                  <span className="font-mono-tech text-base font-semibold text-amber-warm">
+                    {config.length} mm <span className="text-xs text-mute font-normal font-mono-tech">({(config.length / 1000).toFixed(2)} {t.configurator.meterUnit})</span>
                   </span>
                 </div>
                 <input
@@ -325,9 +350,9 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                   step="100"
                   value={config.length}
                   onChange={(e) => setConfig({ ...config, length: Number(e.target.value) })}
-                  className="w-full h-2.5 bg-[#18191E] rounded-lg appearance-none cursor-pointer accent-[#FFD21A]"
+                  className="w-full h-1 bg-[var(--ed-line)] appearance-none cursor-pointer accent-[var(--ed-amber)]"
                 />
-                <div className="flex justify-between text-[10px] text-gray-500 font-mono mt-1.5">
+                <div className="flex justify-between font-mono-tech text-[10px] text-mute mt-2">
                   <span>0.5 m</span>
                   <span>2.5 m</span>
                   <span>5.0 m</span>
@@ -338,14 +363,18 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
             </div>
 
             {/* 3. CCT, Diffuser, Finish & Control */}
-            <div className="bg-[#101114] border border-white/10 rounded-2xl p-6 shadow-xl space-y-6">
+            <div className="bg-[var(--ed-bg-2)] border border-[var(--ed-line)] p-6 sm:p-7 space-y-6">
               
               {/* Color Temperature (CCT) */}
-              <div className="space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-[#FFD21A]">
-                  {t.configurator.section3}
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="space-y-4">
+                <div className="flex items-baseline justify-between pb-3 border-b border-[var(--ed-line)]">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono-tech text-xs text-amber-warm tracking-wider">03</span>
+                    <span className="w-4 h-[1px] bg-[var(--ed-line)]" />
+                    <span className="font-mono-tech text-xs tracking-widest uppercase text-ivory">{t.configurator.section3}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   {[
                     { id: '2700k', name: t.configurator.cct.cct2700, sub: t.configurator.cct.cct2700Sub, color: '#FFA947' },
                     { id: '3000k', name: t.configurator.cct.cct3000, sub: t.configurator.cct.cct3000Sub, color: '#FFD39B' },
@@ -355,26 +384,29 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                     <button
                       key={c.id}
                       onClick={() => setConfig({ ...config, cct: c.id as any })}
-                      className={`p-3 rounded-xl border text-left transition-all ${
+                      className={`p-3.5 border text-left transition-all cursor-pointer relative ${
                         config.cct === c.id 
-                          ? 'border-[#FFD21A] bg-[#FFD21A]/10 ring-1 ring-[#FFD21A]' 
-                          : 'border-white/10 bg-black/40 text-gray-400 hover:text-white hover:border-white/20'
+                          ? 'border-[var(--ed-amber)] bg-[rgba(245,166,35,0.06)]' 
+                          : 'border-[var(--ed-line)] bg-transparent text-soft hover:text-ivory hover:border-[var(--ed-line-strong)]'
                       }`}
                     >
-                      <div className="w-5 h-5 rounded-full mb-2 border border-white/30 shadow-inner" style={{ background: c.color }} />
-                      <div className="text-xs font-bold text-white">{c.name}</div>
-                      <div className="text-[10px] text-gray-400 mt-0.5">{c.sub}</div>
+                      {config.cct === c.id && (
+                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-[var(--ed-amber)]" />
+                      )}
+                      <div className="w-3.5 h-3.5 rounded-full mb-2.5 border border-white/20" style={{ background: c.color }} />
+                      <div className="font-mono-tech text-xs text-ivory font-medium tracking-wide">{c.name}</div>
+                      <div className="font-mono-tech text-[10px] text-mute mt-1">{c.sub}</div>
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Diffuser / Glare Control */}
-              <div className="space-y-3 pt-3 border-t border-white/10">
-                <label className="block text-xs font-medium text-gray-300">
+              <div className="space-y-3 pt-4 border-t border-[var(--ed-line)]">
+                <label className="block font-micro text-[10px] text-mute uppercase tracking-widest">
                   {t.configurator.diffuserTitle}
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   {[
                     { id: 'microprismatic', name: t.configurator.diffusers.microprismatic, ugr: t.configurator.diffusers.microprismaticSub },
                     { id: 'opal', name: t.configurator.diffusers.opal, ugr: t.configurator.diffusers.opalSub },
@@ -383,25 +415,28 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                     <button
                       key={d.id}
                       onClick={() => setConfig({ ...config, diffuser: d.id as any })}
-                      className={`p-3 rounded-xl border text-left text-xs transition-all ${
+                      className={`p-3.5 border text-left text-xs transition-all cursor-pointer relative ${
                         config.diffuser === d.id 
-                          ? 'border-[#FFD21A] bg-[#FFD21A]/15 text-white font-bold ring-1 ring-[#FFD21A]' 
-                          : 'border-white/10 bg-black/40 text-gray-400 hover:text-white hover:border-white/20'
+                          ? 'border-[var(--ed-amber)] bg-[rgba(245,166,35,0.06)] text-ivory font-medium' 
+                          : 'border-[var(--ed-line)] bg-transparent text-soft hover:text-ivory hover:border-[var(--ed-line-strong)]'
                       }`}
                     >
-                      <div className="font-semibold text-white">{d.name}</div>
-                      <div className="text-[10px] text-gray-400 mt-1">{d.ugr}</div>
+                      {config.diffuser === d.id && (
+                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-[var(--ed-amber)]" />
+                      )}
+                      <div className="font-mono-tech text-xs text-ivory font-medium tracking-wide">{d.name}</div>
+                      <div className="font-mono-tech text-[10px] text-mute mt-1">{d.ugr}</div>
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Profile Body Finish */}
-              <div className="space-y-3 pt-3 border-t border-white/10">
-                <label className="block text-xs font-medium text-gray-300">
+              <div className="space-y-3 pt-4 border-t border-[var(--ed-line)]">
+                <label className="block font-micro text-[10px] text-mute uppercase tracking-widest">
                   {t.configurator.finishTitle}
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   {[
                     { id: 'black', name: t.configurator.finishes.black, hex: '#141518' },
                     { id: 'white', name: t.configurator.finishes.white, hex: '#E2E8F0' },
@@ -411,22 +446,25 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                     <button
                       key={f.id}
                       onClick={() => setConfig({ ...config, finish: f.id as any })}
-                      className={`p-3 rounded-xl border flex items-center gap-2.5 text-xs transition-all ${
+                      className={`p-3 border flex items-center gap-2.5 text-xs transition-all cursor-pointer relative ${
                         config.finish === f.id 
-                          ? 'border-[#FFD21A] bg-white/10 text-white font-bold ring-1 ring-[#FFD21A]' 
-                          : 'border-white/10 bg-black/40 text-gray-400 hover:text-white hover:border-white/20'
+                          ? 'border-[var(--ed-amber)] bg-[rgba(245,166,35,0.06)] text-ivory font-medium' 
+                          : 'border-[var(--ed-line)] bg-transparent text-soft hover:text-ivory hover:border-[var(--ed-line-strong)]'
                       }`}
                     >
-                      <span className="w-4 h-4 rounded-full border border-white/40 flex-shrink-0" style={{ background: f.hex }} />
-                      <span className="truncate">{f.name}</span>
+                      {config.finish === f.id && (
+                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-[var(--ed-amber)]" />
+                      )}
+                      <span className="w-3.5 h-3.5 rounded-full border border-white/20 flex-shrink-0" style={{ background: f.hex }} />
+                      <span className="font-mono-tech text-xs truncate tracking-wide">{f.name}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Control System */}
-              <div className="space-y-3 pt-3 border-t border-white/10">
-                <label className="block text-xs font-medium text-gray-300">
+              <div className="space-y-3 pt-4 border-t border-[var(--ed-line)]">
+                <label className="block font-micro text-[10px] text-mute uppercase tracking-widest">
                   {t.configurator.controlTitle}
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -439,12 +477,15 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                     <button
                       key={ctrl.id}
                       onClick={() => setConfig({ ...config, control: ctrl.id as any })}
-                      className={`px-3 py-2.5 rounded-lg text-xs border transition-all text-center ${
+                      className={`px-3 py-2.5 border text-xs font-mono-tech tracking-wider uppercase transition-all text-center cursor-pointer relative ${
                         config.control === ctrl.id 
-                          ? 'border-[#FFD21A] bg-[#FFD21A]/15 text-[#FFD21A] font-bold ring-1 ring-[#FFD21A]' 
-                          : 'border-white/10 bg-black/40 text-gray-400 hover:text-white hover:border-white/20'
+                          ? 'border-[var(--ed-amber)] bg-[rgba(245,166,35,0.06)] text-amber-warm font-medium' 
+                          : 'border-[var(--ed-line)] bg-transparent text-mute hover:text-ivory hover:border-[var(--ed-line-strong)]'
                       }`}
                     >
+                      {config.control === ctrl.id && (
+                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-[var(--ed-amber)]" />
+                      )}
                       {ctrl.label}
                     </button>
                   ))}
@@ -459,25 +500,25 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
           <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-28">
             
             {/* Real-time Luminaire Preview Stage */}
-            <div className="bg-[#101114] border border-white/10 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-5">
+            <div className="bg-[var(--ed-bg-2)] border border-[var(--ed-line)] p-6 space-y-6">
               
               {/* Studio Header with View Mode Switchers */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-white/10">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[var(--ed-line)]">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-widest text-[#FFD21A]">
+                  <span className="text-[11px] font-mono-tech uppercase tracking-widest text-amber-warm font-semibold">
                     {t.configurator.simulationTitle}
                   </span>
-                  <span className="text-[10px] font-mono bg-white/5 border border-white/10 px-2 py-0.5 rounded text-gray-300">
+                  <span className="text-[10px] font-mono-tech border border-[var(--ed-line)] px-2 py-0.5 text-soft">
                     {t.configurator.simulationBadge}
                   </span>
                 </div>
 
-                {/* Perspective View Switcher */}
-                <div className="flex items-center bg-black/60 border border-white/10 rounded-lg p-0.5">
+                {/* Perspective View Switcher — clean architectural segmented control */}
+                <div className="inline-flex border border-[var(--ed-line)] divide-x divide-[var(--ed-line)] text-xs font-mono-tech tracking-wider uppercase">
                   <button
                     onClick={() => setViewMode('elevation')}
-                    className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
-                      viewMode === 'elevation' ? 'bg-[#FFD21A] text-black font-bold' : 'text-gray-400 hover:text-white'
+                    className={`px-3 py-1.5 transition-colors cursor-pointer ${
+                      viewMode === 'elevation' ? 'bg-[var(--ed-amber)] text-[#1d1d1b] font-semibold' : 'bg-transparent text-mute hover:text-ivory'
                     }`}
                     title={t.configurator.viewElevation}
                   >
@@ -485,8 +526,8 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                   </button>
                   <button
                     onClick={() => setViewMode('3d')}
-                    className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
-                      viewMode === '3d' ? 'bg-[#FFD21A] text-black font-bold' : 'text-gray-400 hover:text-white'
+                    className={`px-3 py-1.5 transition-colors cursor-pointer ${
+                      viewMode === '3d' ? 'bg-[var(--ed-amber)] text-[#1d1d1b] font-semibold' : 'bg-transparent text-mute hover:text-ivory'
                     }`}
                     title={t.configurator.view3d}
                   >
@@ -494,8 +535,8 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                   </button>
                   <button
                     onClick={() => setViewMode('effect')}
-                    className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
-                      viewMode === 'effect' ? 'bg-[#FFD21A] text-black font-bold' : 'text-gray-400 hover:text-white'
+                    className={`px-3 py-1.5 transition-colors cursor-pointer ${
+                      viewMode === 'effect' ? 'bg-[var(--ed-amber)] text-[#1d1d1b] font-semibold' : 'bg-transparent text-mute hover:text-ivory'
                     }`}
                     title={t.configurator.viewEffect}
                   >
@@ -505,13 +546,13 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
               </div>
 
               {/* Interactive Stage Canvas */}
-              <div className="h-72 sm:h-80 bg-[#07080A] border border-white/10 rounded-xl relative overflow-hidden flex flex-col justify-between p-4 select-none">
+              <div className="h-72 sm:h-80 bg-[#121211] border border-[var(--ed-line)] relative overflow-hidden flex flex-col justify-between p-4 select-none">
                 
                 {/* Architectural Grid & Ambient Ceiling */}
-                <div className="absolute inset-0 architectural-grid opacity-15 pointer-events-none" />
+                <div className="absolute inset-0 pointer-events-none [background-image:linear-gradient(to_right,rgba(242,237,227,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(242,237,227,0.04)_1px,transparent_1px)] [background-size:24px_24px]" />
                 
                 {/* Ceiling Plane Marker */}
-                <div className="relative z-10 w-full flex justify-between items-center text-[10px] font-mono text-gray-500 border-b border-dashed border-gray-700/60 pb-1">
+                <div className="relative z-10 w-full flex justify-between items-center text-[10px] font-mono-tech text-mute border-b border-dashed border-[var(--ed-line)] pb-1">
                   <span>CEILING PLANE</span>
                   <span>{config.mounting.toUpperCase()} MOUNT</span>
                 </div>
@@ -564,12 +605,12 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                           )}
 
                           {/* Dimension Callout Top */}
-                          <div className="w-full flex items-center justify-between text-[10px] font-mono text-[#FFD21A] mb-1.5 px-0.5">
-                            <span className="text-gray-500">|←</span>
-                            <span className="bg-black/80 px-2 py-0.5 rounded border border-[#FFD21A]/30">
+                          <div className="w-full flex items-center justify-between text-[10px] font-mono-tech text-amber-warm mb-1.5 px-0.5">
+                            <span className="text-mute">|←</span>
+                            <span className="bg-[var(--ed-bg)] px-2 py-0.5 border border-[var(--ed-line)]">
                               {config.length} mm
                             </span>
-                            <span className="text-gray-500">→|</span>
+                            <span className="text-mute">→|</span>
                           </div>
 
                           {/* Profile Body Extrusion */}
@@ -684,10 +725,10 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                             <line x1="120" y1="20" x2="140" y2="40" stroke="#FFF" strokeWidth="1" opacity="0.4" />
                             
                             {/* Dimension Callouts */}
-                            <text x="75" y="18" fill="#FFD21A" fontSize="9" textAnchor="middle" fontFamily="monospace">
+                            <text x="75" y="18" fill="#f5a623" fontSize="9" textAnchor="middle" fontFamily="monospace">
                               {Math.round(config.length * 0.6)} mm
                             </text>
-                            <text x="145" y="65" fill="#FFD21A" fontSize="9" textAnchor="middle" fontFamily="monospace" transform="rotate(90, 145, 65)">
+                            <text x="145" y="65" fill="#f5a623" fontSize="9" textAnchor="middle" fontFamily="monospace" transform="rotate(90, 145, 65)">
                               {Math.round(config.length * 0.4)} mm
                             </text>
                           </svg>
@@ -763,10 +804,10 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                             <line x1="147" y1="82" x2="163" y2="98" stroke="#FFF" strokeWidth="0.8" opacity="0.4" />
 
                             {/* Dimension Callout */}
-                            <text x="90" y="12" fill="#FFD21A" fontSize="9" textAnchor="middle" fontFamily="monospace">
+                            <text x="90" y="12" fill="#f5a623" fontSize="9" textAnchor="middle" fontFamily="monospace">
                               {Math.round(config.length * 0.6)} mm
                             </text>
-                            <text x="170" y="58" fill="#FFD21A" fontSize="9" textAnchor="middle" fontFamily="monospace" transform="rotate(90, 170, 58)">
+                            <text x="170" y="58" fill="#f5a623" fontSize="9" textAnchor="middle" fontFamily="monospace" transform="rotate(90, 170, 58)">
                               {Math.round(config.length * 0.4)} mm
                             </text>
                           </svg>
@@ -854,7 +895,7 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                             {/* Rectangle 3D Frame */}
                             <polygon points="20,10 160,10 180,25 40,25" fill={finishStyles.bg} stroke={finishStyles.border} />
                             <polygon points="40,25 180,25 180,85 40,85" fill={finishStyles.accent} stroke={finishStyles.border} />
-                            <rect x="55" y="38" width="110" height="35" fill="#07080A" stroke={finishStyles.border} />
+                            <rect x="55" y="38" width="110" height="35" fill="var(--ed-well)" stroke={finishStyles.border} />
                             {isLightOn && (
                               <rect x="50" y="34" width="120" height="43" fill="none" stroke={cctStyles.hex} strokeWidth="3" opacity="0.9" style={{ filter: `drop-shadow(0 0 8px ${cctStyles.glow})` }} />
                             )}
@@ -903,15 +944,15 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                 </div>
 
                 {/* Bottom Studio Controls: Light Switch & Dimmer Bar */}
-                <div className="relative z-10 w-full pt-2 border-t border-white/10 flex items-center justify-between gap-3 text-xs">
+                <div className="relative z-10 w-full pt-3 border-t border-[var(--ed-line)] flex items-center justify-between gap-3 text-xs">
                   
                   {/* Light Power Toggle */}
                   <button
                     onClick={() => setIsLightOn(!isLightOn)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                    className={`flex items-center gap-2 px-3 py-1.5 border text-xs font-mono-tech tracking-wider uppercase transition-colors cursor-pointer ${
                       isLightOn 
-                        ? 'border-[#FFD21A] bg-[#FFD21A]/20 text-[#FFD21A]' 
-                        : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
+                        ? 'border-[var(--ed-amber)] bg-[rgba(245,166,35,0.12)] text-amber-warm' 
+                        : 'border-[var(--ed-line)] bg-transparent text-mute hover:text-ivory'
                     }`}
                   >
                     <Power className="w-3.5 h-3.5" />
@@ -921,7 +962,7 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                   {/* Dimming Slider */}
                   {isLightOn && (
                     <div className="flex items-center gap-2 flex-1 max-w-[190px]">
-                      <SunMedium className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <SunMedium className="w-3.5 h-3.5 text-mute flex-shrink-0" />
                       <input
                         type="range"
                         min="10"
@@ -929,14 +970,14 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                         step="5"
                         value={dimLevel}
                         onChange={(e) => setDimLevel(Number(e.target.value))}
-                        className="w-full h-1.5 bg-[#18191E] rounded-lg appearance-none cursor-pointer accent-[#FFD21A]"
+                        className="w-full h-1 bg-[var(--ed-line)] appearance-none cursor-pointer accent-[var(--ed-amber)]"
                       />
-                      <span className="font-mono text-[10px] text-[#FFD21A] w-7 text-right">{dimLevel}%</span>
+                      <span className="font-mono-tech text-[10px] text-amber-warm w-7 text-right">{dimLevel}%</span>
                     </div>
                   )}
 
                   {/* Floating Measurement Stamp */}
-                  <div className="text-[10px] font-mono bg-black/80 px-2 py-1 rounded border border-white/10 text-gray-300 flex-shrink-0">
+                  <div className="text-[10px] font-mono-tech border border-[var(--ed-line)] bg-black/40 px-2.5 py-1 text-soft flex-shrink-0">
                     {config.length}mm • {config.cct.toUpperCase()}
                   </div>
                 </div>
@@ -944,18 +985,18 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
               </div>
 
               {/* Technical Realtime Metrics Display */}
-              <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="p-3 bg-black/40 border border-white/5 rounded-xl">
-                  <div className="text-gray-400 text-[10px] uppercase">{t.configurator.metricPower}</div>
-                  <div className="text-white font-mono font-bold mt-1 text-sm">{totalWatts} W</div>
+              <div className="grid grid-cols-3 border border-[var(--ed-line)] divide-x divide-[var(--ed-line)] bg-[var(--ed-well)] text-center text-xs">
+                <div className="py-3 px-2">
+                  <div className="text-mute text-[9px] font-micro uppercase tracking-widest">{t.configurator.metricPower}</div>
+                  <div className="text-ivory font-mono-tech font-semibold mt-1 text-sm">{totalWatts} <span className="text-[10px] text-mute font-normal">W</span></div>
                 </div>
-                <div className="p-3 bg-black/40 border border-white/5 rounded-xl">
-                  <div className="text-gray-400 text-[10px] uppercase">{t.configurator.metricLumen}</div>
-                  <div className="text-white font-mono font-bold mt-1 text-sm">~{totalLumens} lm</div>
+                <div className="py-3 px-2">
+                  <div className="text-mute text-[9px] font-micro uppercase tracking-widest">{t.configurator.metricLumen}</div>
+                  <div className="text-ivory font-mono-tech font-semibold mt-1 text-sm">~{totalLumens} <span className="text-[10px] text-mute font-normal">lm</span></div>
                 </div>
-                <div className="p-3 bg-black/40 border border-white/5 rounded-xl">
-                  <div className="text-gray-400 text-[10px] uppercase">{t.configurator.metricUgr}</div>
-                  <div className="text-[#FFD21A] font-mono font-bold mt-1 text-sm">{estimatedUGR}</div>
+                <div className="py-3 px-2">
+                  <div className="text-mute text-[9px] font-micro uppercase tracking-widest">{t.configurator.metricUgr}</div>
+                  <div className="text-amber-warm font-mono-tech font-semibold mt-1 text-sm">{estimatedUGR}</div>
                 </div>
               </div>
 
@@ -963,9 +1004,9 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
               <div className="pt-2">
                 <button
                   onClick={handleInquiry}
-                  className="w-full flex items-center justify-center gap-2 bg-[#FFD21A] text-black font-bold text-xs uppercase tracking-wider py-4 rounded-xl hover:bg-[#F0C413] transition-all shadow-[0_0_25px_rgba(255,210,26,0.3)] hover:scale-[1.01]"
+                  className="w-full flex items-center justify-center gap-3 py-4 px-6 bg-[var(--ed-amber)] text-[#1d1d1b] font-mono-tech text-xs tracking-widest uppercase font-semibold hover:bg-[var(--ed-amber-2)] transition-colors cursor-pointer"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-3.5 h-3.5" />
                   <span>{t.configurator.sendInquiry}</span>
                 </button>
               </div>

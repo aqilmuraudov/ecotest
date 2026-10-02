@@ -112,12 +112,13 @@ export const HomePage: React.FC<HomePageProps> = ({
     <div className="bg-[var(--ed-bg)] text-[var(--ed-ivory)] overflow-hidden">
 
       {/* ============================================================ */}
+      {/* ============================================================ */}
       {/* HERO — asymmetric dark canvas, oversized type, glowing object */}
       {/* ============================================================ */}
-      <section ref={heroRef} className="relative min-h-screen flex items-center pt-24 pb-16 overflow-hidden">
+      <section ref={heroRef} className="relative min-h-[auto] lg:min-h-screen flex items-center pt-20 sm:pt-24 pb-12 sm:pb-16 lg:py-20 overflow-hidden">
         <div className="max-w-[1440px] mx-auto w-full px-5 sm:px-8 lg:px-12 relative z-10">
 
-          <div className="max-w-xl lg:max-w-2xl">
+          <div className="max-w-xl lg:max-w-2xl pt-64 sm:pt-72 md:pt-80 lg:pt-0">
             {/* Headline */}
             <motion.div style={{ y: titleY }} className="relative z-10">
               <motion.h1
@@ -135,13 +136,13 @@ export const HomePage: React.FC<HomePageProps> = ({
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.9, delay: 0.55 }}
-                className="mt-8 lg:mt-10 max-w-md"
+                className="mt-6 sm:mt-8 lg:mt-10 max-w-md"
               >
                 <p className="text-sm text-soft leading-relaxed whitespace-pre-line">
                   {ed.heroDesc}
                 </p>
 
-                <div className="mt-8">
+                <div className="mt-6 sm:mt-8">
                   <EdButton arrow onClick={() => onNavigate('catalog')}>
                     {ed.heroCta}
                   </EdButton>
@@ -151,20 +152,39 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
         </div>
 
-        {/* Pendant Lamp hanging from top right */}
+        {/* MOBILE Pendant Lamp (centered between logo & search) */}
         <motion.div
           style={{ y: productY }}
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 1.2, ease: [0.22, 0.61, 0.36, 1], delay: 0.35 }}
-          className="absolute top-0 right-[-24%] sm:right-[-16%] md:right-[-10%] lg:right-[-6%] xl:right-[-2%] lg:translate-x-[60px] w-[720px] sm:w-[900px] md:w-[1050px] lg:w-[1230px] xl:w-[1440px] pointer-events-none z-0 flex flex-col items-center"
+          className="lg:hidden absolute top-0 left-1/2 -translate-x-1/2 w-[440px] sm:w-[500px] pointer-events-none z-0 flex flex-col items-center"
         >
           {/* Warm ambient downward light pool */}
           <div className="absolute top-[48%] left-1/2 -translate-x-1/2 w-[130%] h-[85%] bg-[radial-gradient(ellipse_at_50%_15%,_rgba(245,185,55,0.24)_0%,_rgba(245,180,50,0.08)_42%,_rgba(245,180,50,0.02)_65%,_transparent_80%)] blur-3xl pointer-events-none" />
 
           <img
-            src="/hero-pendant-light.png"
-            alt="Ecolife Architectural Lighting"
+            src="/hero-pendant-light-mobile.png"
+            alt="Ecolife Architectural Lighting - Mobile"
+            className="w-full h-auto object-contain select-none drop-shadow-[0_30px_80px_rgba(0,0,0,0.85)]"
+            loading="eager"
+          />
+        </motion.div>
+
+        {/* DESKTOP Pendant Lamp (hanging from top right) */}
+        <motion.div
+          style={{ y: productY }}
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.2, ease: [0.22, 0.61, 0.36, 1], delay: 0.35 }}
+          className="hidden lg:flex absolute top-0 right-[-6%] xl:right-[-2%] translate-x-[60px] w-[1230px] xl:w-[1440px] pointer-events-none z-0 flex-col items-center"
+        >
+          {/* Warm ambient downward light pool */}
+          <div className="absolute top-[48%] left-1/2 -translate-x-1/2 w-[130%] h-[85%] bg-[radial-gradient(ellipse_at_50%_15%,_rgba(245,185,55,0.24)_0%,_rgba(245,180,50,0.08)_42%,_rgba(245,180,50,0.02)_65%,_transparent_80%)] blur-3xl pointer-events-none" />
+
+          <img
+            src="/hero-pendant-light-desktop.png"
+            alt="Ecolife Architectural Lighting - Desktop"
             className="w-full h-auto object-contain select-none drop-shadow-[0_30px_80px_rgba(0,0,0,0.85)]"
             loading="eager"
           />
@@ -173,14 +193,14 @@ export const HomePage: React.FC<HomePageProps> = ({
         {/* Fade the warm hero glow into the next section—no hard line or glass panel. */}
         <div
           aria-hidden="true"
-          className="absolute inset-x-0 bottom-0 z-[1] h-56 bg-[linear-gradient(to_bottom,rgba(29,29,27,0)_0%,rgba(29,29,27,0.35)_45%,var(--ed-bg)_100%)] backdrop-blur-[3px] pointer-events-none"
+          className="absolute inset-x-0 bottom-0 z-[1] h-28 sm:h-36 bg-[linear-gradient(to_bottom,rgba(29,29,27,0)_0%,rgba(29,29,27,0.35)_45%,var(--ed-bg)_100%)] backdrop-blur-[3px] pointer-events-none"
         />
       </section>
 
       {/* ============================================================ */}
       {/* PRODUCT DISCOVERY — centered headline, pills, editorial grid  */}
       {/* ============================================================ */}
-      <section className="relative z-10 py-24 lg:py-32">
+      <section className="relative z-10 py-12 sm:py-16 lg:py-20">
         <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
 
           <FadeIn>
@@ -189,7 +209,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               titleA={ed.discoveryTitleA}
               titleB={ed.discoveryTitleB}
               sub={ed.discoverySub}
-              className="mb-12"
+              className="mb-8 sm:mb-10"
             />
           </FadeIn>
 
@@ -198,12 +218,12 @@ export const HomePage: React.FC<HomePageProps> = ({
               items={pills.map(p => ({ id: p.id, label: p.label }))}
               activeId={activeCategory}
               onSelect={setActiveCategory}
-              className="mb-16"
+              className="mb-8 sm:mb-10"
             />
           </FadeIn>
 
           {/* 3-column editorial grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-16">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-8 sm:gap-y-12">
             {gridProducts.map((product: Product, i: number) => (
               <FadeIn key={product.id} delay={0.06 * i}>
                 <EdProductCard
@@ -216,7 +236,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             ))}
           </div>
 
-          <div className="mt-20 text-center">
+          <div className="mt-12 sm:mt-16 text-center">
             <EdLink arrow onClick={() => onNavigate('catalog', activeCategory === 'all' ? undefined : activeCategory)}>
               {t.home.viewAllProducts}
             </EdLink>
@@ -228,22 +248,22 @@ export const HomePage: React.FC<HomePageProps> = ({
       {/* FEATURED COLLECTION — oversized title left, glowing product right */}
       {/* ============================================================ */}
       {featuredCollection && (
-        <section className="py-24 lg:py-32 border-t border-[var(--ed-line-soft)]">
+        <section className="py-12 sm:py-16 lg:py-20 border-t border-[var(--ed-line-soft)]">
           <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center">
 
               <FadeIn direction="right">
                 <div>
-                  <p className="font-micro text-amber-warm mb-8">{ed.featuredEyebrow}</p>
+                  <p className="font-micro text-amber-warm mb-4 sm:mb-6">{ed.featuredEyebrow}</p>
                   <h2 className="ed-display-lg font-display text-ivory">
                     {featuredCollection.name}
                   </h2>
-                  <p className="text-sm text-soft leading-relaxed mt-8 max-w-md whitespace-pre-line">
+                  <p className="text-sm text-soft leading-relaxed mt-4 sm:mt-6 max-w-md whitespace-pre-line">
                     {getLocalizedText(featuredCollection.description, currentLang) || ed.featuredDesc}
                   </p>
 
                   {/* Technical row */}
-                  <div className="flex gap-10 mt-10">
+                  <div className="flex gap-10 mt-6 sm:mt-8">
                     {[ed.featuredSpec1, ed.featuredSpec2, ed.featuredSpec3].map((spec, i) => (
                       <div key={i}>
                         <div className="ed-hairline mb-3 max-w-[72px]" />
@@ -252,7 +272,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                     ))}
                   </div>
 
-                  <div className="mt-12 flex flex-wrap items-center gap-6">
+                  <div className="mt-8 sm:mt-10 flex flex-wrap items-center gap-6">
                     <EdButton arrow onClick={() => onNavigate('configurator')}>
                       {ed.featuredCta}
                     </EdButton>
@@ -285,10 +305,10 @@ export const HomePage: React.FC<HomePageProps> = ({
       {/* ============================================================ */}
       {/* ARCHITECTURAL APPLICATIONS — large compositions, overlapping type */}
       {/* ============================================================ */}
-      <section className="py-24 lg:py-32 border-t border-[var(--ed-line-soft)]">
+      <section className="py-12 sm:py-16 lg:py-20 border-t border-[var(--ed-line-soft)]">
         <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
 
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 mb-16">
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 mb-8 sm:mb-10">
             <FadeIn>
               <EdSectionHead
                 eyebrow={ed.appsEyebrow}
@@ -301,7 +321,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             </FadeIn>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {appImages.map((sol, i) => (
               <FadeIn key={sol.id} delay={0.08 * i}>
                 <button
@@ -338,10 +358,10 @@ export const HomePage: React.FC<HomePageProps> = ({
       {/* FEATURED PROJECTS — full-width + two-column editorial spread  */}
       {/* ============================================================ */}
       {featuredProjects.length > 0 && (
-        <section className="py-24 lg:py-32 border-t border-[var(--ed-line-soft)]">
+        <section className="py-12 sm:py-16 lg:py-20 border-t border-[var(--ed-line-soft)]">
           <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
 
-            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 mb-16">
+            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 mb-8 sm:mb-10">
               <FadeIn>
                 <EdSectionHead
                   eyebrow={ed.projEyebrow}
@@ -391,7 +411,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             )}
 
             {/* Two-column composition */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mt-6 lg:mt-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mt-4 sm:mt-6">
               {featuredProjects.slice(1).map((project, i) => (
                 <FadeIn key={project.id} delay={0.1 * i}>
                   <button
@@ -426,14 +446,14 @@ export const HomePage: React.FC<HomePageProps> = ({
       {/* ============================================================ */}
       {/* LIGHTING SOLUTIONS — minimal numbered list with hover reveal   */}
       {/* ============================================================ */}
-      <section className="py-24 lg:py-32 border-t border-[var(--ed-line-soft)]">
+      <section className="py-12 sm:py-16 lg:py-20 border-t border-[var(--ed-line-soft)]">
         <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
           <FadeIn>
             <EdSectionHead
               eyebrow={ed.solEyebrow}
               titleA={ed.solTitleA}
               titleB={ed.solTitleB}
-              className="mb-16"
+              className="mb-8 sm:mb-10"
             />
           </FadeIn>
 
@@ -442,7 +462,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               <FadeIn key={entry.num} delay={0.05 * i}>
                 <button
                   onClick={entry.action}
-                  className="group w-full flex items-center justify-between py-8 lg:py-10 border-t border-[var(--ed-line)] text-left relative overflow-hidden"
+                  className="group w-full flex items-center justify-between py-5 lg:py-6 border-t border-[var(--ed-line)] text-left relative overflow-hidden"
                 >
                   {/* Warm illumination sweep on hover */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[rgba(245,166,35,0.05)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
@@ -474,9 +494,9 @@ export const HomePage: React.FC<HomePageProps> = ({
       {/* ============================================================ */}
       {/* CUSTOM PRODUCTION — 01–04, technical, large numbers           */}
       {/* ============================================================ */}
-      <section className="py-24 lg:py-32 border-t border-[var(--ed-line-soft)]">
+      <section className="py-12 sm:py-16 lg:py-20 border-t border-[var(--ed-line-soft)]">
         <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-14">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
 
             <div className="lg:col-span-5">
               <FadeIn>
@@ -488,10 +508,10 @@ export const HomePage: React.FC<HomePageProps> = ({
                 />
               </FadeIn>
 
-              <div className="mt-14 space-y-0">
+              <div className="mt-8 sm:mt-10 space-y-0">
                 {productionSteps.map((step, i) => (
                   <FadeIn key={step.num} delay={0.06 * i}>
-                    <div className="flex items-baseline gap-10 py-7 border-t border-[var(--ed-line)]">
+                    <div className="flex items-baseline gap-10 py-4 sm:py-5 border-t border-[var(--ed-line)]">
                       <span className="ed-display-sm font-display text-amber-warm/80 leading-none">{step.num}</span>
                       <span className="font-micro text-[11px] text-ivory">{step.label}</span>
                     </div>
@@ -504,7 +524,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             {/* Close-up production photography */}
             <div className="lg:col-span-7">
               <FadeIn direction="left" className="h-full">
-                <div className="grid grid-cols-2 gap-6 h-full">
+                <div className="grid grid-cols-2 gap-4 sm:gap-6 h-full">
                   <div className="relative overflow-hidden aspect-[3/4]">
                     <img
                       src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=900&q=80"
@@ -514,7 +534,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                     />
                     <span className="absolute bottom-4 left-4 font-micro text-[9px] text-ivory/80">{ed.facilityTag}</span>
                   </div>
-                  <div className="relative overflow-hidden aspect-[3/4] mt-12">
+                  <div className="relative overflow-hidden aspect-[3/4] mt-8 sm:mt-12">
                     <img
                       src="https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=900&q=80"
                       alt="Ecolife assembly"
@@ -533,21 +553,21 @@ export const HomePage: React.FC<HomePageProps> = ({
       {/* ============================================================ */}
       {/* WHY ECOLIFE — large typography, thin lines, no icons          */}
       {/* ============================================================ */}
-      <section className="py-24 lg:py-32 border-t border-[var(--ed-line-soft)]">
+      <section className="py-12 sm:py-16 lg:py-20 border-t border-[var(--ed-line-soft)]">
         <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
           <FadeIn>
             <EdSectionHead
               eyebrow={ed.whyEyebrow}
               titleA={ed.whyTitleA}
               titleB={ed.whyTitleB}
-              className="mb-16"
+              className="mb-8 sm:mb-10"
             />
           </FadeIn>
 
           <div>
             {whyItems.map((item, i) => (
               <FadeIn key={item} delay={0.05 * i}>
-                <div className="group flex items-center justify-between py-6 lg:py-8 border-t border-[var(--ed-line)]">
+                <div className="group flex items-center justify-between py-4 sm:py-5 border-t border-[var(--ed-line)]">
                   <span className="ed-display-md font-display text-ivory/90 group-hover:text-ivory group-hover:translate-x-2 transition-all duration-500">
                     {item}
                   </span>
@@ -559,7 +579,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
 
           {/* Real counts from live data */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-10 mt-20">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 mt-10 sm:mt-12">
             {[
               { value: `${products.length}+`, label: ed.statProducts },
               { value: `${projects.length}+`, label: ed.statProjects },
@@ -569,7 +589,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               <FadeIn key={i} delay={0.06 * i}>
                 <div>
                   <div className="ed-display-sm font-display text-amber-warm">{stat.value}</div>
-                  <div className="font-micro text-[9px] text-mute mt-3">{stat.label}</div>
+                  <div className="font-micro text-[9px] text-mute mt-2 sm:mt-3">{stat.label}</div>
                 </div>
               </FadeIn>
             ))}
@@ -580,17 +600,17 @@ export const HomePage: React.FC<HomePageProps> = ({
       {/* ============================================================ */}
       {/* FINAL CTA — dramatic dark close                               */}
       {/* ============================================================ */}
-      <section className="relative py-32 lg:py-44 border-t border-[var(--ed-line-soft)] overflow-hidden">
+      <section className="relative py-16 sm:py-20 lg:py-28 border-t border-[var(--ed-line-soft)] overflow-hidden">
         {/* Warm architectural glow */}
         <div className="absolute inset-x-0 bottom-[-30%] h-[70%] ed-glow-warm pointer-events-none" />
         {/* Let the warm light dissolve into the footer instead of ending on a visible edge. */}
         <div
           aria-hidden="true"
-          className="absolute inset-x-0 bottom-0 z-[1] h-56 bg-[linear-gradient(to_bottom,rgba(29,29,27,0)_0%,rgba(29,29,27,0.42)_48%,var(--ed-bg)_100%)] backdrop-blur-[3px] pointer-events-none"
+          className="absolute inset-x-0 bottom-0 z-[1] h-36 sm:h-48 bg-[linear-gradient(to_bottom,rgba(29,29,27,0)_0%,rgba(29,29,27,0.42)_48%,var(--ed-bg)_100%)] backdrop-blur-[3px] pointer-events-none"
         />
 
         <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-14 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
 
             <div className="lg:col-span-8">
               <FadeIn>
@@ -600,10 +620,10 @@ export const HomePage: React.FC<HomePageProps> = ({
                 </h2>
               </FadeIn>
               <FadeIn delay={0.15}>
-                <p className="text-sm text-soft leading-relaxed mt-8 max-w-md whitespace-pre-line">
+                <p className="text-sm text-soft leading-relaxed mt-5 sm:mt-6 max-w-md whitespace-pre-line">
                   {ed.ctaText}
                 </p>
-                <div className="mt-10">
+                <div className="mt-6 sm:mt-8">
                   <EdButton arrow onClick={onOpenContact}>
                     {ed.ctaBtn}
                   </EdButton>

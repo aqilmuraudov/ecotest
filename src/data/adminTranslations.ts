@@ -59,6 +59,7 @@ export const adminTranslations = {
       database: 'Database',
       users: 'İstifadəçilər',
       import_export: 'İdxal / İxrac',
+      pages: 'Səhifələr',
     },
 
     // Overview Tab
@@ -492,6 +493,7 @@ export const adminTranslations = {
       database: 'Database',
       users: 'Users',
       import_export: 'Import / Export',
+      pages: 'Pages',
     },
 
     // Overview Tab
@@ -925,6 +927,7 @@ export const adminTranslations = {
       database: 'Database',
       users: 'Пользователи',
       import_export: 'Импорт / Экспорт',
+      pages: 'Страницы',
     },
 
     // Overview Tab

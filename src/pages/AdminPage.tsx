@@ -18,6 +18,7 @@ import { BlogFormModal } from '../components/admin/BlogFormModal';
 import { ProjectFormModal } from '../components/admin/ProjectFormModal';
 import { InquiryViewModal } from '../components/admin/InquiryViewModal';
 import { UsersTab } from '../components/admin/UsersTab';
+import { PagesEditorTab } from '../components/admin/PagesEditorTab';
 import { adminTranslations } from '../data/adminTranslations';
 import { 
   Database, 
@@ -116,7 +117,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   }, [isAuthenticated]);
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'blog' | 'projects' | 'inquiries' | 'import_export' | 'database'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'pages' | 'products' | 'blog' | 'projects' | 'inquiries' | 'users' | 'import_export' | 'database'>('overview');
 
   // Inquiries Search & Filter
   const [inquirySearch, setInquirySearch] = useState<string>('');
@@ -546,6 +547,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           <div className="flex overflow-x-auto no-scrollbar gap-1.5 pb-1">
             {[
               { id: 'overview', label: t.tabs.overview, icon: Sparkles },
+              { id: 'pages', label: t.tabs.pages || 'Səhifələr', icon: Globe },
               { id: 'products', label: t.tabs.products, count: products.length, icon: Layers },
               { id: 'blog', label: t.tabs.blog, count: blogPosts.length, icon: FileText },
               { id: 'projects', label: t.tabs.projects, count: projects.length, icon: Briefcase },
@@ -774,6 +776,13 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               </div>
             </div>
           </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB: PAGES CONTENT VISUAL EDITOR */}
+        {/* ========================================================================= */}
+        {activeTab === 'pages' && (
+          <PagesEditorTab currentLang={currentLang} onNavigate={onNavigate} />
         )}
 
         {/* ========================================================================= */}

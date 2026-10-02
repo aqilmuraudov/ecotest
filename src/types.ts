@@ -230,3 +230,63 @@ export interface UserProfile {
   role: UserRole;
   email?: string;
 }
+
+export interface AboutPagePillar {
+  id: string;
+  label: { az: string; en: string; ru: string };
+  desc: { az: string; en: string; ru: string };
+}
+
+export interface AboutPageContent {
+  badge: { az: string; en: string; ru: string };
+  titleA: { az: string; en: string; ru: string };
+  titleB: { az: string; en: string; ru: string };
+  subtitle: { az: string; en: string; ru: string };
+  storyTitle: { az: string; en: string; ru: string };
+  storyP1: { az: string; en: string; ru: string };
+  storyP2: { az: string; en: string; ru: string };
+  facilityPoints: {
+    az: string[];
+    en: string[];
+    ru: string[];
+  };
+  images: {
+    mainFacility: string;
+    workshop1: string;
+    workshop2: string;
+  };
+  pillarsTitle: { az: string; en: string; ru: string };
+  pillars: AboutPagePillar[];
+}
+
+export interface ContactPageContent {
+  title: { az: string; en: string; ru: string };
+  subtitle: { az: string; en: string; ru: string };
+  phone: string;
+  email: string;
+  address: { az: string; en: string; ru: string };
+  hours: { az: string; en: string; ru: string };
+}
+
+export interface HomePageContent {
+  heroTitleA: { az: string; en: string; ru: string };
+  heroTitleB: { az: string; en: string; ru: string };
+  heroDesc: { az: string; en: string; ru: string };
+  heroCta: { az: string; en: string; ru: string };
+  desktopLampImage: string;
+  mobileLampImage: string;
+  discoveryTitleA: { az: string; en: string; ru: string };
+  discoveryTitleB: { az: string; en: string; ru: string };
+  discoverySub: { az: string; en: string; ru: string };
+  featuredEyebrow: { az: string; en: string; ru: string };
+  featuredDesc: { az: string; en: string; ru: string };
+  appsEyebrow: { az: string; en: string; ru: string };
+  appsTitleA: { az: string; en: string; ru: string };
+  appsTitleB: { az: string; en: string; ru: string };
+}
+
+export interface SitePagesData {
+  about: AboutPageContent;
+  contact: ContactPageContent;
+  home: HomePageContent;
+}

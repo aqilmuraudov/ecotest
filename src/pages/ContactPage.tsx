@@ -29,7 +29,15 @@ interface ContactPageProps {
 
 export const ContactPage: React.FC<ContactPageProps> = ({ currentLang }) => {
   const t = translations[currentLang];
-  const { addInquiry } = useData();
+  const { addInquiry, pagesContent } = useData();
+  const contactData = pagesContent?.contact;
+
+  const pageTitle = contactData?.title?.[currentLang] || t.contact.title;
+  const pageSubtitle = contactData?.subtitle?.[currentLang] || t.contact.subtitle;
+  const contactPhone = contactData?.phone || '+994 50 450 70 07';
+  const contactEmail = contactData?.email || 'info@ecolife.az';
+  const contactAddress = contactData?.address?.[currentLang] || t.contact.info.addressValue;
+  const contactHours = contactData?.hours?.[currentLang] || t.contact.info.hoursValue;
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -112,12 +120,10 @@ export const ContactPage: React.FC<ContactPageProps> = ({ currentLang }) => {
           <FadeIn>
             <p className="font-micro text-amber-warm mb-5">05 — {t.nav.contact}</p>
             <h1 className="ed-display-lg font-display text-ivory">
-              {currentLang === 'az' ? 'layihənizi' : currentLang === 'ru' ? 'ваш проект' : 'your'}
-              <br />
-              <span className="text-soft">{currentLang === 'az' ? 'danışın' : currentLang === 'ru' ? 'обсудим' : 'project'}</span>
+              {pageTitle}
             </h1>
             <p className="text-sm text-mute mt-6 max-w-lg leading-relaxed">
-              {t.contact.subtitle}
+              {pageSubtitle}
             </p>
           </FadeIn>
         </div>
@@ -134,7 +140,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ currentLang }) => {
                   <MapPin className="w-4 h-4 text-amber-warm flex-shrink-0 mt-1" />
                   <div>
                     <span className="font-micro text-[9px] text-mute block mb-1.5">{t.contact.info.address}</span>
-                    <span className="text-sm text-[var(--ed-ivory)] leading-relaxed">{t.contact.info.addressValue}</span>
+                    <span className="text-sm text-[var(--ed-ivory)] leading-relaxed">{contactAddress}</span>
                   </div>
                 </div>
 
@@ -142,8 +148,8 @@ export const ContactPage: React.FC<ContactPageProps> = ({ currentLang }) => {
                   <Phone className="w-4 h-4 text-amber-warm flex-shrink-0 mt-1" />
                   <div>
                     <span className="font-micro text-[9px] text-mute block mb-1.5">{t.contact.info.phone}</span>
-                    <a href="tel:+994504507007" className="font-mono-tech text-sm text-[var(--ed-ivory)] hover:text-amber-warm transition-colors">
-                      +994 50 450 70 07
+                    <a href={`tel:${contactPhone.replace(/\s+/g, '')}`} className="font-mono-tech text-sm text-[var(--ed-ivory)] hover:text-amber-warm transition-colors">
+                      {contactPhone}
                     </a>
                   </div>
                 </div>
@@ -152,8 +158,8 @@ export const ContactPage: React.FC<ContactPageProps> = ({ currentLang }) => {
                   <Mail className="w-4 h-4 text-amber-warm flex-shrink-0 mt-1" />
                   <div>
                     <span className="font-micro text-[9px] text-mute block mb-1.5">{t.contact.info.email}</span>
-                    <a href="mailto:info@ecolife.az" className="text-sm text-[var(--ed-ivory)] hover:text-amber-warm transition-colors">
-                      info@ecolife.az
+                    <a href={`mailto:${contactEmail}`} className="text-sm text-[var(--ed-ivory)] hover:text-amber-warm transition-colors">
+                      {contactEmail}
                     </a>
                   </div>
                 </div>
@@ -162,7 +168,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ currentLang }) => {
                   <Clock className="w-4 h-4 text-amber-warm flex-shrink-0 mt-1" />
                   <div>
                     <span className="font-micro text-[9px] text-mute block mb-1.5">{t.contact.info.hours}</span>
-                    <span className="text-sm text-[var(--ed-ivory)]">{t.contact.info.hoursValue}</span>
+                    <span className="text-sm text-[var(--ed-ivory)]">{contactHours}</span>
                   </div>
                 </div>
               </div>

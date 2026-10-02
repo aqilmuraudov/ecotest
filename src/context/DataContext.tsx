@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Product, BlogPost, Project, Inquiry, CategoryItem } from '../types';
+import { Product, BlogPost, Project, Inquiry, CategoryItem, SitePagesData } from '../types';
 import { products as initialProducts, productCategoriesList } from '../data/products';
 import { blogPosts as initialBlogPosts } from '../data/blog';
 import { projects as initialProjects } from '../data/projects';
+import { initialPagesContent } from '../data/pagesContent';
 import { supabase } from '../lib/supabase';
 import { idbStorage } from '../utils/indexedDBStorage';
 
@@ -23,6 +24,7 @@ interface DataContextType {
   blogPosts: BlogPost[];
   projects: Project[];
   inquiries: Inquiry[];
+  pagesContent: SitePagesData;
   isLoading: boolean;
   isSyncing: boolean;
   supabaseConnected: boolean;
@@ -55,6 +57,10 @@ interface DataContextType {
   updateInquiryStatus: (id: string, status: Inquiry['status']) => Promise<{ success: boolean; error?: string }>;
   deleteInquiry: (id: string) => Promise<{ success: boolean; error?: string }>;
 
+  // Pages CMS Operations
+  updatePageContent: <K extends keyof SitePagesData>(pageKey: K, data: Partial<SitePagesData[K]>) => Promise<{ success: boolean; error?: string }>;
+  resetPageContent: (pageKey?: keyof SitePagesData) => Promise<{ success: boolean }>;
+
   // Database Sync & Seeding
   seedAllToSupabase: () => Promise<{ success: boolean; message: string }>;
   refreshData: () => Promise<void>;
@@ -67,6 +73,7 @@ const LOCAL_STORAGE_CATEGORIES = 'ecolife_custom_categories';
 const LOCAL_STORAGE_BLOG = 'ecolife_custom_blog';
 const LOCAL_STORAGE_PROJECTS = 'ecolife_custom_projects';
 const LOCAL_STORAGE_INQUIRIES = 'ecolife_custom_inquiries';
+const LOCAL_STORAGE_PAGES = 'ecolife_site_pages_content';
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>(() => {
@@ -110,6 +117,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (saved) return JSON.parse(saved);
     } catch {}
     return [];
+  });
+
+  const [pagesContent, setPagesContent] = useState<SitePagesData>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_PAGES);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          about: { ...initialPagesContent.about, ...(parsed.about || {}) },
+          contact: { ...initialPagesContent.contact, ...(parsed.contact || {}) },
+          home: { ...initialPagesContent.home, ...(parsed.home || {}) },
+        };
+      }
+    } catch {}
+    return initialPagesContent;
   });
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -472,6 +494,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) {
             setInquiries(parsed);
+          }
+        } catch (err) {}
+      }
+      if (e.key === LOCAL_STORAGE_PAGES && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed && typeof parsed === 'object') {
+            setPagesContent(prev => ({
+              ...prev,
+              ...parsed
+            }));
           }
         } catch (err) {}
       }
@@ -892,6 +925,52 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Pages Content Management Operations
+  const updatePageContent = async <K extends keyof SitePagesData>(
+    pageKey: K,
+    data: Partial<SitePagesData[K]>
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const updated: SitePagesData = {
+        ...pagesContent,
+        [pageKey]: {
+          ...pagesContent[pageKey],
+          ...data
+        }
+      };
+      setPagesContent(updated);
+      saveToLocal(LOCAL_STORAGE_PAGES, updated);
+
+      // Attempt to sync with Supabase site_pages table if it exists
+      try {
+        await supabase.from('site_pages').upsert([{
+          page_key: pageKey,
+          content: updated[pageKey],
+          updated_at: new Date().toISOString()
+        }], { onConflict: 'page_key' });
+      } catch (err) {}
+
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e?.message || 'Xəta baş verdi' };
+    }
+  };
+
+  const resetPageContent = async (pageKey?: keyof SitePagesData): Promise<{ success: boolean }> => {
+    if (pageKey) {
+      const updated: SitePagesData = {
+        ...pagesContent,
+        [pageKey]: initialPagesContent[pageKey]
+      };
+      setPagesContent(updated);
+      saveToLocal(LOCAL_STORAGE_PAGES, updated);
+    } else {
+      setPagesContent(initialPagesContent);
+      saveToLocal(LOCAL_STORAGE_PAGES, initialPagesContent);
+    }
+    return { success: true };
+  };
+
   // One-click Seeder to upload all initial catalog items, projects, and articles to Supabase
   const seedAllToSupabase = async (): Promise<{ success: boolean; message: string }> => {
     setIsSyncing(true);
@@ -953,6 +1032,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         blogPosts,
         projects,
         inquiries,
+        pagesContent,
         isLoading,
         isSyncing,
         supabaseConnected,
@@ -974,6 +1054,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addInquiry,
         updateInquiryStatus,
         deleteInquiry,
+        updatePageContent,
+        resetPageContent,
         seedAllToSupabase,
         refreshData
       }}
