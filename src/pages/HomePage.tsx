@@ -177,7 +177,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 1.2, ease: [0.22, 0.61, 0.36, 1], delay: 0.35 }}
-          className="lg:hidden absolute top-0 left-1/2 -translate-x-1/2 w-[440px] sm:w-[500px] pointer-events-none z-0 flex flex-col items-center"
+          className="ed-hero-lamp-wrap lg:hidden absolute top-0 left-1/2 -translate-x-1/2 w-[440px] sm:w-[500px] pointer-events-none z-0 flex flex-col items-center"
         >
           {/* Warm ambient downward light pool */}
           <div className="absolute top-[48%] left-1/2 -translate-x-1/2 w-[130%] h-[85%] bg-[radial-gradient(ellipse_at_50%_15%,_rgba(245,185,55,0.24)_0%,_rgba(245,180,50,0.08)_42%,_rgba(245,180,50,0.02)_65%,_transparent_80%)] blur-3xl pointer-events-none" />
@@ -185,7 +185,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           <img
             src="/hero-pendant-light-mobile.png"
             alt="Ecolife Architectural Lighting - Mobile"
-            className="w-full h-auto object-contain select-none drop-shadow-[0_30px_80px_rgba(0,0,0,0.85)]"
+            className="w-full h-auto object-contain select-none ed-hero-lamp-shadow"
             loading="eager"
           />
         </motion.div>
@@ -196,7 +196,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 1.2, ease: [0.22, 0.61, 0.36, 1], delay: 0.35 }}
-          className="hidden lg:flex absolute top-0 right-[-6%] xl:right-[-2%] translate-x-[60px] w-[1230px] xl:w-[1440px] pointer-events-none z-0 flex-col items-center"
+          className="ed-hero-lamp-wrap hidden lg:flex absolute top-0 right-[-6%] xl:right-[-2%] translate-x-[60px] w-[1230px] xl:w-[1440px] pointer-events-none z-0 flex-col items-center"
         >
           {/* Warm ambient downward light pool */}
           <div className="absolute top-[48%] left-1/2 -translate-x-1/2 w-[130%] h-[85%] bg-[radial-gradient(ellipse_at_50%_15%,_rgba(245,185,55,0.24)_0%,_rgba(245,180,50,0.08)_42%,_rgba(245,180,50,0.02)_65%,_transparent_80%)] blur-3xl pointer-events-none" />
@@ -204,15 +204,15 @@ export const HomePage: React.FC<HomePageProps> = ({
           <img
             src="/hero-pendant-light-desktop.png"
             alt="Ecolife Architectural Lighting - Desktop"
-            className="w-full h-auto object-contain select-none drop-shadow-[0_30px_80px_rgba(0,0,0,0.85)]"
+            className="w-full h-auto object-contain select-none ed-hero-lamp-shadow"
             loading="eager"
           />
         </motion.div>
 
-        {/* Fade the warm hero glow into the next section—no hard line or glass panel. */}
+        {/* Fade the warm hero glow into the next section—no hard line in either theme. */}
         <div
           aria-hidden="true"
-          className="absolute inset-x-0 bottom-0 z-[1] h-28 sm:h-36 bg-[linear-gradient(to_bottom,rgba(29,29,27,0)_0%,rgba(29,29,27,0.35)_45%,var(--ed-bg)_100%)] backdrop-blur-[3px] pointer-events-none"
+          className="ed-hero-bottom-fade absolute inset-x-0 bottom-0 z-[2] h-36 sm:h-48 lg:h-56 pointer-events-none"
         />
       </section>
 

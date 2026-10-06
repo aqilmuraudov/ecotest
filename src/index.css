@@ -397,3 +397,38 @@ html.light textarea:focus {
 }
 html.light .dark-logo { display: none !important; }
 html.light .light-logo { display: block !important; }
+
+/* Hero pendant lamp shadow, soft edge feathering & bottom transition — theme-aware */
+.ed-hero-lamp-wrap {
+  -webkit-mask-image: radial-gradient(ellipse 72% 82% at 50% 28%, #000 48%, rgba(0, 0, 0, 0.6) 68%, transparent 94%);
+  mask-image: radial-gradient(ellipse 72% 82% at 50% 28%, #000 48%, rgba(0, 0, 0, 0.6) 68%, transparent 94%);
+}
+.ed-hero-lamp-shadow {
+  filter: drop-shadow(0 30px 80px rgba(0, 0, 0, 0.85));
+}
+html.light .ed-hero-lamp-shadow {
+  filter: drop-shadow(0 22px 48px rgba(204, 194, 172, 0.55));
+}
+.ed-hero-bottom-fade {
+  background: linear-gradient(
+    to bottom,
+    rgba(29, 29, 27, 0) 0%,
+    rgba(29, 29, 27, 0.35) 45%,
+    rgba(29, 29, 27, 0.82) 78%,
+    var(--ed-bg) 100%
+  );
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 32%, #000 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 32%, #000 100%);
+}
+html.light .ed-hero-bottom-fade {
+  background: linear-gradient(
+    to bottom,
+    rgba(243, 239, 230, 0) 0%,
+    rgba(243, 239, 230, 0.48) 42%,
+    rgba(243, 239, 230, 0.88) 76%,
+    var(--ed-bg) 100%
+  );
+}
+

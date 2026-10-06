@@ -78,7 +78,7 @@ export const Header: React.FC<HeaderProps> = ({
         id="ecolife-global-header"
         className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ${
           isScrolled
-            ? 'bg-[#1d1d1b]/90 backdrop-blur-xl border-b border-[var(--ed-line)]'
+            ? 'bg-[var(--ed-bg)]/90 backdrop-blur-xl border-b border-[var(--ed-line)]'
             : 'bg-transparent border-b border-transparent'
         }`}
       >
@@ -118,10 +118,10 @@ export const Header: React.FC<HeaderProps> = ({
 
                     {/* Quiet dropdown */}
                     {isSolutionsDropdownOpen && (
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 w-60 bg-[#24231f] border border-[var(--ed-line)] rounded-xl shadow-2xl py-2 px-1.5 z-50 animate-fadeIn">
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 w-60 bg-[var(--ed-raise)] border border-[var(--ed-line)] rounded-xl shadow-2xl py-2 px-1.5 z-50 animate-fadeIn">
                         <button
                           onClick={() => { handleNavClick('solutions'); }}
-                          className="w-full text-left px-3 py-2.5 text-xs font-micro text-amber-warm hover:bg-white/5 rounded-lg"
+                          className="w-full text-left px-3 py-2.5 text-xs font-micro text-amber-warm hover:bg-[var(--ed-line-soft)] rounded-lg"
                         >
                           {t.solutions.exploreAll}
                         </button>
@@ -135,7 +135,7 @@ export const Header: React.FC<HeaderProps> = ({
                           <button
                             key={entry.slug}
                             onClick={() => { onNavigate('solutions', entry.slug); setIsSolutionsDropdownOpen(false); }}
-                            className="w-full text-left px-3 py-2.5 text-[13px] text-[var(--ed-soft)] hover:text-ivory hover:bg-white/5 rounded-lg transition-colors"
+                            className="w-full text-left px-3 py-2.5 text-[13px] text-[var(--ed-soft)] hover:text-ivory hover:bg-[var(--ed-line-soft)] rounded-lg transition-colors"
                           >
                             {currentLang === 'az' ? entry.az : currentLang === 'ru' ? entry.ru : entry.en}
                           </button>
@@ -166,7 +166,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Search */}
             <button
               onClick={() => onOpenSearch ? onOpenSearch() : onNavigate('catalog')}
-              className="p-2.5 text-[var(--ed-soft)] hover:text-amber-warm transition-colors rounded-full hover:bg-white/5"
+              className="p-2.5 text-[var(--ed-soft)] hover:text-amber-warm transition-colors rounded-full hover:bg-[var(--ed-line-soft)]"
               aria-label="Search"
             >
               <Search className="w-4 h-4" />
@@ -175,7 +175,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Theme */}
             <button
               onClick={onToggleTheme}
-              className="p-2.5 text-[var(--ed-soft)] hover:text-amber-warm transition-colors rounded-full hover:bg-white/5"
+              className="p-2.5 text-[var(--ed-soft)] hover:text-amber-warm transition-colors rounded-full hover:bg-[var(--ed-line-soft)]"
               aria-label="Toggle theme"
             >
               {currentTheme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -185,20 +185,20 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="relative">
               <button
                 onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
-                className="font-micro text-[11px] text-[var(--ed-soft)] hover:text-ivory px-2.5 py-1.5 rounded-full border border-[var(--ed-line)] hover:border-[rgba(242,237,227,0.3)] transition-colors flex items-center gap-1"
+                className="font-micro text-[11px] text-[var(--ed-soft)] hover:text-ivory px-2.5 py-1.5 rounded-full border border-[var(--ed-line)] hover:border-[var(--ed-amber)] transition-colors flex items-center gap-1"
               >
                 {currentLang.toUpperCase()}
                 <ChevronDown className="w-3 h-3" />
               </button>
 
               {isLangDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-28 bg-[#24231f] border border-[var(--ed-line)] rounded-xl shadow-xl py-1 z-50 animate-fadeIn">
+                <div className="absolute right-0 mt-2 w-28 bg-[var(--ed-raise)] border border-[var(--ed-line)] rounded-xl shadow-xl py-1 z-50 animate-fadeIn">
                   {(['az', 'en', 'ru'] as Language[]).map((lang) => (
                     <button
                       key={lang}
                       onClick={() => { onLanguageChange(lang); setIsLangDropdownOpen(false); }}
                       className={`w-full text-left px-3.5 py-2 text-xs font-micro transition-colors ${
-                        currentLang === lang ? 'text-amber-warm' : 'text-[var(--ed-soft)] hover:text-ivory hover:bg-white/5'
+                        currentLang === lang ? 'text-amber-warm' : 'text-[var(--ed-soft)] hover:text-ivory hover:bg-[var(--ed-line-soft)]'
                       }`}
                     >
                       {lang.toUpperCase()}
@@ -240,7 +240,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Full-screen mobile menu */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 z-[100] bg-[#1d1d1b] flex flex-col h-screen w-screen overflow-hidden animate-fadeIn"
+          className="fixed inset-0 z-[100] bg-[var(--ed-bg)] flex flex-col h-screen w-screen overflow-hidden animate-fadeIn"
           id="ecolife-mobile-nav-modal"
         >
           {/* Top bar */}
