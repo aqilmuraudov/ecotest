@@ -25,7 +25,7 @@ export const Footer: React.FC<FooterProps> = ({ currentLang, currentTheme, onNav
   ];
 
   return (
-    <footer id="ecolife-global-footer" className="bg-[var(--ed-bg)] pt-16 pb-10">
+    <footer id="ecolife-global-footer" className="bg-[var(--ed-bg)] pt-10 pb-10">
       <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
 
         {/* Oversized wordmark row */}

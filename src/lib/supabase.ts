@@ -1,27 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
-const ENV_URL = import.meta.env?.VITE_SUPABASE_URL as string | undefined;
-const ENV_KEY = import.meta.env?.VITE_SUPABASE_ANON_KEY as string | undefined;
+const DEFAULT_SUPABASE_URL = 'https://ijorncdyzoxkiyxslxkf.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'sb_publishable_5pho3SEQtACiXeiAkAzbPg_FqnMaTv_';
 
-if (!ENV_URL || !ENV_KEY) {
-  // Production-da bu xətanı göstərmək təhlükəsizdir, ancaq dəyəri LOG ETMƏYİN.
-  console.error(
-    '[Supabase] VITE_SUPABASE_URL və/və ya VITE_SUPABASE_ANON_KEY tapılmadı. ' +
-    'Zəhmət olmasa .env.local faylı yaradın (bax: .env.example).'
-  );
-}
+const ENV_URL = (import.meta.env?.VITE_SUPABASE_URL as string | undefined) || DEFAULT_SUPABASE_URL;
+const ENV_KEY = (import.meta.env?.VITE_SUPABASE_ANON_KEY as string | undefined) || DEFAULT_SUPABASE_KEY;
 
-export const SUPABASE_URL = ENV_URL ?? '';
-export const SUPABASE_ANON_KEY = ENV_KEY ?? '';
-
-// Boş dəyərlərlə client yaratmaq mümkündür, ancaq request-lər xəta verəcək.
-// Build zamanı xətanı erkən tutmaq üçün placeholder URL istifadə edirik.
-const PLACEHOLDER_URL = 'https://invalid.supabase.co';
-const PLACEHOLDER_KEY = 'public-anon-key-missing';
+export const SUPABASE_URL = ENV_URL;
+export const SUPABASE_ANON_KEY = ENV_KEY;
 
 export const supabase = createClient(
-  ENV_URL || PLACEHOLDER_URL,
-  ENV_KEY || PLACEHOLDER_KEY,
+  ENV_URL,
+  ENV_KEY,
   {
     auth: {
       persistSession: true,

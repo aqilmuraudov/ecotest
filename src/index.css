@@ -154,11 +154,9 @@ html.light {
   background: linear-gradient(90deg, transparent, var(--ed-line-amber), transparent);
 }
 
-/* Cream product plate — warm background for isolated product cutouts */
+/* White product plate — clean studio frame for isolated product cutouts */
 .ed-plate {
-  background:
-    radial-gradient(120% 90% at 50% 30%, rgba(255, 255, 255, 0.28), transparent 60%),
-    linear-gradient(165deg, var(--ed-cream) 0%, var(--ed-cream-2) 100%);
+  background: #ffffff;
 }
 
 /* ============================================================

@@ -28,13 +28,13 @@ export const EdProductCard: React.FC<EdProductCardProps> = ({
       className="group cursor-pointer flex flex-col"
       aria-label={product.name}
     >
-      {/* Cream plate with product */}
-      <div className="ed-plate relative overflow-hidden aspect-[4/3] flex items-center justify-center">
+      {/* White studio plate with scaled-down contained product */}
+      <div className="ed-plate relative overflow-hidden aspect-[4/3] flex items-center justify-center p-5 sm:p-7">
         <img
           src={product.image}
           alt={product.name}
           loading="lazy"
-          className="w-full h-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.045]"
+          className="w-full h-full max-w-[84%] max-h-[84%] object-contain transition-transform duration-[900ms] ease-out group-hover:scale-[1.05]"
           onError={(e) => {
             (e.target as HTMLImageElement).style.opacity = '0';
           }}

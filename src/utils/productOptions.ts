@@ -89,13 +89,45 @@ export function getFinishOptions(product: Product): string[] {
   return [];
 }
 
-/** Zəmanət badge-i yalnız məhsulda zəmanət məlumatı varsa və ya profil/driver kateqoriyasındadırsa */
-const WARRANTY_CATEGORIES = ['linear-profiles', 'led-profiles', 'magnetic-systems', 'drivers', 'accessories'];
-
-export function shouldShowWarrantyBadge(product: Product): boolean {
-  if (product.specs?.warranty) return true;
-  const cats: string[] = Array.isArray((product as any).categories) && (product as any).categories.length > 0
-    ? (product as any).categories
-    : [product.category];
-  return cats.some(c => WARRANTY_CATEGORIES.includes(c));
+export function shouldShowWarrantyBadge(_product: Product): boolean {
+  return false;
 }
+
+/**
+ * Removes duplicate product images from gallery:
+ * - Bulk-import duplicate uploads (/ecolife_bulk_import/ second copy of main image)
+ * - Identical URLs or URLs with the same base filename before timestamp (-1788157498024.png)
+ */
+export function dedupeProductGallery(mainImage?: string, rawGallery?: unknown): string[] {
+  const main = typeof mainImage === 'string' ? mainImage.trim() : '';
+  const raw = Array.isArray(rawGallery)
+    ? rawGallery.filter((g): g is string => typeof g === 'string' && g.trim().length > 0).map(g => g.trim())
+    : [];
+
+  const getCanonicalKey = (url: string) =>
+    url.replace(/-\d{10,14}(\.[a-zA-Z0-9]+)$/, '$1');
+
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  const addUnique = (url: string) => {
+    if (!url) return;
+    const key = getCanonicalKey(url);
+    if (seen.has(key)) return;
+    seen.add(key);
+    result.push(url);
+  };
+
+  addUnique(main);
+
+  for (const g of raw) {
+    // Bulk import uploaded the single product image twice (once for image, once for gallery[0])
+    if (main && g.includes('/ecolife_bulk_import/')) {
+      continue;
+    }
+    addUnique(g);
+  }
+
+  return result;
+}
+

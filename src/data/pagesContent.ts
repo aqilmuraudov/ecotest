@@ -95,19 +95,6 @@ export const initialPagesContent: SitePagesData = {
         }
       },
       {
-        id: 'warranty',
-        label: {
-          az: 'RƏSMİ ZƏMANƏT',
-          en: 'OFFICIAL WARRANTY',
-          ru: 'ОФИЦИАЛЬНАЯ ГАРАНТИЯ'
-        },
-        desc: {
-          az: 'Bütün xətti və profil sistemlərinə 5 ilədək rəsmi zəmanət və servis xidməti.',
-          en: 'Up to 5 years official factory warranty and responsive service for all profile systems.',
-          ru: 'Официальная гарантия до 5 лет и сервисное обслуживание на все линейные системы.'
-        }
-      },
-      {
         id: 'expert-support',
         label: {
           az: 'PEŞƏKAR DƏSTƏK',

@@ -6,6 +6,7 @@ import { projects as initialProjects } from '../data/projects';
 import { initialPagesContent } from '../data/pagesContent';
 import { supabase } from '../lib/supabase';
 import { idbStorage } from '../utils/indexedDBStorage';
+import { dedupeProductGallery } from '../utils/productOptions';
 
 // Convert productCategoriesList to CategoryItem array (excluding 'all')
 const defaultCategories: CategoryItem[] = productCategoriesList
@@ -34,7 +35,7 @@ interface DataContextType {
   addProduct: (product: Omit<Product, 'id'> & { id?: string }) => Promise<{ success: boolean; error?: string }>;
   updateProduct: (id: string, product: Partial<Product>) => Promise<{ success: boolean; error?: string }>;
   deleteProduct: (id: string) => Promise<{ success: boolean; error?: string }>;
-  deleteAllProducts: () => Promise<{ success: boolean; error?: string }>;
+  deleteAllProducts: ( ) => Promise<{ success: boolean; error?: string }>;
   bulkImportProducts: (products: Product[]) => Promise<{ success: boolean; count: number; error?: string }>;
 
   // Category Operations
@@ -81,7 +82,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const saved = localStorage.getItem(LOCAL_STORAGE_PRODUCTS);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.map((p: Product) => ({
+            ...p,
+            gallery: dedupeProductGallery(p.image, p.gallery)
+          }));
+        }
       }
     } catch {}
     return initialProducts;
@@ -103,10 +109,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return initialBlogPosts;
   });
 
+  const DEMO_PROJECT_IDS = new Set([
+    'sensum-coffee-bakery',
+    'savtour-office',
+    'papa-johns-restaurant',
+    'baku-white-city-residence',
+    'caspian-waterfront-hotel',
+    'port-baku-boutique'
+  ]);
+
   const [projects, setProjects] = useState<Project[]>(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_PROJECTS);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((p: any) => p && !DEMO_PROJECT_IDS.has(p.id));
+        }
+      }
     } catch {}
     return initialProjects;
   });
@@ -180,7 +200,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subtitle: dbRow.subtitle || { az: '', en: '', ru: '' },
       code: dbRow.code || dbRow.id,
       image: dbRow.image || '',
-      gallery: Array.isArray(dbRow.gallery) && dbRow.gallery.length > 0 ? dbRow.gallery : (dbRow.image ? [dbRow.image] : []),
+      gallery: dedupeProductGallery(dbRow.image, dbRow.gallery),
       description: dbRow.description || { az: '', en: '', ru: '' },
       specs: dbRow.specs || { material: 'Alüminium', dimensions: '', ipRating: 'IP20', mounting: 'Səthə' },
       files: Array.isArray(dbRow.files) ? dbRow.files : [],
@@ -214,7 +234,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subtitle: (p.subtitle && typeof p.subtitle === 'object') ? p.subtitle : { az: '', en: '', ru: '' },
       code: String(p.code || p.id),
       image: String(p.image || ''),
-      gallery: Array.isArray(p.gallery) && p.gallery.length > 0 ? p.gallery : (p.image ? [p.image] : []),
+      gallery: dedupeProductGallery(p.image, p.gallery),
       description: (p.description && typeof p.description === 'object') ? p.description : { az: '', en: '', ru: '' },
       specs: (p.specs && typeof p.specs === 'object' && !Array.isArray(p.specs)) ? p.specs : {},
       files: Array.isArray(p.files) ? p.files : [],
@@ -258,8 +278,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Convert DB project record to Project interface
   const mapDbToProject = (dbRow: any): Project => ({
-    id: dbRow.id,
-    slug: dbRow.slug,
+    id: String(dbRow.id),
+    slug: String(dbRow.slug || dbRow.id),
     title: dbRow.title,
     category: dbRow.category,
     categoryName: dbRow.category_name || { az: dbRow.category, en: dbRow.category, ru: dbRow.category },
@@ -304,7 +324,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const idbProds = await idbStorage.getItem<Product[]>(LOCAL_STORAGE_PRODUCTS);
         if (Array.isArray(idbProds) && idbProds.length > 0) {
-          setProducts(idbProds);
+          setProducts(idbProds.map((p: Product) => ({
+            ...p,
+            gallery: dedupeProductGallery(p.image, p.gallery)
+          })));
         }
 
         const idbCats = await idbStorage.getItem<CategoryItem[]>(LOCAL_STORAGE_CATEGORIES);
@@ -314,7 +337,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (Array.isArray(idbBlog) && idbBlog.length > 0) setBlogPosts(idbBlog);
 
         const idbProj = await idbStorage.getItem<Project[]>(LOCAL_STORAGE_PROJECTS);
-        if (Array.isArray(idbProj) && idbProj.length > 0) setProjects(idbProj);
+        if (Array.isArray(idbProj) && idbProj.length > 0) {
+          const cleanProj = idbProj.filter((p: any) => p && !DEMO_PROJECT_IDS.has(p.id));
+          if (cleanProj.length > 0) setProjects(cleanProj);
+        }
 
         const idbInq = await idbStorage.getItem<Inquiry[]>(LOCAL_STORAGE_INQUIRIES);
         if (Array.isArray(idbInq) && idbInq.length > 0) setInquiries(idbInq);

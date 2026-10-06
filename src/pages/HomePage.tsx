@@ -50,11 +50,27 @@ export const HomePage: React.FC<HomePageProps> = ({
     [products]
   );
 
-  // Featured collection product: prefer the LINEAR 40 system
-  const featuredCollection = useMemo(
-    () => products.find(p => p.slug?.includes('linear-40')) || heroProduct,
-    [products, heroProduct]
-  );
+  // Random seed generated once per mount so Featured System shows a different product every time
+  const [randomSeed] = useState(() => Math.random());
+
+  // Featured collection product: pick a different random product on each visit/refresh
+  const featuredCollection = useMemo(() => {
+    if (!products || products.length === 0) return undefined;
+    const validProducts = products.filter(p => p.image && p.name);
+    const basePool = validProducts.length > 0 ? validProducts : products;
+    let lastId: string | null = null;
+    try {
+      lastId = sessionStorage.getItem('ecolife_last_featured_id');
+    } catch {}
+    const pool = basePool.length > 1 && lastId ? basePool.filter(p => p.id !== lastId) : basePool;
+    const picked = pool[Math.floor(randomSeed * pool.length)] || basePool[0];
+    if (picked && basePool.length > 1) {
+      try {
+        sessionStorage.setItem('ecolife_last_featured_id', picked.id);
+      } catch {}
+    }
+    return picked;
+  }, [products, randomSeed]);
 
   const pills = useMemo(() => {
     const base = [
@@ -87,10 +103,16 @@ export const HomePage: React.FC<HomePageProps> = ({
     return (matched.length > 0 ? matched : products.filter(p => p.featured).length > 0 ? products.filter(p => p.featured) : products).slice(0, 6);
   }, [products, activeCategory]);
 
-  const featuredProjects = projects.slice(0, 3);
+  const featuredProjects = useMemo(() => {
+    if (!projects || projects.length === 0) return [];
+    const copy = [...projects];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(((Math.sin(randomSeed * 1000 + i) + 1) / 2) * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy.slice(0, 3);
+  }, [projects, randomSeed]);
   const appImages = solutions.slice(0, 4);
-  // Keep labels paired with their image order: retail, office, hospitality, residential.
-  const appLabels = [ed.appRetail, ed.appOffice, ed.appHospitality, ed.appResidential];
 
   const productionSteps = [
     { num: '01', label: ed.prod1 },
@@ -98,8 +120,6 @@ export const HomePage: React.FC<HomePageProps> = ({
     { num: '03', label: ed.prod3 },
     { num: '04', label: ed.prod4 },
   ];
-
-  const whyItems = [ed.why1, ed.why2, ed.why3, ed.why4, ed.why5];
 
   const solutionEntries = [
     { num: '01', label: ed.sol1, image: appImages[0]?.image, action: () => onNavigate('solutions', 'residential-lighting') },
@@ -111,7 +131,6 @@ export const HomePage: React.FC<HomePageProps> = ({
   return (
     <div className="bg-[var(--ed-bg)] text-[var(--ed-ivory)] overflow-hidden">
 
-      {/* ============================================================ */}
       {/* ============================================================ */}
       {/* HERO — asymmetric dark canvas, oversized type, glowing object */}
       {/* ============================================================ */}
@@ -245,7 +264,7 @@ export const HomePage: React.FC<HomePageProps> = ({
       </section>
 
       {/* ============================================================ */}
-      {/* FEATURED COLLECTION — oversized title left, glowing product right */}
+      {/* FEATURED COLLECTION — random product on each visit            */}
       {/* ============================================================ */}
       {featuredCollection && (
         <section className="py-12 sm:py-16 lg:py-20 border-t border-[var(--ed-line-soft)]">
@@ -255,16 +274,16 @@ export const HomePage: React.FC<HomePageProps> = ({
               <FadeIn direction="right">
                 <div>
                   <p className="font-micro text-amber-warm mb-4 sm:mb-6">{ed.featuredEyebrow}</p>
-                  <h2 className="ed-display-lg font-display text-ivory">
+                  <h2 className="ed-display-md font-display text-ivory">
                     {featuredCollection.name}
                   </h2>
                   <p className="text-sm text-soft leading-relaxed mt-4 sm:mt-6 max-w-md whitespace-pre-line">
                     {getLocalizedText(featuredCollection.description, currentLang) || ed.featuredDesc}
                   </p>
 
-                  {/* Technical row */}
+                  {/* Technical row (without 5Y warranty) */}
                   <div className="flex gap-10 mt-6 sm:mt-8">
-                    {[ed.featuredSpec1, ed.featuredSpec2, ed.featuredSpec3].map((spec, i) => (
+                    {[ed.featuredSpec1, ed.featuredSpec2].filter(Boolean).map((spec, i) => (
                       <div key={i}>
                         <div className="ed-hairline mb-3 max-w-[72px]" />
                         <span className="font-mono-tech text-xs text-ivory">{spec}</span>
@@ -284,15 +303,17 @@ export const HomePage: React.FC<HomePageProps> = ({
               </FadeIn>
 
               <FadeIn direction="left" className="relative">
-                <div className="relative aspect-[3/2] overflow-hidden bg-[var(--ed-bg-2)]">
+                <div
+                  onClick={() => onNavigate('catalog', featuredCollection.slug)}
+                  className="group cursor-pointer relative aspect-[4/3] overflow-hidden ed-plate flex items-center justify-center p-6 sm:p-10"
+                >
                   <img
                     src={featuredCollection.image}
                     alt={featuredCollection.name}
                     loading="lazy"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full max-w-[84%] max-h-[84%] object-contain transition-transform duration-700 group-hover:scale-[1.04]"
                   />
-                  <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[rgba(29,29,27,0.74)] to-transparent pointer-events-none" />
-                  <span className="font-mono-tech text-[10px] text-[var(--ed-warmwhite)] absolute bottom-5 right-5">
+                  <span className="font-mono-tech text-[10px] text-[#1d1d1b]/60 absolute bottom-4 right-5">
                     {featuredCollection.code}
                   </span>
                 </div>
@@ -301,58 +322,6 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
         </section>
       )}
-
-      {/* ============================================================ */}
-      {/* ARCHITECTURAL APPLICATIONS — large compositions, overlapping type */}
-      {/* ============================================================ */}
-      <section className="py-12 sm:py-16 lg:py-20 border-t border-[var(--ed-line-soft)]">
-        <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
-
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 mb-8 sm:mb-10">
-            <FadeIn>
-              <EdSectionHead
-                eyebrow={ed.appsEyebrow}
-                titleA={ed.appsTitleA}
-                titleB={ed.appsTitleB}
-              />
-            </FadeIn>
-            <FadeIn delay={0.1}>
-              <p className="font-micro text-[10px] text-mute max-w-[280px] leading-loose">{ed.appsSub}</p>
-            </FadeIn>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {appImages.map((sol, i) => (
-              <FadeIn key={sol.id} delay={0.08 * i}>
-                <button
-                  onClick={() => onNavigate('solutions', sol.slug)}
-                  className="group relative w-full aspect-[4/3] overflow-hidden text-left"
-                >
-                  <img
-                    src={sol.image}
-                    alt={sol.title[currentLang]}
-                    loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-[1100ms] ease-out group-hover:scale-[1.05]"
-                  />
-                  {/* Dark overlay only where type sits */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#1d1d1b]/85 via-transparent to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-7 lg:p-9 flex items-end justify-between">
-                    <div>
-                      <span className="font-micro text-[9px] text-amber-warm block mb-2">
-                        {String(i + 1).padStart(2, '0')}
-                      </span>
-                      <h3 className="ed-display-sm font-display text-ivory">
-                        {appLabels[i] || sol.title[currentLang]}
-                      </h3>
-                    </div>
-                    <ArrowRight className="w-5 h-5 text-ivory opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-400" />
-                  </div>
-                </button>
-              </FadeIn>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* ============================================================ */}
       {/* FEATURED PROJECTS — full-width + two-column editorial spread  */}
@@ -380,7 +349,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             {featuredProjects[0] && (
               <FadeIn>
                 <button
-                  onClick={() => onNavigate('projects', featuredProjects[0].slug)}
+                  onClick={() => onNavigate('projects', featuredProjects[0].slug || featuredProjects[0].id)}
                   className="group relative w-full aspect-[16/10] lg:aspect-[21/9] overflow-hidden text-left"
                 >
                   <img
@@ -397,7 +366,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                       </h3>
                       <div className="font-micro text-[9px] text-soft mt-4 flex flex-wrap gap-x-6 gap-y-1">
                         <span>{featuredProjects[0].location}</span>
-                        <span>{featuredProjects[0].categoryName[currentLang]}</span>
+                        <span>{featuredProjects[0].categoryName?.[currentLang] || featuredProjects[0].category}</span>
                         <span>{featuredProjects[0].year}</span>
                       </div>
                     </div>
@@ -415,7 +384,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               {featuredProjects.slice(1).map((project, i) => (
                 <FadeIn key={project.id} delay={0.1 * i}>
                   <button
-                    onClick={() => onNavigate('projects', project.slug)}
+                    onClick={() => onNavigate('projects', project.slug || project.id)}
                     className="group relative w-full aspect-[4/3] overflow-hidden text-left"
                   >
                     <img
@@ -431,7 +400,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                       </h3>
                       <div className="font-micro text-[9px] text-soft mt-3 flex flex-wrap gap-x-5 gap-y-1">
                         <span>{project.location}</span>
-                        <span>{project.categoryName[currentLang]}</span>
+                        <span>{project.categoryName?.[currentLang] || project.category}</span>
                         <span>{project.year}</span>
                       </div>
                     </div>
@@ -444,104 +413,103 @@ export const HomePage: React.FC<HomePageProps> = ({
       )}
 
       {/* ============================================================ */}
-      {/* LIGHTING SOLUTIONS — minimal numbered list with hover reveal   */}
+      {/* WHAT WE DO & CUSTOM PRODUCTION — compact architectural bands  */}
       {/* ============================================================ */}
-      <section className="py-12 sm:py-16 lg:py-20 border-t border-[var(--ed-line-soft)]">
+      <section className="py-10 sm:py-14 border-t border-[var(--ed-line-soft)]">
         <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
-          <FadeIn>
-            <EdSectionHead
-              eyebrow={ed.solEyebrow}
-              titleA={ed.solTitleA}
-              titleB={ed.solTitleB}
-              className="mb-8 sm:mb-10"
-            />
-          </FadeIn>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
 
-          <div>
-            {solutionEntries.map((entry, i) => (
-              <FadeIn key={entry.num} delay={0.05 * i}>
-                <button
-                  onClick={entry.action}
-                  className="group w-full flex items-center justify-between py-5 lg:py-6 border-t border-[var(--ed-line)] text-left relative overflow-hidden"
-                >
-                  {/* Warm illumination sweep on hover */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[rgba(245,166,35,0.05)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
-
-                  <div className="flex items-baseline gap-8 lg:gap-16 relative z-10">
-                    <span className="font-mono-tech text-xs text-mute">{entry.num}</span>
-                    <span className="ed-display-sm font-display text-ivory group-hover:text-amber-warm transition-colors duration-400">
-                      {entry.label}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-8 relative z-10">
-                    {/* Image reveal on hover (desktop) */}
-                    {entry.image && (
-                      <div className="hidden lg:block w-40 h-24 overflow-hidden opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500">
-                        <img src={entry.image} alt="" className="w-full h-full object-cover" />
-                      </div>
-                    )}
-                    <ArrowRight className="w-5 h-5 text-mute group-hover:text-amber-warm group-hover:translate-x-1.5 transition-all duration-300" />
-                  </div>
-                </button>
+            {/* Left: Compact Section Title */}
+            <div className="lg:col-span-4">
+              <FadeIn>
+                <p className="font-micro text-amber-warm mb-3">{ed.solEyebrow}</p>
+                <h2 className="ed-display-md font-display text-ivory">
+                  {ed.solTitleA}{' '}
+                  <span className="text-soft">{ed.solTitleB}</span>
+                </h2>
               </FadeIn>
-            ))}
-            <div className="border-t border-[var(--ed-line)]" />
+            </div>
+
+            {/* Right: Compact 2x2 Grid of Services */}
+            <div className="lg:col-span-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 border-t border-l border-[var(--ed-line)]">
+                {solutionEntries.map((entry, i) => (
+                  <FadeIn key={entry.num} delay={0.04 * i}>
+                    <button
+                      onClick={entry.action}
+                      className="group w-full flex items-center justify-between p-5 sm:p-6 border-r border-b border-[var(--ed-line)] text-left relative overflow-hidden hover:bg-[var(--ed-bg-2)] transition-colors duration-300"
+                    >
+                      <div className="flex items-baseline gap-4 relative z-10">
+                        <span className="font-mono-tech text-[11px] text-amber-warm/80">{entry.num}</span>
+                        <span className="text-base sm:text-lg font-medium text-ivory group-hover:text-amber-warm transition-colors duration-300">
+                          {entry.label}
+                        </span>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-mute group-hover:text-amber-warm group-hover:translate-x-1 transition-all duration-300 shrink-0" />
+                    </button>
+                  </FadeIn>
+                ))}
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
 
       {/* ============================================================ */}
-      {/* CUSTOM PRODUCTION — 01–04, technical, large numbers           */}
+      {/* CUSTOM PRODUCTION — compact 01–04 grid + sleek dual visuals    */}
       {/* ============================================================ */}
-      <section className="py-12 sm:py-16 lg:py-20 border-t border-[var(--ed-line-soft)]">
+      <section className="py-10 sm:py-14 border-t border-[var(--ed-line-soft)]">
         <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
 
             <div className="lg:col-span-5">
               <FadeIn>
-                <EdSectionHead
-                  eyebrow={ed.prodEyebrow}
-                  titleA={ed.prodTitleA}
-                  titleB={ed.prodTitleB}
-                  sub={ed.prodSub}
-                />
+                <p className="font-micro text-amber-warm mb-3">{ed.prodEyebrow}</p>
+                <h2 className="ed-display-md font-display text-ivory">
+                  {ed.prodTitleA}{' '}
+                  <span className="text-soft">{ed.prodTitleB}</span>
+                </h2>
+                <p className="text-xs text-mute mt-3 leading-relaxed">
+                  {ed.prodSub}
+                </p>
               </FadeIn>
 
-              <div className="mt-8 sm:mt-10 space-y-0">
+              <div className="grid grid-cols-2 border-t border-l border-[var(--ed-line)] mt-6">
                 {productionSteps.map((step, i) => (
-                  <FadeIn key={step.num} delay={0.06 * i}>
-                    <div className="flex items-baseline gap-10 py-4 sm:py-5 border-t border-[var(--ed-line)]">
-                      <span className="ed-display-sm font-display text-amber-warm/80 leading-none">{step.num}</span>
-                      <span className="font-micro text-[11px] text-ivory">{step.label}</span>
+                  <FadeIn key={step.num} delay={0.05 * i}>
+                    <div className="p-4 sm:p-5 border-r border-b border-[var(--ed-line)] flex items-baseline gap-3">
+                      <span className="font-mono-tech text-xs text-amber-warm">{step.num}</span>
+                      <span className="font-micro text-[10px] text-ivory">{step.label}</span>
                     </div>
                   </FadeIn>
                 ))}
-                <div className="border-t border-[var(--ed-line)]" />
               </div>
             </div>
 
-            {/* Close-up production photography */}
+            {/* Compact side-by-side production imagery */}
             <div className="lg:col-span-7">
-              <FadeIn direction="left" className="h-full">
-                <div className="grid grid-cols-2 gap-4 sm:gap-6 h-full">
-                  <div className="relative overflow-hidden aspect-[3/4]">
+              <FadeIn direction="left">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="relative overflow-hidden aspect-[16/11]">
                     <img
                       src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=900&q=80"
                       alt="Ecolife production"
                       loading="lazy"
                       className="w-full h-full object-cover"
                     />
-                    <span className="absolute bottom-4 left-4 font-micro text-[9px] text-ivory/80">{ed.facilityTag}</span>
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#1d1d1b]/75 via-transparent to-transparent" />
+                    <span className="absolute bottom-3 left-3 font-micro text-[9px] text-ivory/90">{ed.facilityTag}</span>
                   </div>
-                  <div className="relative overflow-hidden aspect-[3/4] mt-8 sm:mt-12">
+                  <div className="relative overflow-hidden aspect-[16/11]">
                     <img
                       src="https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=900&q=80"
                       alt="Ecolife assembly"
                       loading="lazy"
                       className="w-full h-full object-cover"
                     />
-                    <span className="absolute bottom-4 left-4 font-micro text-[9px] text-ivory/80">{ed.assemblyTag}</span>
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#1d1d1b]/75 via-transparent to-transparent" />
+                    <span className="absolute bottom-3 left-3 font-micro text-[9px] text-ivory/90">{ed.assemblyTag}</span>
                   </div>
                 </div>
               </FadeIn>
@@ -551,86 +519,36 @@ export const HomePage: React.FC<HomePageProps> = ({
       </section>
 
       {/* ============================================================ */}
-      {/* WHY ECOLIFE — large typography, thin lines, no icons          */}
+      {/* FINAL CTA — compact, aesthetic horizontal architectural bar    */}
       {/* ============================================================ */}
-      <section className="py-12 sm:py-16 lg:py-20 border-t border-[var(--ed-line-soft)]">
-        <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
-          <FadeIn>
-            <EdSectionHead
-              eyebrow={ed.whyEyebrow}
-              titleA={ed.whyTitleA}
-              titleB={ed.whyTitleB}
-              className="mb-8 sm:mb-10"
-            />
-          </FadeIn>
-
-          <div>
-            {whyItems.map((item, i) => (
-              <FadeIn key={item} delay={0.05 * i}>
-                <div className="group flex items-center justify-between py-4 sm:py-5 border-t border-[var(--ed-line)]">
-                  <span className="ed-display-md font-display text-ivory/90 group-hover:text-ivory group-hover:translate-x-2 transition-all duration-500">
-                    {item}
-                  </span>
-                  <span className="font-mono-tech text-xs text-mute">{String(i + 1).padStart(2, '0')}</span>
-                </div>
-              </FadeIn>
-            ))}
-            <div className="border-t border-[var(--ed-line)]" />
-          </div>
-
-          {/* Real counts from live data */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 mt-10 sm:mt-12">
-            {[
-              { value: `${products.length}+`, label: ed.statProducts },
-              { value: `${projects.length}+`, label: ed.statProjects },
-              { value: 'CRI 95+', label: ed.featuredSpec1 },
-              { value: 'UGR < 19', label: ed.featuredSpec2 },
-            ].map((stat, i) => (
-              <FadeIn key={i} delay={0.06 * i}>
-                <div>
-                  <div className="ed-display-sm font-display text-amber-warm">{stat.value}</div>
-                  <div className="font-micro text-[9px] text-mute mt-2 sm:mt-3">{stat.label}</div>
-                </div>
-              </FadeIn>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* FINAL CTA — dramatic dark close                               */}
-      {/* ============================================================ */}
-      <section className="relative py-16 sm:py-20 lg:py-28 border-t border-[var(--ed-line-soft)] overflow-hidden">
-        {/* Warm architectural glow */}
-        <div className="absolute inset-x-0 bottom-[-30%] h-[70%] ed-glow-warm pointer-events-none" />
-        {/* Let the warm light dissolve into the footer instead of ending on a visible edge. */}
-        <div
-          aria-hidden="true"
-          className="absolute inset-x-0 bottom-0 z-[1] h-36 sm:h-48 bg-[linear-gradient(to_bottom,rgba(29,29,27,0)_0%,rgba(29,29,27,0.42)_48%,var(--ed-bg)_100%)] backdrop-blur-[3px] pointer-events-none"
-        />
+      <section className="relative py-10 sm:py-14 border-t border-[var(--ed-line-soft)] overflow-hidden">
+        {/* Subtle warm architectural glow */}
+        <div className="absolute inset-x-0 bottom-[-40%] h-[90%] ed-glow-warm pointer-events-none opacity-75" />
 
         <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-
-            <div className="lg:col-span-8">
-              <FadeIn>
-                <h2 className="ed-display-lg font-display text-ivory">
-                  {ed.ctaTitleA}<br />
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 sm:gap-8 bg-[var(--ed-bg-2)]/70 border border-[var(--ed-line)] p-6 sm:p-8 lg:px-12 lg:py-10">
+            <FadeIn>
+              <div>
+                <h2 className="ed-display-sm sm:ed-display-md font-display text-ivory leading-tight">
+                  {ed.ctaTitleA}{' '}
                   <span className="text-amber-warm">{ed.ctaTitleB}</span>
                 </h2>
-              </FadeIn>
-              <FadeIn delay={0.15}>
-                <p className="text-sm text-soft leading-relaxed mt-5 sm:mt-6 max-w-md whitespace-pre-line">
+                <p className="text-xs sm:text-sm text-soft mt-2.5 max-w-md">
                   {ed.ctaText}
                 </p>
-                <div className="mt-6 sm:mt-8">
-                  <EdButton arrow onClick={onOpenContact}>
-                    {ed.ctaBtn}
-                  </EdButton>
-                </div>
-              </FadeIn>
-            </div>
+              </div>
+            </FadeIn>
 
+            <FadeIn delay={0.1}>
+              <div className="flex flex-wrap items-center gap-4 shrink-0">
+                <EdButton arrow onClick={onOpenContact}>
+                  {ed.ctaBtn}
+                </EdButton>
+                <EdButton variant="ghost" onClick={() => onNavigate('configurator')}>
+                  {t.nav.configurator}
+                </EdButton>
+              </div>
+            </FadeIn>
           </div>
         </div>
       </section>

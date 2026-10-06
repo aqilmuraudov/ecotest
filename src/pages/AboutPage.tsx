@@ -31,14 +31,15 @@ export const AboutPage: React.FC<AboutPageProps> = ({
   const facilityPoints = (aboutData?.facilityPoints?.[currentLang]?.length ? aboutData.facilityPoints[currentLang] : defaultFacilityPoints);
 
   const pillars = aboutData?.pillars?.length 
-    ? aboutData.pillars.map(p => ({
-        label: p.label[currentLang] || p.label.az,
-        desc: p.desc[currentLang] || p.desc.az
-      }))
+    ? aboutData.pillars
+        .filter(p => p.id !== 'warranty' && !/zəmanət|warranty|гарант/i.test(p.label?.az || ''))
+        .map(p => ({
+          label: p.label[currentLang] || p.label.az,
+          desc: p.desc[currentLang] || p.desc.az
+        }))
     : [
         { label: t.whyUs.highQuality, desc: t.whyUs.highQualityDesc },
         { label: t.about.values.engineering, desc: t.about.values.engineeringDesc },
-        { label: t.whyUs.warranty, desc: t.whyUs.warrantyDesc },
         { label: t.whyUs.expertSupport, desc: t.whyUs.expertSupportDesc },
       ];
 

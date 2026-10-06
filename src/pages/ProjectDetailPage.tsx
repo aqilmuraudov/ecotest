@@ -29,7 +29,9 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
 }) => {
   const t = translations[currentLang];
   const { projects, products } = useData();
-  const project = projects.find(p => p.slug === projectSlug) || projects[0];
+  const project = projects.find(
+    p => p.slug === projectSlug || p.id === projectSlug || decodeURIComponent(p.slug || '') === decodeURIComponent(projectSlug || '')
+  ) || projects[0];
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
 
   const usedProducts = products.filter(prod =>
@@ -69,6 +71,20 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [lightboxImg, navigateLightbox]);
+
+  if (!project) {
+    return (
+      <div className="bg-[var(--ed-bg)] text-[var(--ed-ivory)] pt-32 pb-24 min-h-[60vh] flex items-center justify-center">
+        <button
+          onClick={() => onNavigate('projects')}
+          className="inline-flex items-center gap-2 font-micro text-xs text-amber-warm hover:underline"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>{t.projects.backToProjects}</span>
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[var(--ed-bg)] text-[var(--ed-ivory)] pt-32 pb-24">

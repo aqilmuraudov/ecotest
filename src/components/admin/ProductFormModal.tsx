@@ -4,6 +4,7 @@ import { useData } from '../../context/DataContext';
 import { ProductGalleryManager } from './ProductGalleryManager';
 import { ProductFileManager } from './ProductFileManager';
 import { adminTranslations } from '../../data/adminTranslations';
+import { dedupeProductGallery } from '../../utils/productOptions';
 import { X } from 'lucide-react';
 
 interface ProductFormModalProps {
@@ -49,22 +50,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   const [additionalImages, setAdditionalImages] = useState<string[]>(() => {
     if (!product) return [];
-    const main = product.image || (product.gallery && product.gallery[0]);
-    if (!product.gallery || product.gallery.length === 0) return [];
-    
-    // Filter out the primary main image to isolate additional gallery photos
-    const extras: string[] = [];
-    let skippedFirstMain = false;
-    for (const img of product.gallery) {
-      if (img === main && !skippedFirstMain) {
-        skippedFirstMain = true;
-        continue;
-      }
-      if (img && !extras.includes(img)) {
-        extras.push(img);
-      }
-    }
-    return extras;
+    const unified = dedupeProductGallery(product.image, product.gallery);
+    return unified.slice(1);
   });
   
   // Subtitle (AZ, EN, RU)
@@ -167,8 +154,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         ipRating,
         finish,
         voltage: '220-240V AC',
-        lifespan: '50,000 hrs (L80B10)',
-        warranty: '5 Years'
+        lifespan: '50,000 hrs (L80B10)'
       },
       files: productFiles,
       featured,

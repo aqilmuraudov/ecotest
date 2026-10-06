@@ -75,7 +75,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ currentLang, onNavig
             {lead && (
               <FadeIn>
                 <button
-                  onClick={() => onNavigate('projects', lead.slug)}
+                  onClick={() => onNavigate('projects', lead.slug || lead.id)}
                   className="group relative w-full aspect-[16/10] lg:aspect-[21/9] overflow-hidden text-left"
                 >
                   <img
@@ -90,7 +90,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ currentLang, onNavig
                         {lead.title}
                       </h2>
                       <div className="font-micro text-[9px] text-soft mt-4 flex flex-wrap gap-x-6 gap-y-1">
-                        <span className="text-amber-warm">{lead.categoryName[currentLang]}</span>
+                        <span className="text-amber-warm">{lead.categoryName?.[currentLang] || lead.category}</span>
                         <span>{lead.location}</span>
                         <span>{lead.client}</span>
                         <span>{lead.year}</span>
@@ -110,7 +110,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ currentLang, onNavig
               {rest.map((project, i) => (
                 <FadeIn key={project.id} delay={0.06 * (i + 1)}>
                   <button
-                    onClick={() => onNavigate('projects', project.slug)}
+                    onClick={() => onNavigate('projects', project.slug || project.id)}
                     className="group relative w-full aspect-[4/3] overflow-hidden text-left"
                   >
                     <img

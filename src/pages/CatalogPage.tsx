@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Language, ProductCategory, Product } from '../types';
 import { translations } from '../data/translations';
 import { productCategoriesList } from '../data/products';
@@ -8,7 +8,7 @@ import { FadeIn } from '../components/ui/FadeIn';
 import { EdButton, EdLink, EdSectionHead, EdHairline } from '../components/ed/EditorialUI';
 import { EdProductCard } from '../components/ed/EdProductCard';
 import { EdCategoryPills } from '../components/ed/EdCategoryPills';
-import { Search, X, ArrowRight } from 'lucide-react';
+import { Search, X, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface CatalogPageProps {
   currentLang: Language;
@@ -16,6 +16,8 @@ interface CatalogPageProps {
   onRequestQuote?: (product: Product) => void;
   initialCategory?: ProductCategory | string;
 }
+
+const ITEMS_PER_PAGE = 9;
 
 export const CatalogPage: React.FC<CatalogPageProps> = ({
   currentLang,
@@ -25,6 +27,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
 }) => {
   const t = translations[currentLang];
   const { products, categories } = useData();
+  const gridTopRef = useRef<HTMLDivElement>(null);
 
   const dynamicCategories = useMemo(() => {
     const allTab = { id: 'all', nameAz: 'Bütün Məhsullar', nameEn: 'All Products', nameRu: 'Все продукты' };
@@ -37,6 +40,17 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'featured' | 'name' | 'code'>('featured');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  useEffect(() => {
+    setSelectedCategory(initialCategory || 'all');
+    setCurrentPage(1);
+  }, [initialCategory]);
+
+  // Reset to page 1 whenever filters or sort change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchQuery, sortBy]);
 
   // Filtered and sorted products (logic preserved from the original implementation)
   const filteredProducts = useMemo(() => {
@@ -65,6 +79,22 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
       return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
     });
   }, [products, selectedCategory, searchQuery, sortBy, currentLang]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedProducts = useMemo(() => {
+    const startIdx = (safePage - 1) * ITEMS_PER_PAGE;
+    return filteredProducts.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+  }, [filteredProducts, safePage]);
+
+  const handlePageChange = (page: number) => {
+    const next = Math.max(1, Math.min(totalPages, page));
+    setCurrentPage(next);
+    if (gridTopRef.current) {
+      const top = gridTopRef.current.getBoundingClientRect().top + window.scrollY - 110;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+  };
 
   return (
     <div className="bg-[var(--ed-bg)] text-[var(--ed-ivory)] pt-32 pb-24">
@@ -114,6 +144,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           </div>
         </div>
 
+        <div ref={gridTopRef} />
         <EdHairline className="mb-10" />
 
         {/* Category pills — horizontal scroll on mobile */}
@@ -131,9 +162,16 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
 
         {/* Result meta + sort */}
         <div className="flex items-center justify-between mb-12">
-          <span className="font-micro text-[10px] text-mute">
-            {filteredProducts.length} {t.catalog.productsCount}
-          </span>
+          <div className="flex items-center gap-4">
+            <span className="font-micro text-[10px] text-mute">
+              {filteredProducts.length} {t.catalog.productsCount}
+            </span>
+            {totalPages > 1 && (
+              <span className="font-mono-tech text-[11px] text-amber-warm">
+                {currentLang === 'az' ? `SƏHİFƏ ${safePage} / ${totalPages}` : currentLang === 'ru' ? `СТР. ${safePage} / ${totalPages}` : `PAGE ${safePage} / ${totalPages}`}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-3">
             <span className="font-micro text-[10px] text-mute">{t.catalog.sortBy}</span>
             <select
@@ -148,35 +186,117 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           </div>
         </div>
 
-        {/* Editorial product grid */}
-        {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-16">
-            {filteredProducts.map((product, i) => (
-              <FadeIn key={product.id} delay={Math.min(0.05 * i, 0.4)}>
-                <div className="relative">
-                  <EdProductCard
-                    product={product}
-                    currentLang={currentLang}
-                    onNavigate={onNavigate}
-                    exploreLabel={currentLang === 'az' ? 'Ətraflı' : currentLang === 'ru' ? 'Подробнее' : 'Explore'}
-                  />
-                  {onRequestQuote && (
+        {/* Editorial product grid (3x3 = 9 products per page) */}
+        {paginatedProducts.length > 0 ? (
+          <>
+            <div key={`page-${safePage}-${selectedCategory}-${sortBy}`} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-14">
+              {paginatedProducts.map((product, i) => (
+                <FadeIn key={product.id} delay={Math.min(0.04 * i, 0.3)}>
+                  <div className="relative">
+                    <EdProductCard
+                      product={product}
+                      currentLang={currentLang}
+                      onNavigate={onNavigate}
+                      exploreLabel={currentLang === 'az' ? 'Ətraflı' : currentLang === 'ru' ? 'Подробнее' : 'Explore'}
+                    />
+                    {onRequestQuote && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRequestQuote(product);
+                        }}
+                        className="absolute top-4 right-4 z-10 font-micro text-[9px] text-[#1d1d1b] bg-[var(--ed-amber)] hover:bg-[var(--ed-amber-2)] px-3 py-1.5 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                        title={t.productDetail.requestQuote}
+                      >
+                        {t.productDetail.requestQuote}
+                      </button>
+                    )}
+                  </div>
+                </FadeIn>
+              ))}
+            </div>
+
+            {/* Pagination bar — compact with smart ellipsis */}
+            {totalPages > 1 && (() => {
+              const getVisiblePages = (): (number | 'ellipsis-start' | 'ellipsis-end')[] => {
+                if (totalPages <= 5) {
+                  return Array.from({ length: totalPages }, (_, i) => i + 1);
+                }
+                if (safePage <= 3) {
+                  return [1, 2, 3, 'ellipsis-end', totalPages];
+                }
+                if (safePage >= totalPages - 2) {
+                  return [1, 'ellipsis-start', totalPages - 2, totalPages - 1, totalPages];
+                }
+                return [1, 'ellipsis-start', safePage - 1, safePage, safePage + 1, 'ellipsis-end', totalPages];
+              };
+
+              const visiblePages = getVisiblePages();
+
+              return (
+                <div className="mt-14 pt-6 border-t border-[var(--ed-line)] flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <span className="font-mono-tech text-[10px] text-mute whitespace-nowrap">
+                    {currentLang === 'az'
+                      ? `${(safePage - 1) * ITEMS_PER_PAGE + 1}–${Math.min(safePage * ITEMS_PER_PAGE, filteredProducts.length)} / ${filteredProducts.length} MƏHSUL`
+                      : currentLang === 'ru'
+                      ? `${(safePage - 1) * ITEMS_PER_PAGE + 1}–${Math.min(safePage * ITEMS_PER_PAGE, filteredProducts.length)} ИЗ ${filteredProducts.length}`
+                      : `${(safePage - 1) * ITEMS_PER_PAGE + 1}–${Math.min(safePage * ITEMS_PER_PAGE, filteredProducts.length)} OF ${filteredProducts.length}`}
+                  </span>
+
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRequestQuote(product);
-                      }}
-                      className="absolute top-4 right-4 z-10 font-micro text-[9px] text-[#1d1d1b] bg-[var(--ed-amber)] hover:bg-[var(--ed-amber-2)] px-3 py-1.5 rounded-full transition-colors opacity-0 group-hover:opacity-100"
-                      title={t.productDetail.requestQuote}
+                      onClick={() => handlePageChange(safePage - 1)}
+                      disabled={safePage === 1}
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-[var(--ed-line)] flex items-center justify-center text-[var(--ed-ivory)] hover:border-[var(--ed-amber)] hover:text-amber-warm disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                      aria-label="Previous page"
                     >
-                      {t.productDetail.requestQuote}
+                      <ChevronLeft className="w-3.5 h-3.5" />
                     </button>
-                  )}
+
+                    {visiblePages.map((item) => {
+                      if (item === 'ellipsis-start' || item === 'ellipsis-end') {
+                        return (
+                          <span
+                            key={item}
+                            className="w-6 text-center font-mono-tech text-[11px] text-mute select-none"
+                          >
+                            …
+                          </span>
+                        );
+                      }
+                      const isCurrent = item === safePage;
+                      return (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => handlePageChange(item)}
+                          className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full font-mono-tech text-[11px] transition-all ${
+                            isCurrent
+                              ? 'bg-[var(--ed-amber)] text-[#1d1d1b] font-semibold shadow-[0_0_14px_rgba(245,166,35,0.28)]'
+                              : 'border border-[var(--ed-line)] text-[var(--ed-soft)] hover:border-[var(--ed-amber)] hover:text-ivory'
+                          }`}
+                        >
+                          {item}
+                        </button>
+                      );
+                    })}
+
+                    <button
+                      type="button"
+                      onClick={() => handlePageChange(safePage + 1)}
+                      disabled={safePage === totalPages}
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-[var(--ed-line)] flex items-center justify-center text-[var(--ed-ivory)] hover:border-[var(--ed-amber)] hover:text-amber-warm disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                      aria-label="Next page"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
-              </FadeIn>
-            ))}
-          </div>
+              );
+            })()}
+          </>
         ) : (
           <div className="py-24 text-center space-y-6 border-t border-[var(--ed-line)]">
             <Search className="w-8 h-8 text-mute mx-auto" />

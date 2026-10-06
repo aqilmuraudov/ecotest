@@ -3,7 +3,7 @@ import { Language, Product, ProductFile } from '../types';
 import { translations } from '../data/translations';
 import { useData } from '../context/DataContext';
 import { getLocalizedText } from '../utils/lang';
-import { cctLabel, getCctOptions, getFinishOptions, shouldShowWarrantyBadge } from '../utils/productOptions';
+import { cctLabel, getCctOptions, getFinishOptions, shouldShowWarrantyBadge, dedupeProductGallery } from '../utils/productOptions';
 import { downloadFileFromUrl, getDownloadableFiles } from '../utils/productFiles';
 import { FadeIn } from '../components/ui/FadeIn';
 import { EdButton, EdLink, EdHairline } from '../components/ed/EditorialUI';
@@ -79,12 +79,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.slug]);
 
-  const galleryList = Array.from(
-    new Set([
-      product.image,
-      ...(Array.isArray(product.gallery) ? product.gallery : [])
-    ].filter(Boolean))
-  );
+  const galleryList = dedupeProductGallery(product.image, product.gallery);
 
   const currentImage = galleryList[activeImageIndex] || galleryList[0] || product.image || 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1000&q=80';
 
@@ -143,12 +138,12 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             <FadeIn>
               <div
                 onClick={() => setLightboxOpen(true)}
-                className="group relative ed-plate aspect-[4/3] overflow-hidden cursor-zoom-in"
+                className="group relative ed-plate aspect-[4/3] overflow-hidden cursor-zoom-in flex items-center justify-center p-6 sm:p-10"
               >
                 <img
                   src={currentImage}
                   alt={product.name}
-                  className="w-full h-full object-cover transition-transform duration-[900ms] group-hover:scale-[1.04]"
+                  className="w-full h-full max-w-[85%] max-h-[85%] object-contain transition-transform duration-[900ms] group-hover:scale-[1.04]"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1000&q=80';
                   }}
@@ -165,16 +160,16 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   <button
                     key={idx}
                     onClick={() => setActiveImageIndex(idx)}
-                    className={`relative w-20 h-16 overflow-hidden flex-shrink-0 transition-all ${
+                    className={`relative w-20 h-16 overflow-hidden flex-shrink-0 ed-plate p-1.5 transition-all ${
                       activeImageIndex === idx
-                        ? 'ring-1 ring-[var(--ed-amber)]'
-                        : 'opacity-50 hover:opacity-90'
+                        ? 'ring-2 ring-[var(--ed-amber)]'
+                        : 'opacity-60 hover:opacity-100'
                     }`}
                   >
                     <img
                       src={img}
                       alt={`Thumbnail ${idx + 1}`}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=200&q=80';
                       }}
@@ -248,18 +243,6 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                       </button>
                     ))}
                   </div>
-                </div>
-              </FadeIn>
-            )}
-
-            {/* Warranty note */}
-            {showWarranty && (
-              <FadeIn delay={0.3}>
-                <div className="flex items-start gap-3 pt-2">
-                  <ShieldCheck className="w-4 h-4 text-amber-warm flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-mute leading-relaxed">
-                    {t.productDetail.warrantyBadge}
-                  </p>
                 </div>
               </FadeIn>
             )}
