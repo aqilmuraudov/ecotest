@@ -45,53 +45,46 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   onDownloadFile
 }) => {
   const t = translations[currentLang];
-  const { products } = useData();
+  const { products, isLoading } = useData();
 
-  const product = products.find((p) => p.slug === productSlug || p.id === productSlug) || products[0] || {
-    id: 'not-found',
-    slug: 'not-found',
-    name: 'Məhsul',
-    code: 'ECO-000',
-    image: '',
-    gallery: [],
-    category: 'linear-profiles',
-    categoryName: { az: 'Xətti Profillər', en: 'Linear Profiles', ru: 'Линейные профили' },
-    subtitle: { az: '', en: '', ru: '' },
-    description: { az: '', en: '', ru: '' },
-    specs: { material: 'Alüminium', dimensions: '', ipRating: 'IP20', mounting: 'Surface' },
-    files: []
-  };
+  const product = products.find(
+    (p) => p.id === productSlug || (p.slug && p.slug.toLowerCase() === productSlug.toLowerCase())
+  );
+
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
-  const cctOptions = getCctOptions(product);
-  const finishOptions = getFinishOptions(product);
-  const showWarranty = shouldShowWarrantyBadge(product);
+  const cctOptions = product ? getCctOptions(product) : [];
+  const finishOptions = product ? getFinishOptions(product) : [];
+  const showWarranty = product ? shouldShowWarrantyBadge(product) : false;
 
   const [selectedCCT, setSelectedCCT] = useState(cctOptions[0] || '');
   const [selectedFinish, setSelectedFinish] = useState(finishOptions[0] || '');
   const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
-    setSelectedCCT(getCctOptions(product)[0] || '');
-    setSelectedFinish(getFinishOptions(product)[0] || '');
-    setActiveImageIndex(0);
+    if (product) {
+      setSelectedCCT(getCctOptions(product)[0] || '');
+      setSelectedFinish(getFinishOptions(product)[0] || '');
+      setActiveImageIndex(0);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product.slug]);
+  }, [product?.slug, product?.id]);
 
-  const galleryList = dedupeProductGallery(product.image, product.gallery);
+  const galleryList = product ? dedupeProductGallery(product.image, product.gallery) : [];
+  const currentImage = galleryList[activeImageIndex] || galleryList[0] || product?.image || 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1000&q=80';
 
-  const currentImage = galleryList[activeImageIndex] || galleryList[0] || product.image || 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1000&q=80';
-
-  const relatedProducts = products
-    .filter((p) => {
-      if (p.id === product.id) return false;
-      const pCats: string[] = Array.isArray(p.categories) && p.categories.length > 0
-        ? p.categories
-        : [p.category];
-      return pCats.includes(product.category) || p.featured;
-    })
-    .slice(0, 3);
+  const relatedProducts = product
+    ? products
+        .filter((p) => {
+          if (p.id === product.id) return false;
+          const pCats: string[] = Array.isArray(p.categories) && p.categories.length > 0
+            ? p.categories
+            : [p.category];
+          return pCats.includes(product.category) || p.featured;
+        })
+        .slice(0, 3)
+    : [];
 
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -99,13 +92,48 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     setTimeout(() => setCopiedLink(false), 2500);
   };
 
-  const downloadableFiles = getDownloadableFiles(product.files);
+  const downloadableFiles = product ? getDownloadableFiles(product.files) : [];
 
   const handleRealDownload = async (file: ProductFile) => {
     if (!file.url) return;
     onDownloadFile(file.name);
     await downloadFileFromUrl(file.url, file.name);
   };
+
+  if (isLoading && !product) {
+    return (
+      <div className="bg-[var(--ed-bg)] text-[var(--ed-ivory)] pt-36 pb-24 min-h-[60vh] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 rounded-full border-2 border-[var(--ed-amber)] border-t-transparent animate-spin" />
+          <p className="font-micro text-xs text-soft">
+            {currentLang === 'az' ? 'Məhsul məlumatları yüklənir...' : currentLang === 'ru' ? 'Загрузка данных продукта...' : 'Loading product details...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="bg-[var(--ed-bg)] text-[var(--ed-ivory)] pt-36 pb-24 min-h-[60vh] flex items-center justify-center">
+        <div className="text-center max-w-md px-4">
+          <h1 className="ed-display-sm font-display text-ivory mb-4">
+            {currentLang === 'az' ? 'Məhsul tapılmadı' : currentLang === 'ru' ? 'Продукт не найден' : 'Product Not Found'}
+          </h1>
+          <p className="text-sm text-soft mb-8">
+            {currentLang === 'az'
+              ? 'Axtardığınız məhsul mövcud deyil və ya silinib.'
+              : currentLang === 'ru'
+              ? 'Запрашиваемый продукт не существует или был удален.'
+              : 'The product you are looking for does not exist or has been removed.'}
+          </p>
+          <EdButton arrow onClick={() => onNavigate('catalog')}>
+            {currentLang === 'az' ? 'Kataloqa qayıt' : currentLang === 'ru' ? 'Вернуться в каталог' : 'Back to Catalog'}
+          </EdButton>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[var(--ed-bg)] text-[var(--ed-ivory)] pt-32 pb-24">

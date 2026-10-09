@@ -20,9 +20,10 @@ const AdminPage = lazy(() => import('./pages/AdminPage').then(module => ({ defau
 const AboutPage = lazy(() => import('./pages/AboutPage').then(module => ({ default: module.AboutPage })));
 const ContactPage = lazy(() => import('./pages/ContactPage').then(module => ({ default: module.ContactPage })));
 import { useData } from './context/DataContext';
+import { productCategoriesList } from './data/products';
 
 export default function App() {
-  const { products } = useData();
+  const { products, categories } = useData();
   // Theme State with localStorage recovery (Default is 'dark')
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('ecolife_theme');
@@ -157,11 +158,23 @@ export default function App() {
         );
 
       case 'catalog': {
-        const isProduct = pageParam && products.some(p => p.slug === pageParam || p.id === pageParam);
+        const isKnownCategory = Boolean(
+          pageParam && (
+            pageParam === 'all' ||
+            categories.some(c => c.id === pageParam) ||
+            productCategoriesList.some(c => c.id === pageParam)
+          )
+        );
+        const isProduct = Boolean(
+          pageParam && (
+            products.some(p => p.slug === pageParam || p.id === pageParam) ||
+            !isKnownCategory
+          )
+        );
         if (isProduct) {
           return (
             <ProductDetailPage
-              productSlug={pageParam}
+              productSlug={pageParam!}
               currentLang={currentLang}
               onNavigate={handleNavigate}
               onRequestQuote={handleRequestProductQuote}
