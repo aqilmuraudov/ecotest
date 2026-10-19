@@ -208,7 +208,7 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
     if (!el) return;
     const apply = () => {
       setScale(el.clientWidth / FX_W);
-      setWire(window.matchMedia('(min-width: 1024px)').matches ? 215 : 250);
+      setWire(window.matchMedia('(min-width: 1024px)').matches ? 120 : 250);
     };
     apply();
     const ro = new ResizeObserver(apply);
@@ -265,7 +265,7 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
   return (
     <div
       ref={boxRef}
-      className="absolute top-0 z-0 pointer-events-none left-1/2 -translate-x-1/2 w-[min(96vw,560px)] lg:left-auto lg:translate-x-0 lg:right-[5%] lg:w-[min(860px,60vw)]"
+      className="absolute top-0 z-0 pointer-events-none left-1/2 -translate-x-1/2 w-[min(96vw,560px)] lg:w-[min(1380px,88vw)] lg:-translate-x-[54%]"
       style={{ height: (bodyBottom + 40) * scale }}
     >
       <div style={{ width: FX_W, height: bodyBottom + 40, transform: `scale(${scale})`, transformOrigin: '0 0', perspective: 1500, perspectiveOrigin: '50% 0%' }} className="relative">
@@ -577,7 +577,7 @@ export const HomePage: React.FC<HomePageProps> = ({
       <section ref={heroRef} className="relative min-h-[auto] lg:min-h-screen flex items-center pt-20 sm:pt-24 pb-12 sm:pb-16 lg:py-20 overflow-hidden">
         <div className="max-w-[1440px] mx-auto w-full px-5 sm:px-8 lg:px-12 relative z-10">
 
-          <div className="max-w-xl lg:max-w-2xl pt-64 sm:pt-72 md:pt-80 lg:pt-0">
+          <div className="max-w-xl lg:max-w-2xl pt-64 sm:pt-72 md:pt-80 lg:pt-44">
             {/* Headline */}
             <motion.div style={{ y: titleY }} className="relative z-10">
               <motion.h1
