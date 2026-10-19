@@ -80,7 +80,8 @@ export default async function handler(req: any, res: any) {
   // 1) save (public INSERT is allowed by RLS for status = 'new')
   let saved = false;
   const sbUrl = env('VITE_SUPABASE_URL');
-  const sbKey = env('VITE_SUPABASE_ANON_KEY');
+  // server-only key (bypasses RLS) when configured; the public anon INSERT policy can then be removed from the database
+  const sbKey = env('SUPABASE_SERVICE_ROLE_KEY') || env('VITE_SUPABASE_ANON_KEY');
   if (sbUrl && sbKey) {
     const row = {
       id,
@@ -102,7 +103,7 @@ export default async function handler(req: any, res: any) {
     try {
       const r = await fetch(`${sbUrl}/rest/v1/inquiries`, {
         method: 'POST',
-        headers: { apikey: sbKey, Authorization: `Bearer ${sbKey}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        headers: { apikey: sbKey, ...(sbKey.startsWith('eyJ') ? { Authorization: `Bearer ${sbKey}` } : {}), 'Content-Type': 'application/json', Prefer: 'return=minimal' },
         body: JSON.stringify(row),
       });
       saved = r.ok;

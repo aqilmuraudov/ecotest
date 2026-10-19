@@ -204,7 +204,7 @@ function makeTextSink(lang: 'az' | 'ru', emit: Emit) {
 interface StreamResult { text: string; toolCalls: { id: string; name: string; args: string }[] }
 
 /** One concrete place to send a request to: provider endpoint + key + model + reasoning effort. */
-export interface Target { label: string; base: string; key: string; model: string; effort?: string; firstByteMs: number }
+export interface Target { label: string; base: string; key: string; model: string; effort?: string; firstByteMs: number; extra?: Record<string, unknown> }
 
 const trimSlash = (s: string) => s.replace(/\/+$/, '');
 
@@ -224,13 +224,13 @@ function targets(history: ChatMsg[]): Target[] {
   const think = gonka(env('AI_MODEL_THINK', 'MiniMaxAI/MiniMax-M2.7'), env('AI_EFFORT_THINK', 'medium'));
   const backup = gonka(env('AI_MODEL_FALLBACK', 'deepseek-ai/DeepSeek-V4-Flash-0731'), env('AI_EFFORT_LIGHT', 'low'));
 
-  const chain: Target[] = [];
+  const groq: Target[] = [];
   const groqKey = env('GROQ_API_KEY');
   if (groqKey) {
     // measured on the live site: qwen3.8-27b answers in 0.3-0.9 s with the best Azerbaijani/Russian; gpt-oss-120b is the second Groq option
     const models = [env('GROQ_MODEL', 'qwen/qwen3.8-27b'), env('GROQ_MODEL_2', 'openai/gpt-oss-120b')].filter((m, i, a) => m && a.indexOf(m) === i);
     for (const model of models) {
-      chain.push({
+      groq.push({
         label: 'groq',
         base: trimSlash(env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1')),
         key: groqKey,
@@ -241,8 +241,26 @@ function targets(history: ChatMsg[]): Target[] {
       });
     }
   }
-  if (gKey) chain.push(...(complex ? [think, light, backup] : [light, backup, think]));
-  return chain;
+
+  // IteraCompute: free hosted Qwen3.8-27B (shared capacity, may queue). Thinking is switched off through the chat template, not reasoning_effort.
+  const itera: Target[] = [];
+  const iteraKey = env('ITERA_API_KEY');
+  if (iteraKey) {
+    itera.push({
+      label: 'itera',
+      base: trimSlash(env('ITERA_BASE_URL', 'https://api.iteracompute.com/v1')),
+      key: iteraKey,
+      model: env('ITERA_MODEL', 'qwen/qwen3.8-27b'),
+      firstByteMs: 12000,
+      extra: { chat_template_kwargs: { enable_thinking: false } },
+    });
+  }
+
+  const gonkaChain: Target[] = gKey ? (complex ? [think, light, backup] : [light, backup, think]) : [];
+  const all: Record<string, Target[]> = { groq, itera, gonka: gonkaChain };
+  // AI_ORDER decides who is asked first, e.g. "itera,groq,gonka"; unlisted providers are simply not used
+  const order = env('AI_ORDER', 'groq,itera,gonka').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  return order.flatMap(k => all[k] || []);
 }
 
 async function streamOnce(target: Target, messages: any[], useTools: boolean, sink: ReturnType<typeof makeTextSink>): Promise<StreamResult> {
@@ -252,7 +270,7 @@ async function streamOnce(target: Target, messages: any[], useTools: boolean, si
     method: 'POST',
     signal: ctl.signal,
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${target.key}` },
-    body: JSON.stringify({ model: target.model, messages, stream: true, temperature: 0.5, max_tokens: 900, ...(target.effort ? { reasoning_effort: target.effort } : {}), ...(useTools ? { tools: TOOLS, tool_choice: 'auto' } : {}) }),
+    body: JSON.stringify({ model: target.model, messages, stream: true, temperature: 0.5, max_tokens: 900, ...(target.effort ? { reasoning_effort: target.effort } : {}), ...(target.extra || {}), ...(useTools ? { tools: TOOLS, tool_choice: 'auto' } : {}) }),
   });
   clearTimeout(timer);
   if (!res.ok || !res.body) throw new Error(`${target.label}:${target.model} HTTP ${res.status}`);
@@ -363,7 +381,7 @@ export async function summarize(history: ChatMsg[]): Promise<string> {
         method: 'POST',
         signal: ctl.signal,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${target.key}` },
-        body: JSON.stringify({ model: target.model, messages: [{ role: 'user', content: prompt }], max_tokens: 350, temperature: 0.2, ...(target.effort ? { reasoning_effort: target.effort } : {}) }),
+        body: JSON.stringify({ model: target.model, messages: [{ role: 'user', content: prompt }], max_tokens: 350, temperature: 0.2, ...(target.effort ? { reasoning_effort: target.effort } : {}), ...(target.extra || {}) }),
       });
       clearTimeout(timer);
       if (res.ok) {

@@ -44,7 +44,7 @@ export default async function handler(req: any, res: any) {
     (res as any).flush?.();
   };
 
-  if (!env('AI_API_KEY') && !env('GROQ_API_KEY')) {
+  if (!env('AI_API_KEY') && !env('GROQ_API_KEY') && !env('ITERA_API_KEY')) {
     send({ type: 'error', code: 'not_configured' });
     return res.end();
   }
