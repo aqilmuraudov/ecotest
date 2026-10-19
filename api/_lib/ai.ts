@@ -147,6 +147,9 @@ const PRICE_REPLY = {
   ru: 'Точную стоимость наш менеджер подготовит под ваш проект.',
 };
 
+// some models occasionally write a tool name into the visible text; never show internals to customers
+const TOOL_NAME_RE = /\b(request_consulta\w*|recommend_products|search_products|get_product)\b/g;
+
 function makeTextSink(lang: 'az' | 'ru', emit: Emit) {
   let buf = '';
   let inThink = false;
@@ -154,8 +157,9 @@ function makeTextSink(lang: 'az' | 'ru', emit: Emit) {
   const flushSentences = (final: boolean) => {
     const parts = buf.split(/(?<=[.!?\n])/);
     const keep = final ? '' : parts.pop() ?? '';
-    for (const p of parts) {
-      if (!p) continue;
+    for (let p of parts) {
+      p = p.replace(TOOL_NAME_RE, '');
+      if (!p.trim()) continue;
       const safe = PRICE_RE.test(p) ? PRICE_REPLY[lang] + (/\s$/.test(p) ? ' ' : '') : p;
       total += safe;
       emit({ type: 'text', delta: safe });
@@ -212,16 +216,19 @@ function targets(history: ChatMsg[]): Target[] {
   const chain: Target[] = [];
   const groqKey = env('GROQ_API_KEY');
   if (groqKey) {
-    const model = env('GROQ_MODEL', 'openai/gpt-oss-120b');
-    chain.push({
-      label: 'groq',
-      base: trimSlash(env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1')),
-      key: groqKey,
-      model,
-      // gpt-oss: low/medium/high; Qwen3 on Groq: none/default
-      effort: /qwen/i.test(model) ? 'none' : complex ? 'medium' : 'low',
-      firstByteMs: 10000,
-    });
+    // measured on the live site: qwen3.8-27b answers in 0.3-0.9 s with the best Azerbaijani/Russian; gpt-oss-120b is the second Groq option
+    const models = [env('GROQ_MODEL', 'qwen/qwen3.8-27b'), env('GROQ_MODEL_2', 'openai/gpt-oss-120b')].filter((m, i, a) => m && a.indexOf(m) === i);
+    for (const model of models) {
+      chain.push({
+        label: 'groq',
+        base: trimSlash(env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1')),
+        key: groqKey,
+        model,
+        // gpt-oss: low/medium/high; Qwen3 on Groq: none/default
+        effort: /qwen/i.test(model) ? 'none' : complex ? 'medium' : 'low',
+        firstByteMs: 10000,
+      });
+    }
   }
   if (gKey) chain.push(...(complex ? [think, light, backup] : [light, backup, think]));
   return chain;
