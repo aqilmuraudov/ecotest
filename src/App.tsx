@@ -16,6 +16,7 @@ const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage').then(mo
 const SolutionsPage = lazy(() => import('./pages/SolutionsPage').then(module => ({ default: module.SolutionsPage })));
 const ConfiguratorPage = lazy(() => import('./pages/ConfiguratorPage').then(module => ({ default: module.ConfiguratorPage })));
 const BlogPage = lazy(() => import('./pages/BlogPage').then(module => ({ default: module.BlogPage })));
+const ChatWidget = lazy(() => import('./components/chat/ChatWidget').then(m => ({ default: m.ChatWidget })));
 const AdminPage = lazy(() => import('./pages/AdminPage').then(module => ({ default: module.AdminPage })));
 const AboutPage = lazy(() => import('./pages/AboutPage').then(module => ({ default: module.AboutPage })));
 const ContactPage = lazy(() => import('./pages/ContactPage').then(module => ({ default: module.ContactPage })));
@@ -296,6 +297,13 @@ export default function App() {
           {renderPage()}
         </Suspense>
       </main>
+
+      {/* AI digital seller (not shown inside the admin panel) */}
+      {activePage !== 'admin' && (
+        <Suspense fallback={null}>
+          <ChatWidget currentLang={currentLang} onNavigate={handleNavigate} />
+        </Suspense>
+      )}
 
       {/* Global Footer */}
       <Footer

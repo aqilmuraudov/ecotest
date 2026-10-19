@@ -418,7 +418,7 @@ const LampSwitch: React.FC<{ on: boolean; onToggle: () => void; lang: Language }
       type="button"
       onClick={onToggle}
       aria-pressed={on}
-      className="ed-pill absolute z-10 right-5 sm:right-8 lg:right-12 bottom-8 sm:bottom-10 lg:bottom-16 backdrop-blur-sm bg-[var(--ed-bg)]/40"
+      className="ed-pill absolute z-10 right-[84px] sm:right-[104px] lg:right-[120px] bottom-8 sm:bottom-10 lg:bottom-16 backdrop-blur-sm bg-[var(--ed-bg)]/40"
     >
       {on ? <Lightbulb className="w-4 h-4 text-amber-warm" /> : <LightbulbOff className="w-4 h-4" />}
       <span>{label}</span>
