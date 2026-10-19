@@ -48,6 +48,18 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json(out);
   }
 
+  if (q.reach) {
+    // key-less reachability: an invalid key should give a JSON 401, a bot challenge gives HTML 403
+    const out: Record<string, unknown> = {};
+    for (const [name, p] of Object.entries(PROVIDERS)) {
+      try {
+        const r = await fetch(`${p.base.replace(/\/+$/, '')}/models`, { headers: { Authorization: 'Bearer reachability-probe' } });
+        const t = (await r.text()).slice(0, 80).replace(/\s+/g, ' ');
+        out[name] = { status: r.status, server: r.headers.get('server'), body: t };
+      } catch (e: any) { out[name] = `error: ${e?.message}`; }
+    }
+    return res.status(200).json(out);
+  }
   if (q.diag) {
     const dp = PROVIDERS[String(q.diag)];
     const key = dp?.key();
