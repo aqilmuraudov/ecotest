@@ -150,7 +150,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
         <div ref={gridTopRef} />
         <EdHairline className="mb-10" />
 
-        {/* Category pills — horizontal scroll on mobile */}
+        {/* Category pills: two-column grid on phones, wrapping row from tablet up */}
         <div className="flex items-center justify-between gap-4 mb-4">
           <EdCategoryPills
             items={dynamicCategories.map(cat => ({
@@ -159,28 +159,29 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
             }))}
             activeId={selectedCategory}
             onSelect={setSelectedCategory}
-            className="flex-1 !justify-start"
+            gridOnMobile
+            className="flex-1 md:!justify-start"
           />
         </div>
 
         {/* Result meta + sort */}
-        <div className="flex items-center justify-between mb-12">
-          <div className="flex items-center gap-4">
-            <span className="font-micro text-[10px] text-mute">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-10 sm:mb-12">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span className="font-micro text-[10px] text-mute whitespace-nowrap">
               {filteredProducts.length} {t.catalog.productsCount}
             </span>
             {totalPages > 1 && (
-              <span className="font-mono-tech text-[11px] text-amber-warm">
+              <span className="font-mono-tech text-[11px] text-amber-warm whitespace-nowrap">
                 {currentLang === 'az' ? `SƏHİFƏ ${safePage} / ${totalPages}` : currentLang === 'ru' ? `СТР. ${safePage} / ${totalPages}` : `PAGE ${safePage} / ${totalPages}`}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-3">
-            <span className="font-micro text-[10px] text-mute">{t.catalog.sortBy}</span>
+          <div className="flex items-center justify-between gap-3 sm:justify-end">
+            <span className="font-micro text-[10px] text-mute whitespace-nowrap">{t.catalog.sortBy}</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-transparent border border-[var(--ed-line)] rounded-full px-4 py-1.5 text-xs text-[var(--ed-ivory)] focus:outline-none focus:border-[var(--ed-amber)]"
+              className="min-h-[44px] sm:min-h-0 max-sm:flex-1 max-sm:max-w-[220px] bg-transparent border border-[var(--ed-line)] rounded-full px-4 py-1.5 text-xs text-[var(--ed-ivory)] focus:outline-none focus:border-[var(--ed-amber)]"
             >
               <option value="featured">{t.catalog.sortFeatured}</option>
               <option value="name">{t.catalog.sortName}</option>

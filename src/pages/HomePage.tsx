@@ -690,6 +690,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               items={pills.map(p => ({ id: p.id, label: p.label }))}
               activeId={activeCategory}
               onSelect={setActiveCategory}
+              gridOnMobile
               className="mb-8 sm:mb-10"
             />
           </FadeIn>
