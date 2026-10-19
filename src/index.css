@@ -163,6 +163,15 @@ html.light {
 .ed-plate img {
   mix-blend-mode: multiply;
 }
+/* Background-free product shots (processed into /ecolife_transparent/) sit directly on the
+   dark page: no plate, no blend, just a hairline frame to keep the card footprint. */
+html:not(.light) .ed-plate:has(img[src*="/ecolife_transparent/"]) {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--ed-line-soft);
+}
+html:not(.light) .ed-plate img[src*="/ecolife_transparent/"] {
+  mix-blend-mode: normal;
+}
 
 /* ============================================================
    CONTROLS — pills, buttons, fields

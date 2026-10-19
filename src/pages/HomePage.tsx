@@ -1,15 +1,15 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Language, Product, Project } from '../types';
 import { translations } from '../data/translations';
 import { solutions } from '../data/solutions';
 import { useData } from '../context/DataContext';
 import { getLocalizedText } from '../utils/lang';
-import { motion, useScroll, useTransform, useReducedMotion, MotionValue } from 'motion/react';
+import { motion, useScroll, useTransform, useReducedMotion, useAnimate, MotionValue } from 'motion/react';
 import { FadeIn } from '../components/ui/FadeIn';
 import { EdButton, EdLink, EdSectionHead, EdHairline } from '../components/ed/EditorialUI';
 import { EdProductCard } from '../components/ed/EdProductCard';
 import { EdCategoryPills } from '../components/ed/EdCategoryPills';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Lightbulb, LightbulbOff } from 'lucide-react';
 
 interface HomePageProps {
   currentLang: Language;
@@ -114,10 +114,76 @@ const ProjectStack: React.FC<{
 };
 
 /**
+ * Real-pendant behaviour: the lamp is lowered on its cord from the ceiling once,
+ * settles with a decaying swing, then keeps a very slow, barely-there sway around
+ * the ceiling mount (top centre of the artwork). Static under reduced motion.
+ */
+const LampSwing: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const reduce = useReducedMotion();
+  const [scope, animate] = useAnimate();
+
+  useEffect(() => {
+    if (reduce || !scope.current) return;
+    const running: { stop: () => void }[] = [];
+    let cancelled = false;
+    (async () => {
+      try {
+        const lower = animate(scope.current, { y: ['-100%', '0%'] }, { duration: 1.3, ease: [0.16, 1, 0.3, 1] });
+        running.push(lower);
+        await lower;
+        if (cancelled) return;
+        const settle = animate(scope.current, { rotate: [0, 3, -2.2, 1.5, -1.1] }, { duration: 4, ease: 'easeInOut' });
+        running.push(settle);
+        await settle;
+        if (cancelled) return;
+        running.push(
+          animate(scope.current, { rotate: [-1.1, 1.1] }, { duration: 6.5, ease: 'easeInOut', repeat: Infinity, repeatType: 'mirror' })
+        );
+      } catch {
+        /* animation interrupted on unmount */
+      }
+    })();
+    return () => {
+      cancelled = true;
+      running.forEach(r => r.stop());
+    };
+  }, [reduce, animate, scope]);
+
+  return (
+    <motion.div
+      ref={scope}
+      style={{ transformOrigin: '50% 0%', y: reduce ? 0 : '-100%' }}
+      className="w-full"
+    >
+      {children}
+    </motion.div>
+  );
+};
+
+const LAMP_PREF_KEY = 'ecolife-lamp';
+
+const LampSwitch: React.FC<{ on: boolean; onToggle: () => void; lang: Language }> = ({ on, onToggle, lang }) => {
+  const label = on
+    ? (lang === 'az' ? 'Söndür' : lang === 'ru' ? 'Выключить' : 'Switch off')
+    : (lang === 'az' ? 'Yandır' : lang === 'ru' ? 'Включить' : 'Switch on');
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={on}
+      className="ed-pill absolute z-10 right-5 sm:right-8 lg:right-12 bottom-8 sm:bottom-10 lg:bottom-16 backdrop-blur-sm bg-[var(--ed-bg)]/40"
+    >
+      {on ? <Lightbulb className="w-4 h-4 text-amber-warm" /> : <LightbulbOff className="w-4 h-4" />}
+      <span>{label}</span>
+    </button>
+  );
+};
+
+/**
  * Light pool under the pendant. On load it warms up like an LED driver (a short
  * stepped ramp, no strobing); on scroll it recedes so the lamp "stays behind".
  */
-const HeroGlow: React.FC<{ progress: MotionValue<number> }> = ({ progress }) => {
+const HeroGlow: React.FC<{ progress: MotionValue<number>; on: boolean }> = ({ progress, on }) => {
   const recede = useTransform(progress, [0, 0.7], [1, 0.15]);
   return (
     <motion.div
@@ -127,8 +193,10 @@ const HeroGlow: React.FC<{ progress: MotionValue<number> }> = ({ progress }) => 
     >
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 0.4, 0.3, 1] }}
-        transition={{ duration: 1.8, delay: 0.5, times: [0, 0.3, 0.45, 1], ease: 'easeOut' }}
+        animate={{ opacity: on ? [0, 0.4, 0.3, 1] : 0 }}
+        transition={on
+          ? { duration: 1.6, delay: 0.3, times: [0, 0.3, 0.45, 1], ease: 'easeOut' }
+          : { duration: 0.35, ease: 'easeIn' }}
         className="w-full h-full bg-[radial-gradient(ellipse_at_50%_15%,_rgba(245,185,55,0.24)_0%,_rgba(245,180,50,0.08)_42%,_rgba(245,180,50,0.02)_65%,_transparent_80%)] blur-3xl"
       />
     </motion.div>
@@ -146,6 +214,32 @@ export const HomePage: React.FC<HomePageProps> = ({
 
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const heroRef = useRef<HTMLElement>(null);
+
+  // Lamp power: remembered across visits (per-viewer convenience only)
+  const [lampOn, setLampOn] = useState<boolean>(() => {
+    try { return localStorage.getItem(LAMP_PREF_KEY) !== 'off'; } catch { return true; }
+  });
+  const toggleLamp = () => {
+    setLampOn(prev => {
+      const next = !prev;
+      try { localStorage.setItem(LAMP_PREF_KEY, next ? 'on' : 'off'); } catch { /* storage unavailable */ }
+      return next;
+    });
+  };
+  // Snappy toggles once the entrance sequence has finished
+  const [introDone, setIntroDone] = useState(false);
+  useEffect(() => {
+    const id = window.setTimeout(() => setIntroDone(true), 2400);
+    return () => window.clearTimeout(id);
+  }, []);
+  const lampMotion = {
+    initial: { opacity: 0, scale: 0.96, filter: 'brightness(0.55)' },
+    animate: { opacity: 1, scale: 1, filter: lampOn ? 'brightness(1)' : 'brightness(0.22)' },
+    transition: {
+      default: { duration: 1.2, ease: [0.22, 0.61, 0.36, 1] as const, delay: 0.1 },
+      filter: { duration: lampOn ? 1.2 : 0.5, ease: 'easeOut' as const, delay: introDone ? 0 : 0.3 },
+    },
+  };
 
   // Subtle product parallax on the hero (max ±18px — calm, not gimmicky)
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
@@ -282,46 +376,48 @@ export const HomePage: React.FC<HomePageProps> = ({
         {/* MOBILE Pendant Lamp (centered between logo & search) */}
         <motion.div
           style={{ y: productY }}
-          initial={{ opacity: 0, scale: 0.96, filter: 'brightness(0.55)' }}
-          animate={{ opacity: 1, scale: 1, filter: 'brightness(1)' }}
-          transition={{ duration: 1.2, ease: [0.22, 0.61, 0.36, 1], delay: 0.35 }}
+          {...lampMotion}
           className="ed-hero-lamp-wrap lg:hidden absolute top-0 left-1/2 -translate-x-1/2 w-[440px] sm:w-[500px] pointer-events-none z-0 flex flex-col items-center"
         >
-          <HeroGlow progress={scrollYProgress} />
+          <HeroGlow progress={scrollYProgress} on={lampOn} />
 
-          <img
-            src="/hero-pendant-light-mobile.webp"
-            alt="Ecolife Architectural Lighting - Mobile"
-            width={824}
-            height={827}
-            className="w-full h-auto object-contain select-none ed-hero-lamp-shadow"
-            loading="eager"
-            fetchPriority="high"
-            decoding="async"
-          />
+          <LampSwing>
+            <img
+              src="/hero-pendant-light-mobile.webp"
+              alt="Ecolife Architectural Lighting - Mobile"
+              width={824}
+              height={827}
+              className="w-full h-auto object-contain select-none ed-hero-lamp-shadow"
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+            />
+          </LampSwing>
         </motion.div>
 
         {/* DESKTOP Pendant Lamp (hanging from top right) */}
         <motion.div
           style={{ y: productY }}
-          initial={{ opacity: 0, scale: 0.96, filter: 'brightness(0.55)' }}
-          animate={{ opacity: 1, scale: 1, filter: 'brightness(1)' }}
-          transition={{ duration: 1.2, ease: [0.22, 0.61, 0.36, 1], delay: 0.35 }}
+          {...lampMotion}
           className="ed-hero-lamp-wrap hidden lg:flex absolute top-0 right-[-6%] xl:right-[-2%] translate-x-[60px] w-[940px] xl:w-[1230px] 2xl:w-[1440px] pointer-events-none z-0 flex-col items-center"
         >
-          <HeroGlow progress={scrollYProgress} />
+          <HeroGlow progress={scrollYProgress} on={lampOn} />
 
-          <img
-            src="/hero-pendant-light-desktop.webp"
-            alt="Ecolife Architectural Lighting - Desktop"
-            width={1024}
-            height={880}
-            className="w-full h-auto object-contain select-none ed-hero-lamp-shadow"
-            loading="eager"
-            fetchPriority="high"
-            decoding="async"
-          />
+          <LampSwing>
+            <img
+              src="/hero-pendant-light-desktop.webp"
+              alt="Ecolife Architectural Lighting - Desktop"
+              width={1024}
+              height={880}
+              className="w-full h-auto object-contain select-none ed-hero-lamp-shadow"
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+            />
+          </LampSwing>
         </motion.div>
+
+        <LampSwitch on={lampOn} onToggle={toggleLamp} lang={currentLang} />
 
         {/* Fade the warm hero glow into the next section—no hard line in either theme. */}
         <div
