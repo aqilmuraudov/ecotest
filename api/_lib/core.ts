@@ -83,12 +83,17 @@ export async function loadCatalog(): Promise<CatalogItem[]> {
   const url = env('VITE_SUPABASE_URL');
   const key = env('VITE_SUPABASE_ANON_KEY');
   if (!url || !key) return cache?.items || [];
-  const res = await fetch(
-    `${url}/rest/v1/products?select=code,slug,name,category,category_name,image&limit=1000`,
-    { headers: { apikey: key, Authorization: `Bearer ${key}` } }
-  );
-  if (!res.ok) return cache?.items || [];
-  const rows: any[] = await res.json();
+  let rows: any[];
+  try {
+    const res = await fetch(
+      `${url}/rest/v1/products?select=code,slug,name,category,category_name,image&limit=1000`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(6000) }
+    );
+    if (!res.ok) return cache?.items || [];
+    rows = await res.json();
+  } catch {
+    return cache?.items || [];
+  }
   const items = rows.map(r => {
     const name = String(r.name || '');
     const cn = r.category_name || {};
@@ -126,7 +131,8 @@ export async function searchCatalog(args: { query?: string; category?: string; l
     .filter(t => t.length > 1);
   if (tokens.length === 0) return pool.slice(0, limit);
   const scored = pool
-    .map(i => ({ i, s: tokens.reduce((n, t) => n + (i.haystack.includes(t) ? 1 : 0), 0) }))
+    // word forms: "lentiniz" must still find "lentlər"/"LED Strip" categories, so long words also match by their first 4 letters
+    .map(i => ({ i, s: tokens.reduce((n, t) => n + (i.haystack.includes(t) ? 1 : t.length >= 5 && i.haystack.includes(t.slice(0, 4)) ? 0.5 : 0), 0) }))
     .filter(x => x.s > 0)
     .sort((a, b) => b.s - a.s);
   return scored.slice(0, limit).map(x => x.i);

@@ -57,6 +57,8 @@ const STR = {
     doneText: 'Məsləhətçimiz tezliklə sizinlə əlaqə saxlayacaq (Bazar ertəsi - Şənbə, 09:00 - 18:00).',
     wa: 'WhatsApp-da yazın',
     err: 'Bağışlayın, hazırda cavab verə bilmirəm. Satış məsləhətçimizə birbaşa yaza bilərsiniz.',
+    busy: 'Hazırda sorğular çoxdur. Bir neçə saniyə sonra yenidən yazın və ya satış məsləhətçimizə birbaşa yazın.',
+    rate: 'Çox mesaj göndərdiniz. Bir neçə dəqiqə sonra yenidən yazın və ya satış məsləhətçimizə birbaşa yazın.',
     errName: 'Adınızı yazın',
     errPhone: 'Düzgün telefon nömrəsi yazın',
     errConsent: 'Razılıq lazımdır',
@@ -84,6 +86,8 @@ const STR = {
     doneText: 'Наш консультант скоро свяжется с вами (Пн - Сб, 09:00 - 18:00).',
     wa: 'Написать в WhatsApp',
     err: 'Извините, сейчас не могу ответить. Вы можете написать менеджеру напрямую.',
+    busy: 'Сейчас много запросов. Повторите через несколько секунд или напишите менеджеру напрямую.',
+    rate: 'Слишком много сообщений. Попробуйте через несколько минут или напишите менеджеру напрямую.',
     errName: 'Укажите имя',
     errPhone: 'Укажите корректный номер телефона',
     errConsent: 'Нужно согласие',
@@ -111,6 +115,8 @@ const STR = {
     doneText: 'Our consultant will contact you shortly (Mon - Sat, 09:00 - 18:00).',
     wa: 'Chat on WhatsApp',
     err: 'Sorry, I cannot answer right now. You can message our sales consultant directly.',
+    busy: 'We are receiving many requests right now. Please try again in a few seconds or message our sales consultant.',
+    rate: 'Too many messages. Please try again in a few minutes or message our sales consultant.',
     errName: 'Enter your name',
     errPhone: 'Enter a valid phone number',
     errConsent: 'Consent is required',
@@ -119,6 +125,14 @@ const STR = {
 } as const;
 
 const uid = () => Math.random().toString(36).slice(2, 10);
+
+/** Same rules as /api/lead: Azerbaijan numbers are 994 + 9 digits (also accepted as 9 digits or 0 + 9), others 11-15 digits. */
+function validPhone(input: string): boolean {
+  const d = input.replace(/\D/g, '');
+  if (d.length === 9 || (d.length === 10 && d.startsWith('0'))) return true;
+  if (d.startsWith('994')) return d.length === 12 && d[3] !== '0';
+  return d.length >= 11 && d.length <= 15;
+}
 const tidy = (s: string) => s.replace(/[ \t]{2,}/g, ' ').trim();
 
 interface ChatWidgetProps {
@@ -217,13 +231,15 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           lang: apiLang,
-          messages: history.filter(m => !m.error).map(m => ({ role: m.role, content: m.content })),
+          // greeting and error notices are UI-only; the server keeps only the recent turns anyway
+          messages: history.filter(m => !m.error && !m.local && m.content).slice(-14).map(m => ({ role: m.role, content: m.content })),
         }),
       });
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
       const reader = res.body.getReader();
       const dec = new TextDecoder();
       let buf = '';
+      let got = false; // something visible arrived (text, cards or the contact form)
       for (;;) {
         const { value, done } = await reader.read();
         if (done) break;
@@ -234,29 +250,33 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate 
           if (!part.startsWith('data:')) continue;
           let evt: any;
           try { evt = JSON.parse(part.slice(5)); } catch { continue; }
-          if (evt.type === 'text') patchLast(m => ({ ...m, content: m.content + evt.delta, status: undefined }));
+          if (evt.type === 'text') { if (String(evt.delta || '').trim()) got = true; patchLast(m => ({ ...m, content: m.content + evt.delta, status: undefined })); }
           else if (evt.type === 'status') patchLast(m => ({ ...m, status: String(evt.text || '') }));
-          else if (evt.type === 'products') patchLast(m => ({ ...m, products: evt.items }));
-          else if (evt.type === 'consultation') patchLast(m => ({ ...m, consultation: evt.summary || '' }));
-          else if (evt.type === 'reset') patchLast(m => ({ ...m, content: '', status: undefined, products: undefined, consultation: undefined }));
+          else if (evt.type === 'products') { got = true; patchLast(m => ({ ...m, products: evt.items })); }
+          else if (evt.type === 'consultation') { got = true; patchLast(m => ({ ...m, consultation: evt.summary || '' })); }
+          else if (evt.type === 'reset') { got = false; patchLast(m => ({ ...m, content: '', status: undefined, products: undefined, consultation: undefined })); }
           else if (evt.type === 'error') throw new Error(evt.code || 'error');
         }
       }
+      // the stream finished but nothing visible came out: never leave the customer with a silent, empty bubble
+      if (!got) throw new Error('empty');
       patchLast(m => ({ ...m, content: tidy(m.content) }));
     } catch (e: any) {
       if (e?.name === 'AbortError') return;
-      patchLast(m => ({ ...m, content: t.err, error: true, products: undefined, consultation: undefined }));
+      const msg = String(e?.message || '');
+      const text = msg === 'busy' ? t.busy : msg === 'HTTP 429' ? t.rate : t.err;
+      patchLast(m => ({ ...m, content: text, error: true, products: undefined, consultation: undefined }));
     } finally {
       setBusy(false);
       abortRef.current = null;
     }
-  }, [apiLang, busy, messages, patchLast, t.err]);
+  }, [apiLang, busy, messages, patchLast, t.err, t.busy, t.rate]);
 
   const submitLead = async (e: React.FormEvent) => {
     e.preventDefault();
     setLeadErr('');
     if (lead.name.trim().length < 2) return setLeadErr(t.errName);
-    if (lead.phone.replace(/\D/g, '').length < 9) return setLeadErr(t.errPhone);
+    if (!validPhone(lead.phone)) return setLeadErr(t.errPhone);
     if (!lead.consent) return setLeadErr(t.errConsent);
     setLeadBusy(true);
     try {

@@ -14,14 +14,24 @@ export default async function handler(req: any, res: any) {
   const history: ChatMsg[] = raw
     .map((m: any) => ({ role: m?.role === 'assistant' ? 'assistant' : 'user', content: String(m?.content ?? '').slice(0, 1500) }) as ChatMsg)
     .filter(m => m.content.trim())
-    .slice(-16);
+    .slice(-30);
   if (history.length === 0 || history[history.length - 1].role !== 'user') {
     return res.status(400).json({ error: 'Last message must come from the user.' });
   }
   const lang: 'az' | 'ru' = body.lang === 'ru' ? 'ru' : 'az';
 
-  if (!rateLimit(`chat:${clientIp(req)}`, 40, 10 * 60 * 1000)) {
-    return res.status(429).json({ error: 'Too many messages. Please try again in a few minutes.' });
+  // lean context: the model gets the last 10 messages; older customer messages shrink to a short memory so nothing is forgotten
+  const recent = history.slice(-10);
+  const memory = history
+    .slice(0, -10)
+    .filter(m => m.role === 'user')
+    .slice(-6)
+    .map(m => `- ${m.content.replace(/\s+/g, ' ').slice(0, 160)}`)
+    .join('\n');
+
+  const ip = clientIp(req);
+  if (!rateLimit(`chat-burst:${ip}`, 10, 60 * 1000) || !rateLimit(`chat:${ip}`, 40, 10 * 60 * 1000) || !rateLimit(`chat-day:${ip}`, 300, 24 * 60 * 60 * 1000)) {
+    return res.status(429).json({ error: 'rate_limit' });
   }
 
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
@@ -45,14 +55,14 @@ export default async function handler(req: any, res: any) {
     send(evt);
   };
   try {
-    const { model } = await runChat(history, lang, tracked);
+    const { model } = await runChat(recent, lang, tracked, undefined, memory);
     if (!formShown && shouldOfferForm(history)) {
       send({ type: 'consultation', summary: history.filter(m => m.role === 'user').slice(-2).map(m => m.content).join(' ').slice(0, 400) });
     }
     send({ type: 'done', model });
   } catch (e: any) {
     console.error('[chat] failed:', e?.message || e);
-    send({ type: 'error', code: 'unavailable' });
+    send({ type: 'error', code: e?.message === 'rate_limited' ? 'busy' : 'unavailable' });
   }
   res.end();
 }

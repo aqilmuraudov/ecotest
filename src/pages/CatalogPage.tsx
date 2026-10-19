@@ -26,7 +26,10 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   initialCategory = 'all'
 }) => {
   const t = translations[currentLang];
-  const { products, categories } = useData();
+  const { products, categories, isLoading, supabaseError, refreshData } = useData();
+  // three distinct states: still loading (never show "0 products"), failed to load, genuinely empty
+  const loadingEmpty = isLoading && products.length === 0;
+  const loadFailed = !isLoading && products.length === 0 && !!supabaseError;
   const gridTopRef = useRef<HTMLDivElement>(null);
 
   const dynamicCategories = useMemo(() => {
@@ -168,7 +171,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-10 sm:mb-12">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <span className="font-micro text-[10px] text-mute whitespace-nowrap">
-              {filteredProducts.length} {t.catalog.productsCount}
+              {loadingEmpty ? '…' : `${filteredProducts.length} ${t.catalog.productsCount}`}
             </span>
             {totalPages > 1 && (
               <span className="font-mono-tech text-[11px] text-amber-warm whitespace-nowrap">
@@ -191,7 +194,26 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
         </div>
 
         {/* Editorial product grid (3x3 = 9 products per page) */}
-        {paginatedProducts.length > 0 ? (
+        {loadingEmpty ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-14" aria-busy="true" aria-label={currentLang === 'ru' ? 'Загрузка каталога' : currentLang === 'en' ? 'Loading catalogue' : 'Kataloq yüklənir'}>
+            {Array.from({ length: 6 }, (_, i) => (
+              <div key={i} className="space-y-4 animate-pulse">
+                <div className="aspect-[4/5] rounded-2xl bg-[var(--ed-line)]/40" />
+                <div className="h-3 w-2/3 rounded-full bg-[var(--ed-line)]/40" />
+                <div className="h-3 w-1/3 rounded-full bg-[var(--ed-line)]/30" />
+              </div>
+            ))}
+          </div>
+        ) : loadFailed ? (
+          <div className="py-24 text-center space-y-6 border-t border-[var(--ed-line)]" role="alert">
+            <h3 className="ed-display-sm font-display text-ivory">
+              {currentLang === 'ru' ? 'Не удалось загрузить каталог' : currentLang === 'en' ? 'Could not load the catalogue' : 'Kataloq yüklənmədi'}
+            </h3>
+            <EdButton variant="ghost" onClick={() => { void refreshData(); }}>
+              {currentLang === 'ru' ? 'Повторить' : currentLang === 'en' ? 'Try again' : 'Yenidən cəhd edin'}
+            </EdButton>
+          </div>
+        ) : paginatedProducts.length > 0 ? (
           <>
             <div key={`page-${safePage}-${selectedCategory}-${sortBy}`} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-14">
               {paginatedProducts.map((product, i) => (

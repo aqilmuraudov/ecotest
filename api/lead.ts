@@ -16,8 +16,14 @@ function normalizePhone(input: string): string | null {
   let full = d;
   if (d.length === 9) full = '994' + d; // 50 450 70 07
   else if (d.length === 10 && d.startsWith('0')) full = '994' + d.slice(1); // 050 450 70 07
+  // Azerbaijan numbers are exactly 994 + 9 digits; other countries may be 11-15 digits
+  if (full.startsWith('994')) return full.length === 12 && /^994[1-9]\d{8}$/.test(full) ? full : null;
   return full.length >= 11 && full.length <= 15 ? full : null;
 }
+
+// the same person pressing "send" twice (or a retry after a slow response) must create one inquiry, not two
+const recent = new Map<string, { at: number; body: Record<string, unknown> }>();
+const DEDUPE_MS = 5 * 60 * 1000;
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -38,6 +44,11 @@ export default async function handler(req: any, res: any) {
   if (!phone) return res.status(400).json({ error: 'phone' });
   // the classic forms state the consent next to the submit button; the chat asks for an explicit tick
   if (body.consent !== true) return res.status(400).json({ error: 'consent' });
+
+  const sourceForKey = SOURCES[String(body.source)] ? String(body.source) : 'contact-form';
+  const dedupeKey = `${phone}|${sourceForKey}|${String(body.productCode || '')}`;
+  const seen = recent.get(dedupeKey);
+  if (seen && Date.now() - seen.at < DEDUPE_MS) return res.status(200).json({ ...seen.body, duplicate: true });
 
   const emailRaw = String(body.email || '').trim().toLowerCase().slice(0, 200);
   const email = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailRaw) ? emailRaw : '-';
@@ -128,12 +139,15 @@ export default async function handler(req: any, res: any) {
 
   // the lead is considered received if it is stored or the team was notified
   if (!saved && !notified) return res.status(502).json({ error: 'unavailable' });
-  return res.status(200).json({
+  const out = {
     ok: true,
     id,
     short,
     notified,
     whatsappUrl: `https://wa.me/${SALES_WHATSAPP()}?text=${encodeURIComponent(wa)}`,
     site: SITE_URL(),
-  });
+  };
+  recent.set(dedupeKey, { at: Date.now(), body: out });
+  for (const [k, v] of recent) if (Date.now() - v.at > DEDUPE_MS) recent.delete(k);
+  return res.status(200).json(out);
 }
