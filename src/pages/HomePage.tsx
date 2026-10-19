@@ -4,7 +4,7 @@ import { translations } from '../data/translations';
 import { solutions } from '../data/solutions';
 import { useData } from '../context/DataContext';
 import { getLocalizedText } from '../utils/lang';
-import { motion, useScroll, useTransform, useReducedMotion, useAnimate, MotionValue } from 'motion/react';
+import { motion, useScroll, useTransform, useReducedMotion, useAnimate, MotionConfig, MotionValue } from 'motion/react';
 import { FadeIn } from '../components/ui/FadeIn';
 import { EdButton, EdLink, EdSectionHead, EdHairline } from '../components/ed/EditorialUI';
 import { EdProductCard } from '../components/ed/EdProductCard';
@@ -116,49 +116,69 @@ const ProjectStack: React.FC<{
 /**
  * Real-pendant behaviour: the lamp is lowered on its cord from the ceiling once,
  * settles with a decaying swing, then keeps a very slow, barely-there sway around
- * the ceiling mount (top centre of the artwork). Static under reduced motion.
+ * the ceiling mount (top centre of the artwork).
+ *
+ * This is the brand moment of the page and the movement is slow, small and single-object,
+ * so it runs even when the OS asks for reduced motion (MotionConfig "never" below); the
+ * rest of the site still honours the setting.
  */
-const LampSwing: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const reduce = useReducedMotion();
+const LampSwingInner: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [scope, animate] = useAnimate();
 
   useEffect(() => {
-    if (reduce || !scope.current) return;
-    const running: { stop: () => void }[] = [];
+    if (!scope.current) return;
+    const el = scope.current as HTMLElement;
     let cancelled = false;
+    const running: { stop: () => void }[] = [];
+    const run = (target: Record<string, unknown>, options: Record<string, unknown>) => {
+      const controls = animate(el, target, options);
+      running.push(controls);
+      return controls;
+    };
     (async () => {
       try {
-        const lower = animate(scope.current, { y: ['-100%', '0%'] }, { duration: 1.3, ease: [0.16, 1, 0.3, 1] });
-        running.push(lower);
-        await lower;
+        // 1. lowered slowly from the ceiling on its cord
+        await run({ y: ['-100%', '0%'] }, { duration: 2.4, ease: [0.33, 0.9, 0.4, 1] });
         if (cancelled) return;
-        const settle = animate(scope.current, { rotate: [0, 3, -2.2, 1.5, -1.1] }, { duration: 4, ease: 'easeInOut' });
-        running.push(settle);
-        await settle;
-        if (cancelled) return;
-        running.push(
-          animate(scope.current, { rotate: [-1.1, 1.1] }, { duration: 6.5, ease: 'easeInOut', repeat: Infinity, repeatType: 'mirror' })
-        );
+        // 2. settle with a decaying pendulum swing
+        for (const angle of [4.5, -3.6, 2.8, -2.1, 1.6, -1.2]) {
+          await run({ rotate: angle }, { duration: 1.5, ease: 'easeInOut' });
+          if (cancelled) return;
+        }
+        // 3. idle sway: slow, but clearly visible, around the ceiling mount
+        let dir = 1;
+        while (!cancelled) {
+          const started = performance.now();
+          await run({ rotate: 2.2 * dir }, { duration: 4.2, ease: 'easeInOut' });
+          if (performance.now() - started < 500) break; // animations disabled: never spin
+          dir = -dir;
+        }
       } catch {
-        /* animation interrupted on unmount */
+        /* interrupted on unmount */
       }
     })();
     return () => {
       cancelled = true;
       running.forEach(r => r.stop());
     };
-  }, [reduce, animate, scope]);
+  }, [animate, scope]);
 
   return (
     <motion.div
       ref={scope}
-      style={{ transformOrigin: '50% 0%', y: reduce ? 0 : '-100%' }}
+      style={{ transformOrigin: '50% 0%', y: '-100%' }}
       className="w-full"
     >
       {children}
     </motion.div>
   );
 };
+
+const LampSwing: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <MotionConfig reducedMotion="never">
+    <LampSwingInner>{children}</LampSwingInner>
+  </MotionConfig>
+);
 
 const LAMP_PREF_KEY = 'ecolife-lamp';
 
