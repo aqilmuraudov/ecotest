@@ -49,14 +49,22 @@ export default async function handler(req: any, res: any) {
   }
 
   let formShown = false;
+  let textLen = 0;
   const tracked = (evt: Record<string, unknown>) => {
     if (evt.type === 'consultation') formShown = true;
-    if (evt.type === 'reset') formShown = false;
+    if (evt.type === 'text') textLen += String(evt.delta || '').length;
+    if (evt.type === 'reset') { formShown = false; textLen = 0; }
     send(evt);
   };
   try {
     const { model } = await runChat(recent, lang, tracked, undefined, memory);
     if (!formShown && shouldOfferForm(history)) {
+      if (textLen < 40) {
+        const line = lang === 'ru'
+          ? 'Оставьте, пожалуйста, имя и номер в форме ниже, и наш консультант свяжется с вами.'
+          : 'Zəhmət olmasa, aşağıdakı formada adınızı və nömrənizi yazın, satış məsləhətçimiz sizinlə əlaqə saxlasın.';
+        send({ type: 'text', delta: (textLen ? ' ' : '') + line });
+      }
       send({ type: 'consultation', summary: history.filter(m => m.role === 'user').slice(-2).map(m => m.content).join(' ').slice(0, 400) });
     }
     send({ type: 'done', model });

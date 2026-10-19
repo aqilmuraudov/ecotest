@@ -4,7 +4,7 @@ export type ChatMsg = { role: 'user' | 'assistant'; content: string };
 export type Emit = (evt: Record<string, unknown>) => void;
 
 // ---------------------------------------------------------------- prompt
-export async function buildSystemPrompt(history: ChatMsg[] = [], memory = ''): Promise<string> {
+export async function buildSystemPrompt(history: ChatMsg[] = [], memory = '', lang: 'az' | 'ru' = 'az'): Promise<string> {
   const items = await loadCatalog();
   const cats = new Map<string, string>();
   items.forEach(i => cats.set(i.category, `${i.categoryName.az} / ${i.categoryName.en} / ${i.categoryName.ru}`));
@@ -21,7 +21,7 @@ export async function buildSystemPrompt(history: ChatMsg[] = [], memory = ''): P
   return `You are "AISeller", the virtual sales consultant of Ecolife, an architectural LED lighting company in Baku, Azerbaijan.
 
 LANGUAGE
-- Reply in the customer's language: Azerbaijani by default, Russian if they write Russian, English only if they write English.
+- The website interface language is ${lang === 'ru' ? 'Russian' : 'Azerbaijani'}: answer in ${lang === 'ru' ? 'Russian' : 'Azerbaijani'} unless the customer clearly writes in another language (then follow the customer). Never switch language on your own.
 - Polite formal register (Azerbaijani "siz", Russian "вы"). Warm, confident, professional, never pushy.
 
 YOUR JOB
@@ -29,10 +29,12 @@ YOUR JOB
 - Discover, in a natural order: type of space (home, office, shop, restaurant, hotel...), size/area, ceiling height, desired mood or colour temperature, new build or renovation, whether a track/magnetic/recessed installation already exists, timeline.
 - After you understand enough (usually 3-5 exchanges) recommend 1-3 suitable products: write one or two sentences about why they fit AND call recommend_products in that same reply. Use search_products only if the listed candidates are not enough.
 - Do not use tools for a plain greeting or small talk; first learn what the customer needs.
+- If the customer asks whether we have a specific item (type, voltage, colour temperature, power...), say yes ONLY if one of the candidates matches, and show up to 3 matching items with recommend_products in that same reply. If none matches, say so honestly (see rule 2).
+- If the customer wants to talk to a person, the sales consultant or the team, call request_consultation right away (no extra questions first).
 - Call request_consultation ONLY when the customer asks for a price, an offer, an order, a call or a contact, or after you have recommended products and the needs are clear. Never on the first answer.
 
 HARD RULES
-1. NEVER state, estimate or hint at prices, discounts, costs, stock levels or delivery times. If asked, say that the exact price is prepared by our sales consultant for their specific project, then continue the conversation or call request_consultation. The price topic always comes LAST.
+1. NEVER state, estimate or hint at prices, discounts, costs, stock levels or delivery times. If asked, say that the exact price is prepared by our sales consultant for their specific project (even when no product is named: then also ask which product or project they mean), then continue the conversation or call request_consultation. The price topic always comes LAST.
 2. Only mention products returned by your tools. Never invent product codes, specifications, certificates or warranties. If unsure, say the consultant will confirm.
    If nothing in the catalogue fits what the customer asks for, say so honestly in one sentence, name the closest category we do have, and offer our sales consultant (call request_consultation when they agree or ask). Never pretend an item exists.
 3. Stay on lighting and Ecolife. Politely steer other topics back.
@@ -94,8 +96,9 @@ const TOOLS = [
   },
 ];
 
-const INTENT_RE = /(qiym[əe]t|manat|neç[əe]y[əe]|sifari[şs]|t[əe]klif|[əe]laq[əe]|z[əe]ng|nömr[əe]|цен|стоимост|сколько|заказ|предложен|оформ|свяж|позвон|order|quote|price|contact|call me)/i;
-const ORDER_RE = /(sifari[şs]|t[əe]klif|[əe]laq[əe]|z[əe]ng|nömr[əe]|заказ|предложен|оформ|свяж|позвон|order|quote|call me)/i;
+const HUMAN = 'danış|m[əe]sl[əe]h[əe]tçi|menecer|operator|satış (?:şöb|komand)|поговор|говорить|менеджер|консультант|оператор|живым|talk to|speak (?:to|with)|human|manager|agent';
+const INTENT_RE = new RegExp('(qiym[əe]t|manat|neç[əe]y[əe]|sifari[şs]|t[əe]klif|[əe]laq[əe]|z[əe]ng|nömr[əe]|цен|стоимост|сколько|заказ|предложен|оформ|свяж|позвон|order|quote|price|contact|call me|' + HUMAN + ')', 'i');
+const ORDER_RE = new RegExp('(sifari[şs]|t[əe]klif|[əe]laq[əe]|z[əe]ng|nömr[əe]|заказ|предложен|оформ|свяж|позвон|order|quote|call me|' + HUMAN + ')', 'i');
 const PRICE_ASK_RE = /(qiym[əe]t|manat|neç[əe]y[əe]|цен|стоимост|сколько|price)/i;
 
 /** Deterministic backup for the sales hand-off: the customer asked for an order/offer/contact (or pressed on price after a real talk). */
@@ -284,7 +287,7 @@ async function streamOnce(target: Target, messages: any[], useTools: boolean, si
 
 // ---------------------------------------------------------------- public API
 export async function runChat(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit, override?: Target[], memory = ''): Promise<{ model: string; text: string }> {
-  const system = await buildSystemPrompt(history, memory);
+  const system = await buildSystemPrompt(history, memory, lang);
   const convo: any[] = [{ role: 'system', content: system }, ...history];
   let lastError = '';
   let rateLimited = false;
