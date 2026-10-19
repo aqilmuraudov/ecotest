@@ -4,7 +4,7 @@ import { translations } from '../data/translations';
 import { solutions } from '../data/solutions';
 import { useData } from '../context/DataContext';
 import { getLocalizedText } from '../utils/lang';
-import { motion, useScroll, useTransform, useReducedMotion, useAnimate, MotionConfig, MotionValue } from 'motion/react';
+import { motion, animate, useMotionValue, useScroll, useTransform, useReducedMotion, useAnimate, MotionConfig, MotionValue } from 'motion/react';
 import { FadeIn } from '../components/ui/FadeIn';
 import { EdButton, EdLink, EdSectionHead, EdHairline } from '../components/ed/EditorialUI';
 import { EdProductCard } from '../components/ed/EdProductCard';
@@ -180,6 +180,137 @@ const LampSwing: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   </MotionConfig>
 );
 
+/**
+ * Hero fixture: a suspended linear luminaire (Magnetic Rail "Surface hanging" in the catalogue).
+ * It is lowered from the ceiling on two cables, settles with a decaying swing, then keeps a slow,
+ * visible sway. Two-cable suspension means the bar stays level: each cable rotates about its
+ * ceiling anchor and the bar translates sideways (a parallelogram swing) instead of tilting.
+ * The whole thing opts out of the global reduced-motion setting on purpose (slow, single object).
+ */
+const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({ on, progress }) => {
+  const [cable, setCable] = useState(300);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const apply = () => setCable(mq.matches ? 300 : 150);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
+
+  const drop = useMotionValue(0); // 0 = hidden above, 1 = hanging
+  const theta = useMotionValue(0); // swing angle of the cables, degrees
+
+  useEffect(() => {
+    let cancelled = false;
+    const running: { stop: () => void }[] = [];
+    const go = (mv: MotionValue<number>, to: number, duration: number, ease: unknown) => {
+      const controls = animate(mv, to, { duration, ease: ease as never });
+      running.push(controls);
+      return controls;
+    };
+    (async () => {
+      try {
+        await go(drop, 1, 2.6, [0.33, 0.9, 0.4, 1]);
+        if (cancelled) return;
+        for (const a of [3.8, -3.1, 2.4, -1.8, 1.4, -1.1]) {
+          await go(theta, a, 1.6, 'easeInOut');
+          if (cancelled) return;
+        }
+        let dir = 1;
+        while (!cancelled) {
+          const t0 = performance.now();
+          await go(theta, 2.6 * dir, 4.4, 'easeInOut');
+          if (performance.now() - t0 < 500) break; // animations disabled: never spin
+          dir = -dir;
+        }
+      } catch {
+        /* interrupted on unmount */
+      }
+    })();
+    return () => {
+      cancelled = true;
+      running.forEach(r => r.stop());
+    };
+  }, [drop, theta]);
+
+  const rad = (deg: number) => (deg * Math.PI) / 180;
+  const barX = useTransform(theta, t => cable * Math.sin(rad(t)));
+  const barY = useTransform([drop, theta] as const, ([d, t]: number[]) => (d - 1) * cable - cable * (1 - Math.cos(rad(t))));
+  const recede = useTransform(progress, [0, 0.7], [1, 0.15]);
+
+  const Cable: React.FC<{ side: 'l' | 'r' }> = ({ side }) => (
+    <motion.div
+      aria-hidden="true"
+      style={{ rotate: theta, scaleY: drop, transformOrigin: '50% 0%', height: cable }}
+      className={`absolute top-0 w-px bg-gradient-to-b from-white/10 via-white/45 to-white/60 ${side === 'l' ? 'left-[7%]' : 'right-[7%]'}`}
+    />
+  );
+
+  return (
+    <div
+      className="absolute top-0 z-0 pointer-events-none left-1/2 -translate-x-1/2 w-[min(330px,84vw)] lg:left-auto lg:translate-x-0 lg:right-[5%] xl:right-[8%] lg:w-[calc(38vw-44px)] xl:w-[min(520px,calc(35vw-36px))]"
+      style={{ paddingTop: cable }}
+    >
+      <Cable side="l" />
+      <Cable side="r" />
+
+      <motion.div style={{ x: barX, y: barY }} className="relative">
+        {/* light thrown downward: a soft trapezoid wash that warms up when switched on */}
+        <motion.div style={{ opacity: recede }} className="absolute top-full left-0 right-0 h-[320px] lg:h-[560px]">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: on ? [0, 0.4, 0.3, 1] : 0 }}
+            transition={on ? { duration: 1.6, delay: 0.3, times: [0, 0.3, 0.45, 1], ease: 'easeOut' } : { duration: 0.35, ease: 'easeIn' }}
+            className="w-full h-full"
+            style={{
+              clipPath: 'polygon(4% 0, 96% 0, 128% 100%, -28% 100%)',
+              background: 'linear-gradient(to bottom, rgba(255,226,176,0.42) 0%, rgba(255,206,130,0.16) 45%, rgba(255,200,120,0) 100%)',
+              filter: 'blur(14px)',
+            }}
+          />
+        </motion.div>
+
+        {/* halo around the fixture */}
+        <motion.div
+          aria-hidden="true"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: on ? 1 : 0 }}
+          transition={{ duration: on ? 1.2 : 0.35, delay: on ? 0.3 : 0 }}
+          className="absolute -inset-x-3 -inset-y-2 rounded-sm"
+          style={{ boxShadow: '0 0 38px 8px rgba(255,222,165,0.45), 0 0 120px 30px rgba(255,200,120,0.18)' }}
+        />
+
+        <motion.div
+          initial={{ filter: 'brightness(0.3)' }}
+          animate={{ filter: on ? 'brightness(1)' : 'brightness(0.28)' }}
+          transition={{ duration: on ? 1.2 : 0.5, delay: on ? 0.3 : 0 }}
+          className="relative"
+        >
+          <img
+            src="/hero-linear-light.webp"
+            alt="Ecolife suspended linear luminaire"
+            width={1500}
+            height={70}
+            className="block w-full h-auto select-none"
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+          />
+          {/* warm 3000K tint on the diffuser while lit */}
+          <motion.div
+            aria-hidden="true"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: on ? 1 : 0 }}
+            transition={{ duration: on ? 1.2 : 0.35, delay: on ? 0.3 : 0 }}
+            className="absolute inset-[6%_0.6%] mix-blend-multiply"
+            style={{ background: 'linear-gradient(to bottom, #ffe3a8, #ffd48a)' }}
+          />
+        </motion.div>
+      </motion.div>
+    </div>
+  );
+};
+
 const LAMP_PREF_KEY = 'ecolife-lamp';
 
 const LampSwitch: React.FC<{ on: boolean; onToggle: () => void; lang: Language }> = ({ on, onToggle, lang }) => {
@@ -234,6 +365,8 @@ export const HomePage: React.FC<HomePageProps> = ({
 
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const heroRef = useRef<HTMLElement>(null);
+  // Hero fixture: suspended linear luminaire (default). ?hero=pendant shows the previous pendant lamp.
+  const heroVariant = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('hero') === 'pendant' ? 'pendant' : 'linear';
 
   // Lamp power: remembered across visits (per-viewer convenience only)
   const [lampOn, setLampOn] = useState<boolean>(() => {
@@ -393,49 +526,55 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
         </div>
 
-        {/* MOBILE Pendant Lamp (centered between logo & search) */}
-        <motion.div
-          style={{ y: productY }}
-          {...lampMotion}
-          className="ed-hero-lamp-wrap lg:hidden absolute top-0 left-1/2 -translate-x-1/2 w-[440px] sm:w-[500px] pointer-events-none z-0 flex flex-col items-center"
-        >
-          <HeroGlow progress={scrollYProgress} on={lampOn} />
+        {heroVariant === 'linear' ? (
+          <LinearLight on={lampOn} progress={scrollYProgress} />
+        ) : (
+          <>
+          {/* MOBILE Pendant Lamp (centered between logo & search) */}
+          <motion.div
+            style={{ y: productY }}
+            {...lampMotion}
+            className="ed-hero-lamp-wrap lg:hidden absolute top-0 left-1/2 -translate-x-1/2 w-[440px] sm:w-[500px] pointer-events-none z-0 flex flex-col items-center"
+          >
+            <HeroGlow progress={scrollYProgress} on={lampOn} />
 
-          <LampSwing>
-            <img
-              src="/hero-pendant-light-mobile.webp"
-              alt="Ecolife Architectural Lighting - Mobile"
-              width={824}
-              height={827}
-              className="w-full h-auto object-contain select-none ed-hero-lamp-shadow"
-              loading="eager"
-              fetchPriority="high"
-              decoding="async"
-            />
-          </LampSwing>
-        </motion.div>
+            <LampSwing>
+              <img
+                src="/hero-pendant-light-mobile.webp"
+                alt="Ecolife Architectural Lighting - Mobile"
+                width={824}
+                height={827}
+                className="w-full h-auto object-contain select-none ed-hero-lamp-shadow"
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+              />
+            </LampSwing>
+          </motion.div>
 
-        {/* DESKTOP Pendant Lamp (hanging from top right) */}
-        <motion.div
-          style={{ y: productY }}
-          {...lampMotion}
-          className="ed-hero-lamp-wrap hidden lg:flex absolute top-0 right-[-6%] xl:right-[-2%] translate-x-[60px] w-[940px] xl:w-[1230px] 2xl:w-[1440px] pointer-events-none z-0 flex-col items-center"
-        >
-          <HeroGlow progress={scrollYProgress} on={lampOn} />
+          {/* DESKTOP Pendant Lamp (hanging from top right) */}
+          <motion.div
+            style={{ y: productY }}
+            {...lampMotion}
+            className="ed-hero-lamp-wrap hidden lg:flex absolute top-0 right-[-6%] xl:right-[-2%] translate-x-[60px] w-[940px] xl:w-[1230px] 2xl:w-[1440px] pointer-events-none z-0 flex-col items-center"
+          >
+            <HeroGlow progress={scrollYProgress} on={lampOn} />
 
-          <LampSwing>
-            <img
-              src="/hero-pendant-light-desktop.webp"
-              alt="Ecolife Architectural Lighting - Desktop"
-              width={1024}
-              height={880}
-              className="w-full h-auto object-contain select-none ed-hero-lamp-shadow"
-              loading="eager"
-              fetchPriority="high"
-              decoding="async"
-            />
-          </LampSwing>
-        </motion.div>
+            <LampSwing>
+              <img
+                src="/hero-pendant-light-desktop.webp"
+                alt="Ecolife Architectural Lighting - Desktop"
+                width={1024}
+                height={880}
+                className="w-full h-auto object-contain select-none ed-hero-lamp-shadow"
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+              />
+            </LampSwing>
+          </motion.div>
+          </>
+        )}
 
         <LampSwitch on={lampOn} onToggle={toggleLamp} lang={currentLang} />
 
