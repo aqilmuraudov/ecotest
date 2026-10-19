@@ -94,6 +94,15 @@ const TOOLS = [
 ];
 
 const INTENT_RE = /(qiym[əe]t|manat|neç[əe]y[əe]|sifari[şs]|t[əe]klif|[əe]laq[əe]|z[əe]ng|nömr[əe]|цен|стоимост|сколько|заказ|предложен|оформ|свяж|позвон|order|quote|price|contact|call me)/i;
+const ORDER_RE = /(sifari[şs]|t[əe]klif|[əe]laq[əe]|z[əe]ng|nömr[əe]|заказ|предложен|оформ|свяж|позвон|order|quote|call me)/i;
+const PRICE_ASK_RE = /(qiym[əe]t|manat|neç[əe]y[əe]|цен|стоимост|сколько|price)/i;
+
+/** Deterministic backup for the sales hand-off: the customer asked for an order/offer/contact (or pressed on price after a real talk). */
+export function shouldOfferForm(history: ChatMsg[]): boolean {
+  const users = history.filter(m => m.role === 'user');
+  const last = users[users.length - 1]?.content || '';
+  return ORDER_RE.test(last) || (PRICE_ASK_RE.test(last) && users.length >= 2);
+}
 
 async function runTool(name: string, args: any, emit: Emit, ctx: { userTurns: number; lastUser: string }): Promise<string> {
   try {

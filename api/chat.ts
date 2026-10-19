@@ -1,5 +1,5 @@
 import { env, rateLimit, clientIp } from './_lib/core.js';
-import { runChat, type ChatMsg } from './_lib/ai.js';
+import { runChat, shouldOfferForm, type ChatMsg } from './_lib/ai.js';
 
 // POST /api/chat  { messages: [{role, content}], lang: 'az' | 'ru' | 'en' }
 // Server-sent events: text | products | consultation | reset | error | done
@@ -38,8 +38,17 @@ export default async function handler(req: any, res: any) {
     return res.end();
   }
 
+  let formShown = false;
+  const tracked = (evt: Record<string, unknown>) => {
+    if (evt.type === 'consultation') formShown = true;
+    if (evt.type === 'reset') formShown = false;
+    send(evt);
+  };
   try {
-    const { model } = await runChat(history, lang, send);
+    const { model } = await runChat(history, lang, tracked);
+    if (!formShown && shouldOfferForm(history)) {
+      send({ type: 'consultation', summary: history.filter(m => m.role === 'user').slice(-2).map(m => m.content).join(' ').slice(0, 400) });
+    }
     send({ type: 'done', model });
   } catch (e: any) {
     console.error('[chat] failed:', e?.message || e);
