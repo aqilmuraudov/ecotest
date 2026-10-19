@@ -181,24 +181,43 @@ const LampSwing: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 /**
- * Hero fixture: a suspended linear luminaire (Magnetic Rail "Surface hanging" in the catalogue).
- * It is lowered from the ceiling on two cables, settles with a decaying swing, then keeps a slow,
- * visible sway. Two-cable suspension means the bar stays level: each cable rotates about its
- * ceiling anchor and the bar translates sideways (a parallelogram swing) instead of tilting.
- * The whole thing opts out of the global reduced-motion setting on purpose (slow, single object).
+ * Hero fixture: a suspended linear luminaire (Magnetic Rail "Surface hanging" in the catalogue),
+ * built as a small CSS 3D scene instead of a flat render: an anodised aluminium body seen from
+ * slightly below and at an angle (perspective), an opal diffuser face that actually emits,
+ * steel suspension wires, bloom + anamorphic streak, and a grainy wall wash.
+ *
+ * Motion: lowered from the ceiling, decaying swing, then a slow visible sway. With two-point
+ * suspension the bar stays level: wires rotate about their ceiling anchors, the bar translates.
+ * It opts out of the global reduced-motion setting on purpose (slow, single object).
  */
+const FX_W = 1000; // design width of the scene, scaled to the container
+const FX_H = 44; // body height (design units)
+const FX_D = 44; // body depth
+const FX_YAW = -24;
+const FX_PITCH = 24;
+
+const NOISE =
+  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.55 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>\")";
+
 const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({ on, progress }) => {
-  const [cable, setCable] = useState(300);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.5);
+  const [wire, setWire] = useState(150); // wire length in design units
   useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1024px)');
-    const apply = () => setCable(mq.matches ? 300 : 150);
+    const el = boxRef.current;
+    if (!el) return;
+    const apply = () => {
+      setScale(el.clientWidth / FX_W);
+      setWire(window.matchMedia('(min-width: 1024px)').matches ? 215 : 250);
+    };
     apply();
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
 
-  const drop = useMotionValue(0); // 0 = hidden above, 1 = hanging
-  const theta = useMotionValue(0); // swing angle of the cables, degrees
+  const drop = useMotionValue(0);
+  const theta = useMotionValue(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -210,16 +229,16 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
     };
     (async () => {
       try {
-        await go(drop, 1, 2.6, [0.33, 0.9, 0.4, 1]);
+        await go(drop, 1, 2.8, [0.33, 0.9, 0.4, 1]);
         if (cancelled) return;
-        for (const a of [3.8, -3.1, 2.4, -1.8, 1.4, -1.1]) {
-          await go(theta, a, 1.6, 'easeInOut');
+        for (const a of [3.4, -2.9, 2.3, -1.8, 1.4, -1.1]) {
+          await go(theta, a, 1.7, 'easeInOut');
           if (cancelled) return;
         }
         let dir = 1;
         while (!cancelled) {
           const t0 = performance.now();
-          await go(theta, 2.6 * dir, 4.4, 'easeInOut');
+          await go(theta, 2.5 * dir, 4.6, 'easeInOut');
           if (performance.now() - t0 < 500) break; // animations disabled: never spin
           dir = -dir;
         }
@@ -234,79 +253,145 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
   }, [drop, theta]);
 
   const rad = (deg: number) => (deg * Math.PI) / 180;
-  const barX = useTransform(theta, t => cable * Math.sin(rad(t)));
-  const barY = useTransform([drop, theta] as const, ([d, t]: number[]) => (d - 1) * cable - cable * (1 - Math.cos(rad(t))));
+  const barX = useTransform(theta, t => wire * Math.sin(rad(t)));
+  const barY = useTransform([drop, theta] as const, ([d, t]: number[]) => (d - 1) * wire - wire * (1 - Math.cos(rad(t))));
+  const flatX = useTransform(barX, x => x * Math.cos(rad(-FX_YAW)));
   const recede = useTransform(progress, [0, 0.7], [1, 0.15]);
+  const twistDelta = useTransform(theta, t => t * 0.8); // the bar twists a little as it swings
 
-  const Cable: React.FC<{ side: 'l' | 'r' }> = ({ side }) => (
-    <motion.div
-      aria-hidden="true"
-      style={{ rotate: theta, scaleY: drop, transformOrigin: '50% 0%', height: cable }}
-      className={`absolute top-0 w-px bg-gradient-to-b from-white/10 via-white/45 to-white/60 ${side === 'l' ? 'left-[7%]' : 'right-[7%]'}`}
-    />
-  );
+  const warm = on ? 1 : 0;
+  const bodyBottom = wire + FX_H;
 
   return (
     <div
-      className="absolute top-0 z-0 pointer-events-none left-1/2 -translate-x-1/2 w-[min(330px,84vw)] lg:left-auto lg:translate-x-0 lg:right-[5%] xl:right-[8%] lg:w-[calc(38vw-44px)] xl:w-[min(520px,calc(35vw-36px))]"
-      style={{ paddingTop: cable }}
+      ref={boxRef}
+      className="absolute top-0 z-0 pointer-events-none left-1/2 -translate-x-1/2 w-[min(96vw,560px)] lg:left-auto lg:translate-x-0 lg:right-[5%] lg:w-[min(860px,60vw)]"
+      style={{ height: (bodyBottom + 40) * scale }}
     >
-      <Cable side="l" />
-      <Cable side="r" />
-
-      <motion.div style={{ x: barX, y: barY }} className="relative">
-        {/* light thrown downward: a soft trapezoid wash that warms up when switched on */}
-        <motion.div style={{ opacity: recede }} className="absolute top-full left-0 right-0 h-[320px] lg:h-[560px]">
+      <div style={{ width: FX_W, height: bodyBottom + 40, transform: `scale(${scale})`, transformOrigin: '0 0', perspective: 1500, perspectiveOrigin: '50% 0%' }} className="relative">
+        {/* screen-space light: wall wash, bloom and anamorphic streak (follow the swing) */}
+        <motion.div style={{ x: flatX, y: barY, opacity: recede }} className="absolute left-0 right-0" aria-hidden="true">
           <motion.div
             initial={{ opacity: 0 }}
-            animate={{ opacity: on ? [0, 0.4, 0.3, 1] : 0 }}
-            transition={on ? { duration: 1.6, delay: 0.3, times: [0, 0.3, 0.45, 1], ease: 'easeOut' } : { duration: 0.35, ease: 'easeIn' }}
-            className="w-full h-full"
-            style={{
-              clipPath: 'polygon(4% 0, 96% 0, 128% 100%, -28% 100%)',
-              background: 'linear-gradient(to bottom, rgba(255,226,176,0.42) 0%, rgba(255,206,130,0.16) 45%, rgba(255,200,120,0) 100%)',
-              filter: 'blur(14px)',
-            }}
-          />
+            animate={{ opacity: on ? [0, 0.45, 0.3, 1] : 0 }}
+            transition={on ? { duration: 1.8, delay: 0.3, times: [0, 0.3, 0.45, 1], ease: 'easeOut' } : { duration: 0.35, ease: 'easeIn' }}
+            style={{ position: 'absolute', left: 0, right: 0, top: bodyBottom - FX_H / 2 }}
+          >
+            {/* soft wash on the wall below: no hard edges, falls off with distance, with film grain */}
+            <div
+              style={{
+                position: 'absolute',
+                left: -60,
+                width: FX_W + 120,
+                top: 10,
+                height: 900,
+                background:
+                  'radial-gradient(ellipse 52% 100% at 50% 0%, rgba(255,226,176,0.40) 0%, rgba(255,208,132,0.17) 38%, rgba(255,200,120,0.05) 62%, rgba(255,200,120,0) 80%)',
+                filter: 'blur(8px)',
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                left: -60,
+                width: FX_W + 120,
+                top: 10,
+                height: 900,
+                backgroundImage: NOISE,
+                opacity: 0.16,
+                mixBlendMode: 'overlay',
+                WebkitMaskImage: 'radial-gradient(ellipse 52% 100% at 50% 0%, #000 0%, transparent 78%)',
+                maskImage: 'radial-gradient(ellipse 52% 100% at 50% 0%, #000 0%, transparent 78%)',
+              }}
+            />
+            {/* bloom around the diffuser */}
+            <div
+              style={{
+                position: 'absolute',
+                left: -40,
+                width: FX_W + 80,
+                top: -46,
+                height: 120,
+                background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,232,190,0.55) 0%, rgba(255,214,150,0.22) 45%, rgba(255,200,120,0) 100%)',
+                filter: 'blur(14px)',
+              }}
+            />
+            {/* anamorphic streak */}
+            <div
+              style={{
+                position: 'absolute',
+                left: -240,
+                width: FX_W + 480,
+                top: -3,
+                height: 6,
+                background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,240,215,0.85) 0%, rgba(255,220,160,0.25) 55%, rgba(255,210,140,0) 100%)',
+                filter: 'blur(3px)',
+              }}
+            />
+          </motion.div>
         </motion.div>
 
-        {/* halo around the fixture */}
-        <motion.div
-          aria-hidden="true"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: on ? 1 : 0 }}
-          transition={{ duration: on ? 1.2 : 0.35, delay: on ? 0.3 : 0 }}
-          className="absolute -inset-x-3 -inset-y-2 rounded-sm"
-          style={{ boxShadow: '0 0 38px 8px rgba(255,222,165,0.45), 0 0 120px 30px rgba(255,200,120,0.18)' }}
-        />
+        {/* suspension wires (shared perspective + yaw with the body) */}
+        <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', transform: `rotateY(${FX_YAW}deg)`, transformOrigin: '50% 0%' }}>
+          {[70, FX_W - 70].map((left, i) => (
+            <motion.div
+              key={i}
+              aria-hidden="true"
+              style={{ position: 'absolute', left, top: 0, width: 2, height: wire, rotate: theta, scaleY: drop, transformOrigin: '50% 0%' }}
+            >
+              <div style={{ width: '100%', height: '100%', background: 'linear-gradient(90deg, rgba(255,255,255,0.15), rgba(235,235,240,0.85), rgba(120,120,130,0.4))' }} />
+            </motion.div>
+          ))}
+          {/* ceiling canopies */}
+          {[70, FX_W - 70].map((left, i) => (
+            <div key={'c' + i} style={{ position: 'absolute', left: left - 16, top: -4, width: 34, height: 9, borderRadius: 2, background: 'linear-gradient(180deg,#2c2c2f,#0c0c0d)' }} />
+          ))}
+        </div>
 
-        <motion.div
-          initial={{ filter: 'brightness(0.3)' }}
-          animate={{ filter: on ? 'brightness(1)' : 'brightness(0.28)' }}
-          transition={{ duration: on ? 1.2 : 0.5, delay: on ? 0.3 : 0 }}
-          className="relative"
-        >
-          <img
-            src="/hero-linear-light.webp"
-            alt="Ecolife suspended linear luminaire"
-            width={1500}
-            height={70}
-            className="block w-full h-auto select-none"
-            loading="eager"
-            fetchPriority="high"
-            decoding="async"
-          />
-          {/* warm 3000K tint on the diffuser while lit */}
-          <motion.div
-            aria-hidden="true"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: on ? 1 : 0 }}
-            transition={{ duration: on ? 1.2 : 0.35, delay: on ? 0.3 : 0 }}
-            className="absolute inset-[6%_0.6%] mix-blend-multiply"
-            style={{ background: 'linear-gradient(to bottom, #ffe3a8, #ffd48a)' }}
-          />
-        </motion.div>
-      </motion.div>
+        {/* the luminaire body */}
+        <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', transform: `rotateY(${FX_YAW}deg)`, transformOrigin: '50% 0%' }}>
+          <motion.div style={{ x: barX, y: barY, rotateY: twistDelta, transformStyle: 'preserve-3d', transformOrigin: '50% 0%', position: 'absolute', left: 0, top: wire, width: FX_W, height: FX_H }}>
+            <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', transform: `rotateX(${FX_PITCH}deg)`, transformOrigin: '50% 50%' }}>
+              {/* front (matt anodised) */}
+              <div
+                style={{
+                  position: 'absolute', inset: 0, transform: `translateZ(${FX_D / 2}px)`, borderRadius: 2,
+                  background:
+                    'repeating-linear-gradient(90deg, rgba(255,255,255,0.018) 0 1px, rgba(0,0,0,0.05) 1px 3px), linear-gradient(180deg, #34343a 0%, #1a1a1d 14%, #0f0f11 55%, #070708 100%)',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.8)',
+                }}
+              />
+              {/* underside: opal diffuser in a black frame */}
+              <div
+                style={{
+                  position: 'absolute', left: 0, width: FX_W, height: FX_D, top: FX_H - FX_D / 2, transform: 'rotateX(-90deg)',
+                  background: '#050506', borderRadius: 2,
+                }}
+              >
+                <div style={{ position: 'absolute', inset: '7px 8px', background: '#26262a', borderRadius: 1 }} />
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: warm }}
+                  transition={{ duration: on ? 1.4 : 0.35, delay: on ? 0.3 : 0 }}
+                  style={{
+                    position: 'absolute', inset: '7px 8px', borderRadius: 1,
+                    background:
+                      'linear-gradient(90deg, #ffd488 0%, #ffe6b3 18%, #fff6e2 50%, #ffe6b3 82%, #ffd488 100%)',
+                    boxShadow: '0 0 18px 4px rgba(255,226,170,0.9)',
+                  }}
+                />
+              </div>
+              {/* end caps */}
+              <div style={{ position: 'absolute', left: -FX_D / 2, width: FX_D, height: FX_H, top: 0, transform: 'rotateY(-90deg)', background: 'linear-gradient(180deg,#2a2a2e,#0a0a0b)' }} />
+              <div style={{ position: 'absolute', left: FX_W - FX_D / 2, width: FX_D, height: FX_H, top: 0, transform: 'rotateY(90deg)', background: 'linear-gradient(180deg,#2a2a2e,#0a0a0b)' }} />
+              {/* wire clamps on top */}
+              {[70, FX_W - 70].map((left, i) => (
+                <div key={'k' + i} style={{ position: 'absolute', left: left - 12, top: -9, width: 26, height: 10, transform: `translateZ(${FX_D / 2}px)`, borderRadius: 2, background: 'linear-gradient(180deg,#3a3a40,#0d0d0f)' }} />
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      </div>
     </div>
   );
 };
