@@ -203,12 +203,20 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
   const boxRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.5);
   const [wire, setWire] = useState(150); // wire length in design units
+  const [yaw, setYaw] = useState(FX_YAW); // gentler angle on phones so the near end stays on screen
+  const [body, setBody] = useState(44); // body height/depth in design units (thicker on phones)
   useEffect(() => {
     const el = boxRef.current;
     if (!el) return;
     const apply = () => {
-      setScale(el.clientWidth / FX_W);
-      setWire(window.matchMedia('(min-width: 1024px)').matches ? 120 : 250);
+      const s = el.clientWidth / FX_W;
+      if (!s) return;
+      const desktop = window.matchMedia('(min-width: 1024px)').matches;
+      setScale(s);
+      setBody(desktop ? 44 : 88);
+      setYaw(desktop ? FX_YAW : -15);
+      // desktop: fixed wire; phones/tablets: hang the bar about 200px below the top whatever the width
+      setWire(desktop ? 120 : Math.round(200 / s));
     };
     apply();
     const ro = new ResizeObserver(apply);
@@ -260,12 +268,12 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
   const twistDelta = useTransform(theta, t => t * 0.8); // the bar twists a little as it swings
 
   const warm = on ? 1 : 0;
-  const bodyBottom = wire + FX_H;
+  const bodyBottom = wire + body;
 
   return (
     <div
       ref={boxRef}
-      className="absolute top-0 z-0 pointer-events-none left-1/2 -translate-x-1/2 w-[min(96vw,560px)] lg:w-[min(1380px,88vw)] lg:-translate-x-[54%]"
+      className="absolute top-0 z-0 pointer-events-none left-1/2 -translate-x-[54%] w-[min(90vw,620px)] lg:w-[min(1380px,88vw)]"
       style={{ height: (bodyBottom + 40) * scale }}
     >
       <div style={{ width: FX_W, height: bodyBottom + 40, transform: `scale(${scale})`, transformOrigin: '0 0', perspective: 1500, perspectiveOrigin: '50% 0%' }} className="relative">
@@ -275,7 +283,7 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: on ? [0, 0.45, 0.3, 1] : 0 }}
             transition={on ? { duration: 1.8, delay: 0.3, times: [0, 0.3, 0.45, 1], ease: 'easeOut' } : { duration: 0.35, ease: 'easeIn' }}
-            style={{ position: 'absolute', left: 0, right: 0, top: bodyBottom - FX_H / 2 }}
+            style={{ position: 'absolute', left: 0, right: 0, top: bodyBottom - body / 2 }}
           >
             {/* soft wash on the wall below: no hard edges, falls off with distance, with film grain */}
             <div
@@ -332,7 +340,7 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
         </motion.div>
 
         {/* suspension wires (shared perspective + yaw with the body) */}
-        <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', transform: `rotateY(${FX_YAW}deg)`, transformOrigin: '50% 0%' }}>
+        <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', transform: `rotateY(${yaw}deg)`, transformOrigin: '50% 0%' }}>
           {[70, FX_W - 70].map((left, i) => (
             <motion.div
               key={i}
@@ -349,13 +357,13 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
         </div>
 
         {/* the luminaire body */}
-        <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', transform: `rotateY(${FX_YAW}deg)`, transformOrigin: '50% 0%' }}>
-          <motion.div style={{ x: barX, y: barY, rotateY: twistDelta, transformStyle: 'preserve-3d', transformOrigin: '50% 0%', position: 'absolute', left: 0, top: wire, width: FX_W, height: FX_H }}>
+        <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', transform: `rotateY(${yaw}deg)`, transformOrigin: '50% 0%' }}>
+          <motion.div style={{ x: barX, y: barY, rotateY: twistDelta, transformStyle: 'preserve-3d', transformOrigin: '50% 0%', position: 'absolute', left: 0, top: wire, width: FX_W, height: body }}>
             <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', transform: `rotateX(${FX_PITCH}deg)`, transformOrigin: '50% 50%' }}>
               {/* front (matt anodised) */}
               <div
                 style={{
-                  position: 'absolute', inset: 0, transform: `translateZ(${FX_D / 2}px)`, borderRadius: 2,
+                  position: 'absolute', inset: 0, transform: `translateZ(${body / 2}px)`, borderRadius: 2,
                   background:
                     'repeating-linear-gradient(90deg, rgba(255,255,255,0.018) 0 1px, rgba(0,0,0,0.05) 1px 3px), linear-gradient(180deg, #34343a 0%, #1a1a1d 14%, #0f0f11 55%, #070708 100%)',
                   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.8)',
@@ -364,7 +372,7 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
               {/* underside: opal diffuser in a black frame */}
               <div
                 style={{
-                  position: 'absolute', left: 0, width: FX_W, height: FX_D, top: FX_H - FX_D / 2, transform: 'rotateX(-90deg)',
+                  position: 'absolute', left: 0, width: FX_W, height: body, top: body - body / 2, transform: 'rotateX(-90deg)',
                   background: '#050506', borderRadius: 2,
                 }}
               >
@@ -382,11 +390,11 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
                 />
               </div>
               {/* end caps */}
-              <div style={{ position: 'absolute', left: -FX_D / 2, width: FX_D, height: FX_H, top: 0, transform: 'rotateY(-90deg)', background: 'linear-gradient(180deg,#2a2a2e,#0a0a0b)' }} />
-              <div style={{ position: 'absolute', left: FX_W - FX_D / 2, width: FX_D, height: FX_H, top: 0, transform: 'rotateY(90deg)', background: 'linear-gradient(180deg,#2a2a2e,#0a0a0b)' }} />
+              <div style={{ position: 'absolute', left: -body / 2, width: body, height: body, top: 0, transform: 'rotateY(-90deg)', background: 'linear-gradient(180deg,#2a2a2e,#0a0a0b)' }} />
+              <div style={{ position: 'absolute', left: FX_W - body / 2, width: body, height: body, top: 0, transform: 'rotateY(90deg)', background: 'linear-gradient(180deg,#2a2a2e,#0a0a0b)' }} />
               {/* wire clamps on top */}
               {[70, FX_W - 70].map((left, i) => (
-                <div key={'k' + i} style={{ position: 'absolute', left: left - 12, top: -9, width: 26, height: 10, transform: `translateZ(${FX_D / 2}px)`, borderRadius: 2, background: 'linear-gradient(180deg,#3a3a40,#0d0d0f)' }} />
+                <div key={'k' + i} style={{ position: 'absolute', left: left - 12, top: -9, width: 26, height: 10, transform: `translateZ(${body / 2}px)`, borderRadius: 2, background: 'linear-gradient(180deg,#3a3a40,#0d0d0f)' }} />
               ))}
             </div>
           </motion.div>
