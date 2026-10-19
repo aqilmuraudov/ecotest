@@ -205,6 +205,8 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
   const [wire, setWire] = useState(150); // wire length in design units
   const [yaw, setYaw] = useState(FX_YAW); // gentler angle on phones so the near end stays on screen
   const [body, setBody] = useState(44); // body height/depth in design units (thicker on phones)
+  const [mode, setMode] = useState<'phone' | 'tablet' | 'desktop'>('desktop');
+  const [pitch, setPitch] = useState(FX_PITCH);
   useEffect(() => {
     const el = boxRef.current;
     if (!el) return;
@@ -212,11 +214,14 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
       const s = el.clientWidth / FX_W;
       if (!s) return;
       const desktop = window.matchMedia('(min-width: 1024px)').matches;
+      const tablet = !desktop && window.matchMedia('(min-width: 640px)').matches;
       setScale(s);
-      setBody(desktop ? 44 : 88);
-      setYaw(desktop ? FX_YAW : -15);
-      // desktop: fixed wire; phones/tablets: hang the bar about 200px below the top whatever the width
-      setWire(desktop ? 120 : Math.round(200 / s));
+      setMode(desktop ? 'desktop' : tablet ? 'tablet' : 'phone');
+      setBody(desktop ? 44 : tablet ? 64 : 88);
+      setYaw(desktop ? FX_YAW : tablet ? -20 : -15);
+      setPitch(desktop ? FX_PITCH : 8);
+      // desktop: fixed wire; phones/tablets: hang the bar ~200 / ~230px below the top whatever the width
+      setWire(desktop ? 120 : Math.round((tablet ? 230 : 200) / s));
     };
     apply();
     const ro = new ResizeObserver(apply);
@@ -269,14 +274,21 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
 
   const warm = on ? 1 : 0;
   const bodyBottom = wire + body;
+  const boost = mode === 'desktop' ? 1 : mode === 'tablet' ? 1.35 : 1.8;
+  const washH = mode === 'desktop' ? 900 : Math.min(2200, Math.round(560 / scale));
+  const glow = Math.max(18, Math.round(16 / scale)); // glow radius in design units ~ constant on screen
+  const bloomH = Math.max(120, Math.round(70 / scale));
+  const a = (v: number) => Math.min(0.92, v * boost);
+  // phones/tablets look at the bar from below its own height so the lit underside is visible
+  const camY = mode === 'desktop' ? 0 : wire + body / 2 + 140;
 
   return (
     <div
       ref={boxRef}
-      className="absolute top-0 z-0 pointer-events-none left-1/2 -translate-x-[54%] w-[min(90vw,620px)] lg:w-[min(1380px,88vw)]"
+      className="absolute top-0 z-0 pointer-events-none left-1/2 -translate-x-[54%] w-[min(90vw,620px)] sm:w-[min(92vw,860px)] lg:w-[min(1380px,88vw)]"
       style={{ height: (bodyBottom + 40) * scale }}
     >
-      <div style={{ width: FX_W, height: bodyBottom + 40, transform: `scale(${scale})`, transformOrigin: '0 0', perspective: 1500, perspectiveOrigin: '50% 0%' }} className="relative">
+      <div style={{ width: FX_W, height: bodyBottom + 40, transform: `scale(${scale})`, transformOrigin: '0 0', perspective: 1500, perspectiveOrigin: `50% ${camY}px` }} className="relative">
         {/* screen-space light: wall wash, bloom and anamorphic streak (follow the swing) */}
         <motion.div style={{ x: flatX, y: barY, opacity: recede }} className="absolute left-0 right-0" aria-hidden="true">
           <motion.div
@@ -292,9 +304,9 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
                 left: -60,
                 width: FX_W + 120,
                 top: 10,
-                height: 900,
+                height: washH,
                 background:
-                  'radial-gradient(ellipse 52% 100% at 50% 0%, rgba(255,226,176,0.40) 0%, rgba(255,208,132,0.17) 38%, rgba(255,200,120,0.05) 62%, rgba(255,200,120,0) 80%)',
+                  `radial-gradient(ellipse 52% 100% at 50% 0%, rgba(255,226,176,${a(0.40)}) 0%, rgba(255,208,132,${a(0.17)}) 38%, rgba(255,200,120,${a(0.05)}) 62%, rgba(255,200,120,0) 80%)`,
                 filter: 'blur(8px)',
               }}
             />
@@ -304,7 +316,7 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
                 left: -60,
                 width: FX_W + 120,
                 top: 10,
-                height: 900,
+                height: washH,
                 backgroundImage: NOISE,
                 opacity: 0.16,
                 mixBlendMode: 'overlay',
@@ -318,10 +330,10 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
                 position: 'absolute',
                 left: -40,
                 width: FX_W + 80,
-                top: -46,
-                height: 120,
-                background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,232,190,0.55) 0%, rgba(255,214,150,0.22) 45%, rgba(255,200,120,0) 100%)',
-                filter: 'blur(14px)',
+                top: -bloomH * 0.38,
+                height: bloomH,
+                background: `radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,232,190,${a(0.55)}) 0%, rgba(255,214,150,${a(0.22)}) 45%, rgba(255,200,120,0) 100%)`,
+                filter: `blur(${Math.round(glow * 0.8)}px)`,
               }}
             />
             {/* anamorphic streak */}
@@ -330,8 +342,8 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
                 position: 'absolute',
                 left: -240,
                 width: FX_W + 480,
-                top: -3,
-                height: 6,
+                top: -glow / 4,
+                height: glow / 2,
                 background: 'radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,240,215,0.85) 0%, rgba(255,220,160,0.25) 55%, rgba(255,210,140,0) 100%)',
                 filter: 'blur(3px)',
               }}
@@ -359,7 +371,7 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
         {/* the luminaire body */}
         <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', transform: `rotateY(${yaw}deg)`, transformOrigin: '50% 0%' }}>
           <motion.div style={{ x: barX, y: barY, rotateY: twistDelta, transformStyle: 'preserve-3d', transformOrigin: '50% 0%', position: 'absolute', left: 0, top: wire, width: FX_W, height: body }}>
-            <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', transform: `rotateX(${FX_PITCH}deg)`, transformOrigin: '50% 50%' }}>
+            <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', transform: `rotateX(${pitch}deg)`, transformOrigin: '50% 50%' }}>
               {/* front (matt anodised) */}
               <div
                 style={{
@@ -385,7 +397,7 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
                     position: 'absolute', inset: '7px 8px', borderRadius: 1,
                     background:
                       'linear-gradient(90deg, #ffd488 0%, #ffe6b3 18%, #fff6e2 50%, #ffe6b3 82%, #ffd488 100%)',
-                    boxShadow: '0 0 18px 4px rgba(255,226,170,0.9)',
+                    boxShadow: `0 0 ${glow}px ${Math.round(glow / 4)}px rgba(255,226,170,0.9)`,
                   }}
                 />
               </div>
