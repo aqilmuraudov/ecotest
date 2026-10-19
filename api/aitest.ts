@@ -10,6 +10,7 @@ const PROVIDERS: Record<string, { base: string; key: () => string }> = {
   orca: { base: 'https://api.orcarouter.ai/v1', key: () => env('ORCAROUTER_API_KEY') },
   anymodel: { base: 'https://anymodel.org/v1', key: () => env('ANYMODEL_API_KEY') },
   vyce: { base: 'https://vyceai.com/v1', key: () => env('VYCE_API_KEY') },
+  groq: { base: env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1'), key: () => env('GROQ_API_KEY') },
   gonka: { base: env('AI_BASE_URL', 'https://api.gonkarouter.io/v1'), key: () => env('AI_API_KEY') },
 };
 
@@ -31,7 +32,7 @@ const SCEN: Record<string, { lang: 'az' | 'ru'; messages: ChatMsg[] }> = {
 
 export default async function handler(req: any, res: any) {
   if (!rateLimit(`aitest:${clientIp(req)}`, 120, 10 * 60 * 1000)) return res.status(429).json({ error: 'rate' });
-  const q = req.query || {};
+  const q: Record<string, any> = req.query && Object.keys(req.query).length ? req.query : Object.fromEntries(new URL(req.url || '', 'http://x').searchParams);
 
   if (q.list) {
     const out: Record<string, unknown> = {};
