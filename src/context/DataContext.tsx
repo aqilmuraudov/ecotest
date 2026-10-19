@@ -297,6 +297,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     featured: dbRow.featured || false
   });
 
+  // Failed DB write: report it and reload the authoritative state (undo optimistic UI change)
+  const fail = (message?: string) => {
+    void refreshData();
+    return { success: false as const, error: message };
+  };
+
+  // RLS silently filters blocked deletes (0 rows, no error), so check the returned rows
+  const deleteRow = async (table: string, id: string): Promise<string | null> => {
+    const { data, error } = await supabase.from(table).delete().eq('id', id).select('id');
+    if (error) return error.message;
+    if (!data || data.length === 0) return 'Silmək üçün icazə yoxdur və ya qeyd tapılmadı.';
+    return null;
+  };
+
   // Convert Project interface to DB record
   const mapProjectToDb = (pr: Project) => ({
     id: pr.id,
@@ -447,6 +461,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         saveToLocal(LOCAL_STORAGE_CATEGORIES, loadedCategories);
       }
 
+      // 6. Editable page content (About / Contact / Home)
+      const { data: pageData, error: pageErr } = await supabase.from('site_pages').select('page_key, content');
+      if (!pageErr && pageData && pageData.length > 0) {
+        setPagesContent(prev => {
+          const merged: any = { ...prev };
+          for (const row of pageData) {
+            if (row.page_key in initialPagesContent && row.content && typeof row.content === 'object') {
+              merged[row.page_key] = { ...(initialPagesContent as any)[row.page_key], ...row.content };
+            }
+          }
+          saveToLocal(LOCAL_STORAGE_PAGES, merged);
+          return merged as SitePagesData;
+        });
+      }
+
       setSupabaseConnected(true);
     } catch (err: any) {
       console.warn('Supabase fetch notice:', err?.message || err);
@@ -572,11 +601,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       const { error } = await supabase.from('categories').upsert([dbRow]);
       if (error) {
-        return { success: true, error: `Lokal yaddaşa yazıldı. (Supabase bildirişi: ${error.message})` };
+        return fail(error.message);
       }
       return { success: true };
     } catch (e: any) {
-      return { success: true, error: e?.message };
+      return fail(e?.message);
     }
   };
 
@@ -597,11 +626,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           display_order: target.order || 0
         };
         const { error } = await supabase.from('categories').upsert([dbRow]);
-        if (error) return { success: true, error: error.message };
+        if (error) return fail(error.message);
       }
       return { success: true };
     } catch (e: any) {
-      return { success: true, error: e?.message };
+      return fail(e?.message);
     }
   };
 
@@ -611,11 +640,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveToLocal(LOCAL_STORAGE_CATEGORIES, updated);
 
     try {
-      const { error } = await supabase.from('categories').delete().eq('id', id);
-      if (error) return { success: true, error: error.message };
+      const delErr = await deleteRow('categories', id);
+      if (delErr) return fail(delErr);
       return { success: true };
     } catch (e: any) {
-      return { success: true, error: e?.message };
+      return fail(e?.message);
     }
   };
 
@@ -639,11 +668,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.from('products').upsert([dbRow]);
       if (error) {
         console.warn('Supabase add product notice:', error.message);
-        return { success: true, error: `Lokal yaddaşa yazıldı. (Supabase bildirişi: ${error.message})` };
+        return fail(error.message);
       }
       return { success: true };
     } catch (e: any) {
-      return { success: true, error: e?.message };
+      return fail(e?.message);
     }
   };
 
@@ -658,12 +687,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const dbRow = mapProductToDb(target);
         const { error } = await supabase.from('products').upsert([dbRow]);
         if (error) {
-          return { success: true, error: error.message };
+          return fail(error.message);
         }
       }
       return { success: true };
     } catch (e: any) {
-      return { success: true, error: e?.message };
+      return fail(e?.message);
     }
   };
 
@@ -673,31 +702,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await saveToStorage(LOCAL_STORAGE_PRODUCTS, updated);
 
     try {
-      const { error } = await supabase.from('products').delete().eq('id', id);
-      if (error) {
-        return { success: true, error: error.message };
-      }
+      const delErr = await deleteRow('products', id);
+      if (delErr) return fail(delErr);
       return { success: true };
     } catch (e: any) {
-      return { success: true, error: e?.message };
+      return fail(e?.message);
     }
   };
 
   const deleteAllProducts = async (): Promise<{ success: boolean; error?: string }> => {
-    setProducts([]);
-    await idbStorage.removeItem(LOCAL_STORAGE_PRODUCTS);
     try {
-      localStorage.removeItem(LOCAL_STORAGE_PRODUCTS);
-    } catch {}
-
-    try {
+      // Database first: only clear local copies once the delete really happened
       const { error } = await supabase.from('products').delete().neq('id', '___none___');
       if (error) {
-        return { success: true, error: error.message };
+        return fail(error.message);
       }
+      const { count } = await supabase.from('products').select('id', { count: 'exact', head: true });
+      if (count && count > 0) {
+        return fail('Silmək üçün icazə yoxdur (yalnız admin bütün məhsulları silə bilər).');
+      }
+      setProducts([]);
+      await idbStorage.removeItem(LOCAL_STORAGE_PRODUCTS);
+      try {
+        localStorage.removeItem(LOCAL_STORAGE_PRODUCTS);
+      } catch {}
       return { success: true };
     } catch (e: any) {
-      return { success: true, error: e?.message };
+      return fail(e?.message);
     }
   };
 
@@ -787,10 +818,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const dbRow = mapBlogToDb(newPost);
       const { error } = await supabase.from('articles').upsert([dbRow]);
-      if (error) return { success: true, error: error.message };
+      if (error) return fail(error.message);
       return { success: true };
     } catch (e: any) {
-      return { success: true, error: e?.message };
+      return fail(e?.message);
     }
   };
 
@@ -804,11 +835,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (target) {
         const dbRow = mapBlogToDb(target);
         const { error } = await supabase.from('articles').upsert([dbRow]);
-        if (error) return { success: true, error: error.message };
+        if (error) return fail(error.message);
       }
       return { success: true };
     } catch (e: any) {
-      return { success: true, error: e?.message };
+      return fail(e?.message);
     }
   };
 
@@ -818,11 +849,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveToLocal(LOCAL_STORAGE_BLOG, updated);
 
     try {
-      const { error } = await supabase.from('articles').delete().eq('id', id);
-      if (error) return { success: true, error: error.message };
+      const delErr = await deleteRow('articles', id);
+      if (delErr) return fail(delErr);
       return { success: true };
     } catch (e: any) {
-      return { success: true, error: e?.message };
+      return fail(e?.message);
     }
   };
 
@@ -842,10 +873,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const dbRow = mapProjectToDb(newProject);
       const { error } = await supabase.from('projects').upsert([dbRow]);
-      if (error) return { success: true, error: error.message };
+      if (error) return fail(error.message);
       return { success: true };
     } catch (e: any) {
-      return { success: true, error: e?.message };
+      return fail(e?.message);
     }
   };
 
@@ -859,11 +890,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (target) {
         const dbRow = mapProjectToDb(target);
         const { error } = await supabase.from('projects').upsert([dbRow]);
-        if (error) return { success: true, error: error.message };
+        if (error) return fail(error.message);
       }
       return { success: true };
     } catch (e: any) {
-      return { success: true, error: e?.message };
+      return fail(e?.message);
     }
   };
 
@@ -873,11 +904,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveToLocal(LOCAL_STORAGE_PROJECTS, updated);
 
     try {
-      const { error } = await supabase.from('projects').delete().eq('id', id);
-      if (error) return { success: true, error: error.message };
+      const delErr = await deleteRow('projects', id);
+      if (delErr) return fail(delErr);
       return { success: true };
     } catch (e: any) {
-      return { success: true, error: e?.message };
+      return fail(e?.message);
     }
   };
 
@@ -932,10 +963,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveToLocal(LOCAL_STORAGE_INQUIRIES, updated);
 
     try {
-      await supabase.from('inquiries').update({ status }).eq('id', id);
+      const { data, error } = await supabase.from('inquiries').update({ status }).eq('id', id).select('id');
+      if (error) return fail(error.message);
+      if (!data || data.length === 0) return fail('Status dəyişdirilmədi (icazə yoxdur və ya qeyd tapılmadı).');
       return { success: true };
     } catch (e: any) {
-      return { success: true, error: e?.message };
+      return fail(e?.message);
     }
   };
 
@@ -945,10 +978,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveToLocal(LOCAL_STORAGE_INQUIRIES, updated);
 
     try {
-      await supabase.from('inquiries').delete().eq('id', id);
+      const delErr = await deleteRow('inquiries', id);
+      if (delErr) return fail(delErr);
       return { success: true };
     } catch (e: any) {
-      return { success: true, error: e?.message };
+      return fail(e?.message);
     }
   };
 
@@ -968,14 +1002,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setPagesContent(updated);
       saveToLocal(LOCAL_STORAGE_PAGES, updated);
 
-      // Attempt to sync with Supabase site_pages table if it exists
-      try {
-        await supabase.from('site_pages').upsert([{
-          page_key: pageKey,
-          content: updated[pageKey],
-          updated_at: new Date().toISOString()
-        }], { onConflict: 'page_key' });
-      } catch (err) {}
+      // Persist to the database so every visitor sees the edit
+      const { error } = await supabase.from('site_pages').upsert([{
+        page_key: pageKey,
+        content: updated[pageKey],
+        updated_at: new Date().toISOString()
+      }], { onConflict: 'page_key' });
+      if (error) {
+        return { success: false, error: `Səhifə bazaya yazılmadı: ${error.message}` };
+      }
 
       return { success: true };
     } catch (e: any) {
@@ -984,6 +1019,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const resetPageContent = async (pageKey?: keyof SitePagesData): Promise<{ success: boolean }> => {
+    const keys = pageKey ? [pageKey] : (Object.keys(initialPagesContent) as (keyof SitePagesData)[]);
+    const { error } = await supabase.from('site_pages').upsert(
+      keys.map(k => ({ page_key: k, content: initialPagesContent[k], updated_at: new Date().toISOString() })),
+      { onConflict: 'page_key' }
+    );
+    if (error) return { success: false };
     if (pageKey) {
       const updated: SitePagesData = {
         ...pagesContent,

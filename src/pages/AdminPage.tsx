@@ -836,7 +836,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   <button
                     type="button"
                     onClick={async () => {
-                      if (window.confirm("Bütün məhsulları silmək istədiyinizə əminsiniz? Bu əməliyyat geri qaytarılmır.")) {
+                      const typed = window.prompt(`Bütün ${products.length} məhsul bazadan silinəcək və geri qaytarılmayacaq. Təsdiq üçün SİL yazın:`);
+                      if (typed?.trim().toUpperCase() === 'SİL' || typed?.trim().toUpperCase() === 'SIL') {
                         const res = await deleteAllProducts();
                         if (res.success) {
                           alert("Bütün məhsullar uğurla silindi.");
