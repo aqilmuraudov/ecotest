@@ -1,4 +1,5 @@
 // Shared server-side helpers for the AI seller (chat + lead). Files under api/_lib are not routes.
+import { createHmac, timingSafeEqual } from 'node:crypto';
 
 export const env = (name: string, fallback = ''): string => (process.env[name] ?? fallback).trim();
 
@@ -22,6 +23,52 @@ export function rateLimit(key: string, max: number, windowMs: number): boolean {
 export function clientIp(req: any): string {
   const fwd = String(req.headers?.['x-forwarded-for'] || '').split(',')[0].trim();
   return fwd || req.socket?.remoteAddress || 'unknown';
+}
+
+// ---------- Cloudflare Turnstile (human check). Inert until TURNSTILE_SECRET_KEY is set, so the site never breaks half-configured.
+// A solved challenge is exchanged for a short-lived signed "pass" so a chat does not need a new challenge for every message.
+const PASS_TTL_S = 45 * 60;
+export const captchaEnabled = () => !!env('TURNSTILE_SECRET_KEY');
+
+function passSig(exp: number): string {
+  return createHmac('sha256', env('TURNSTILE_SECRET_KEY')).update(`pass:${exp}`).digest('base64url').slice(0, 27);
+}
+export function issuePass(): string {
+  const exp = Math.floor(Date.now() / 1000) + PASS_TTL_S;
+  return `${exp}.${passSig(exp)}`;
+}
+export function checkPass(pass: unknown): boolean {
+  const m = /^(\d{9,12})\.([A-Za-z0-9_-]{20,40})$/.exec(String(pass || ''));
+  if (!m || Number(m[1]) < Date.now() / 1000) return false;
+  const want = Buffer.from(passSig(Number(m[1])));
+  const got = Buffer.from(m[2]);
+  return want.length === got.length && timingSafeEqual(want, got);
+}
+
+async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
+  try {
+    const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ secret: env('TURNSTILE_SECRET_KEY'), response: token, ...(ip && ip !== 'unknown' ? { remoteip: ip } : {}) }),
+      signal: AbortSignal.timeout(5000),
+    });
+    const j: any = await r.json();
+    return j.success === true;
+  } catch (e) {
+    // Cloudflare unreachable: do not lock real customers out (the rate limits still apply)
+    console.error('[turnstile] verify unavailable, allowing', e);
+    return true;
+  }
+}
+
+/** { ok: true, pass? } when the request is from a verified visitor (or the check is not configured). */
+export async function checkHuman(body: any, ip: string): Promise<{ ok: boolean; pass?: string }> {
+  if (!captchaEnabled()) return { ok: true };
+  if (checkPass(body?.pass)) return { ok: true };
+  const token = String(body?.cfToken || '').slice(0, 2048);
+  if (token && (await verifyTurnstile(token, ip))) return { ok: true, pass: issuePass() };
+  return { ok: false };
 }
 
 // ---------- opening hours (Baku, UTC+4, Mon-Sat 09:00-18:00)

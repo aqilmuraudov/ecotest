@@ -1,4 +1,4 @@
-import { env, rateLimit, clientIp, sendTelegram, escapeHtml, loadCatalog, SALES_WHATSAPP, SITE_URL } from './_lib/core.js';
+import { env, rateLimit, clientIp, sendTelegram, escapeHtml, loadCatalog, checkHuman, SALES_WHATSAPP, SITE_URL } from './_lib/core.js';
 import { summarize, type ChatMsg } from './_lib/ai.js';
 
 // POST /api/lead  { name, phone, message?, source, lang, products?: string[], transcript?: ChatMsg[], consent, website }
@@ -36,6 +36,9 @@ export default async function handler(req: any, res: any) {
   if (!rateLimit(`lead:${clientIp(req)}`, 5, 10 * 60 * 1000)) {
     return res.status(429).json({ error: 'Too many requests. Please try again later.' });
   }
+
+  const human = await checkHuman(body, clientIp(req));
+  if (!human.ok) return res.status(403).json({ error: 'captcha' });
 
   const name = String(body.name || '').trim().slice(0, 80);
   const phone = normalizePhone(String(body.phone || ''));

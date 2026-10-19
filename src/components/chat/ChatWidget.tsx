@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowUp, Check, Lightbulb, MessageCircle, X } from 'lucide-react';
 import { Language } from '../../types';
+import { clearPass, getTurnstileToken, readPass, storePass, turnstileEnabled } from '../../lib/turnstile';
 
 /**
  * AISeller: the digital sales consultant. Streams answers from /api/chat, shows real catalogue
@@ -57,6 +58,7 @@ const STR = {
     doneText: 'Məsləhətçimiz tezliklə sizinlə əlaqə saxlayacaq (Bazar ertəsi - Şənbə, 09:00 - 18:00).',
     wa: 'WhatsApp-da yazın',
     err: 'Bağışlayın, hazırda cavab verə bilmirəm. Satış məsləhətçimizə birbaşa yaza bilərsiniz.',
+    captcha: 'Təhlükəsizlik yoxlaması alınmadı. Zəhmət olmasa yenidən cəhd edin və ya satış məsləhətçimizə birbaşa yazın.',
     busy: 'Hazırda sorğular çoxdur. Bir neçə saniyə sonra yenidən yazın və ya satış məsləhətçimizə birbaşa yazın.',
     rate: 'Çox mesaj göndərdiniz. Bir neçə dəqiqə sonra yenidən yazın və ya satış məsləhətçimizə birbaşa yazın.',
     errName: 'Adınızı yazın',
@@ -86,6 +88,7 @@ const STR = {
     doneText: 'Наш консультант скоро свяжется с вами (Пн - Сб, 09:00 - 18:00).',
     wa: 'Написать в WhatsApp',
     err: 'Извините, сейчас не могу ответить. Вы можете написать менеджеру напрямую.',
+    captcha: 'Не удалось пройти проверку безопасности. Повторите попытку или напишите менеджеру напрямую.',
     busy: 'Сейчас много запросов. Повторите через несколько секунд или напишите менеджеру напрямую.',
     rate: 'Слишком много сообщений. Попробуйте через несколько минут или напишите менеджеру напрямую.',
     errName: 'Укажите имя',
@@ -115,6 +118,7 @@ const STR = {
     doneText: 'Our consultant will contact you shortly (Mon - Sat, 09:00 - 18:00).',
     wa: 'Chat on WhatsApp',
     err: 'Sorry, I cannot answer right now. You can message our sales consultant directly.',
+    captcha: 'The security check could not be completed. Please try again or message our sales consultant.',
     busy: 'We are receiving many requests right now. Please try again in a few seconds or message our sales consultant.',
     rate: 'Too many messages. Please try again in a few minutes or message our sales consultant.',
     errName: 'Enter your name',
@@ -225,16 +229,23 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate 
     const ctl = new AbortController();
     abortRef.current = ctl;
     try {
+      // human check (Cloudflare Turnstile): solved once, then a signed pass covers the rest of the chat
+      let pass = readPass();
+      let cfToken = '';
+      if (turnstileEnabled && !pass) cfToken = (await getTurnstileToken()) || '';
       const res = await fetch('/api/chat', {
         method: 'POST',
         signal: ctl.signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           lang: apiLang,
+          pass,
+          cfToken,
           // greeting and error notices are UI-only; the server keeps only the recent turns anyway
           messages: history.filter(m => !m.error && !m.local && m.content).slice(-30).map(m => ({ role: m.role, content: m.content })),
         }),
       });
+      if (res.status === 403) { clearPass(); throw new Error('captcha'); }
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
       const reader = res.body.getReader();
       const dec = new TextDecoder();
@@ -251,6 +262,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate 
           let evt: any;
           try { evt = JSON.parse(part.slice(5)); } catch { continue; }
           if (evt.type === 'text') { if (String(evt.delta || '').trim()) got = true; patchLast(m => ({ ...m, content: m.content + evt.delta, status: undefined })); }
+          else if (evt.type === 'pass') { if (typeof evt.token === 'string') storePass(evt.token); }
           else if (evt.type === 'status') patchLast(m => ({ ...m, status: String(evt.text || '') }));
           else if (evt.type === 'products') { got = true; patchLast(m => ({ ...m, products: evt.items })); }
           else if (evt.type === 'consultation') { got = true; patchLast(m => ({ ...m, consultation: evt.summary || '' })); }
@@ -264,13 +276,13 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate 
     } catch (e: any) {
       if (e?.name === 'AbortError') return;
       const msg = String(e?.message || '');
-      const text = msg === 'busy' ? t.busy : msg === 'HTTP 429' ? t.rate : t.err;
+      const text = msg === 'busy' ? t.busy : msg === 'HTTP 429' ? t.rate : msg === 'captcha' ? t.captcha : t.err;
       patchLast(m => ({ ...m, content: text, error: true, products: undefined, consultation: undefined }));
     } finally {
       setBusy(false);
       abortRef.current = null;
     }
-  }, [apiLang, busy, messages, patchLast, t.err, t.busy, t.rate]);
+  }, [apiLang, busy, messages, patchLast, t.err, t.busy, t.rate, t.captcha]);
 
   const submitLead = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -280,6 +292,8 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate 
     if (!lead.consent) return setLeadErr(t.errConsent);
     setLeadBusy(true);
     try {
+      const pass = readPass();
+      const cfToken = pass ? '' : (await getTurnstileToken()) || '';
       const res = await fetch('/api/lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -287,6 +301,8 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate 
           name: lead.name,
           phone: lead.phone,
           consent: true,
+          pass,
+          cfToken,
           website: lead.website,
           lang: apiLang,
           source: 'ai-chat',
@@ -295,6 +311,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate 
         }),
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 403) { clearPass(); return setLeadErr(t.captcha); }
       if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
       setLeadDone({ short: data.short || '', whatsappUrl: data.whatsappUrl || `https://wa.me/${WHATSAPP}`, notified: !!data.notified });
     } catch {

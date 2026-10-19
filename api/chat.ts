@@ -1,4 +1,4 @@
-import { env, rateLimit, clientIp } from './_lib/core.js';
+import { env, rateLimit, clientIp, checkHuman } from './_lib/core.js';
 import { runChat, shouldOfferForm, type ChatMsg } from './_lib/ai.js';
 
 // POST /api/chat  { messages: [{role, content}], lang: 'az' | 'ru' | 'en' }
@@ -32,6 +32,8 @@ export default async function handler(req: any, res: any) {
   if (!rateLimit(`chat-burst:${ip}`, 10, 60 * 1000) || !rateLimit(`chat:${ip}`, 40, 10 * 60 * 1000) || !rateLimit(`chat-day:${ip}`, 300, 24 * 60 * 60 * 1000)) {
     return res.status(429).json({ error: 'rate_limit' });
   }
+  const human = await checkHuman(body, ip);
+  if (!human.ok) return res.status(403).json({ error: 'captcha' });
 
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
@@ -46,6 +48,7 @@ export default async function handler(req: any, res: any) {
     send({ type: 'error', code: 'not_configured' });
     return res.end();
   }
+  if (human.pass) send({ type: 'pass', token: human.pass });
 
   let formShown = false;
   let textLen = 0;

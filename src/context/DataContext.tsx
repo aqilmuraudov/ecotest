@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { getTurnstileToken } from '../lib/turnstile';
 import { Product, BlogPost, Project, Inquiry, CategoryItem, SitePagesData } from '../types';
 import { products as initialProducts, productCategoriesList } from '../data/products';
 import { blogPosts as initialBlogPosts } from '../data/blog';
@@ -927,10 +928,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // 1) the shared lead pipeline (validation, database, Telegram to the sales team)
     try {
+      const cfToken = (await getTurnstileToken()) || ''; // empty when the human check is not configured
       const res = await fetch('/api/lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          cfToken,
           name: inqData.name,
           phone: inqData.phone,
           email: inqData.email,
@@ -947,6 +950,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.ok) return { success: true };
+      // a refused human check or a rate limit must not be bypassed by the direct database fallback below
+      if (res.status === 403 || res.status === 429) return { success: false, error: res.status === 403 ? 'captcha' : 'rate_limit' };
     } catch (e) {
       console.warn('Lead pipeline unavailable, falling back to direct insert', e);
     }
