@@ -204,7 +204,7 @@ function makeTextSink(lang: 'az' | 'ru', emit: Emit) {
 interface StreamResult { text: string; toolCalls: { id: string; name: string; args: string }[] }
 
 /** One concrete place to send a request to: provider endpoint + key + model + reasoning effort. */
-export interface Target { label: string; base: string; key: string; model: string; effort?: string; firstByteMs: number; extra?: Record<string, unknown> }
+export interface Target { label: string; base: string; key: string; model: string; effort?: string; firstByteMs: number }
 
 const trimSlash = (s: string) => s.replace(/\/+$/, '');
 
@@ -242,25 +242,8 @@ function targets(history: ChatMsg[]): Target[] {
     }
   }
 
-  // IteraCompute: free hosted Qwen3.8-27B (shared capacity, may queue). Thinking is switched off through the chat template, not reasoning_effort.
-  const itera: Target[] = [];
-  const iteraKey = env('ITERA_API_KEY');
-  if (iteraKey) {
-    itera.push({
-      label: 'itera',
-      base: trimSlash(env('ITERA_BASE_URL', 'https://api.iteracompute.com/v1')),
-      key: iteraKey,
-      model: env('ITERA_MODEL', 'qwen/qwen3.8-27b'),
-      firstByteMs: 12000,
-      extra: { chat_template_kwargs: { enable_thinking: false } },
-    });
-  }
-
-  const gonkaChain: Target[] = gKey ? (complex ? [think, light, backup] : [light, backup, think]) : [];
-  const all: Record<string, Target[]> = { groq, itera, gonka: gonkaChain };
-  // AI_ORDER decides who is asked first, e.g. "itera,groq,gonka"; unlisted providers are simply not used
-  const order = env('AI_ORDER', 'groq,gonka').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-  return order.flatMap(k => all[k] || []);
+  // Groq answers first (fast, stable); the Gonka models are only a safety net when Groq fails or is rate limited
+  return [...groq, ...(gKey ? (complex ? [think, light, backup] : [light, backup, think]) : [])];
 }
 
 async function streamOnce(target: Target, messages: any[], useTools: boolean, sink: ReturnType<typeof makeTextSink>): Promise<StreamResult> {
@@ -270,7 +253,7 @@ async function streamOnce(target: Target, messages: any[], useTools: boolean, si
     method: 'POST',
     signal: ctl.signal,
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${target.key}` },
-    body: JSON.stringify({ model: target.model, messages, stream: true, temperature: 0.5, max_tokens: 900, ...(target.effort ? { reasoning_effort: target.effort } : {}), ...(target.extra || {}), ...(useTools ? { tools: TOOLS, tool_choice: 'auto' } : {}) }),
+    body: JSON.stringify({ model: target.model, messages, stream: true, temperature: 0.5, max_tokens: 900, ...(target.effort ? { reasoning_effort: target.effort } : {}), ...(useTools ? { tools: TOOLS, tool_choice: 'auto' } : {}) }),
   });
   clearTimeout(timer);
   if (!res.ok || !res.body) throw new Error(`${target.label}:${target.model} HTTP ${res.status}`);
@@ -381,7 +364,7 @@ export async function summarize(history: ChatMsg[]): Promise<string> {
         method: 'POST',
         signal: ctl.signal,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${target.key}` },
-        body: JSON.stringify({ model: target.model, messages: [{ role: 'user', content: prompt }], max_tokens: 350, temperature: 0.2, ...(target.effort ? { reasoning_effort: target.effort } : {}), ...(target.extra || {}) }),
+        body: JSON.stringify({ model: target.model, messages: [{ role: 'user', content: prompt }], max_tokens: 350, temperature: 0.2, ...(target.effort ? { reasoning_effort: target.effort } : {}) }),
       });
       clearTimeout(timer);
       if (res.ok) {
