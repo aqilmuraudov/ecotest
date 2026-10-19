@@ -398,6 +398,9 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                   <span>{isSubmitting ? t.contact.form.submitting : t.contact.form.submit}</span>
                 </button>
               </div>
+              <p className="text-[11px] leading-snug text-mute pt-1">
+                {currentLang === 'az' ? 'Sorğunu göndərməklə məlumatlarınızın sorğunun işlənməsi üçün istifadəsinə razılıq verirsiniz.' : currentLang === 'ru' ? 'Отправляя заявку, вы соглашаетесь на обработку данных для её рассмотрения.' : 'By sending this request you agree to your data being used to process it.'}
+              </p>
             </form>
           </div>
         )}

@@ -36,8 +36,15 @@ export default async function handler(req: any, res: any) {
   const lang: 'az' | 'ru' = body.lang === 'ru' ? 'ru' : 'az';
   if (name.length < 2) return res.status(400).json({ error: 'name' });
   if (!phone) return res.status(400).json({ error: 'phone' });
+  // the classic forms state the consent next to the submit button; the chat asks for an explicit tick
   if (body.consent !== true) return res.status(400).json({ error: 'consent' });
 
+  const emailRaw = String(body.email || '').trim().toLowerCase().slice(0, 200);
+  const email = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailRaw) ? emailRaw : '-';
+  const company = String(body.company || '').trim().slice(0, 190) || null;
+  const projectType = String(body.projectType || '').trim().slice(0, 190) || null;
+  const roomPreset = String(body.roomPreset || '').trim().slice(0, 190) || null;
+  const configSummary = String(body.configSummary || '').trim().slice(0, 4000);
   const sourceKey = SOURCES[String(body.source)] ? String(body.source) : 'contact-form';
   const history: ChatMsg[] = (Array.isArray(body.transcript) ? body.transcript : [])
     .map((m: any) => ({ role: m?.role === 'assistant' ? 'assistant' : 'user', content: String(m?.content ?? '').slice(0, 1200) }) as ChatMsg)
@@ -46,7 +53,7 @@ export default async function handler(req: any, res: any) {
 
   // products referenced by the customer/AI (validated against the real catalogue)
   const catalog = await loadCatalog();
-  const wanted: string[] = Array.isArray(body.products) ? body.products.map(String).slice(0, 5) : [];
+  const wanted: string[] = (Array.isArray(body.products) ? body.products.map(String) : []).concat(body.productCode ? [String(body.productCode)] : []).slice(0, 5);
   const products = wanted.map(c => catalog.find(i => i.code.toLowerCase() === c.toLowerCase())).filter(Boolean) as typeof catalog;
 
   const userMessage = String(body.message || '').trim().slice(0, 1500);
@@ -64,14 +71,17 @@ export default async function handler(req: any, res: any) {
     const row = {
       id,
       name,
-      email: '-',
+      email,
       phone: '+' + phone,
       subject: SOURCES[sourceKey],
       message: (summary || userMessage || 'Müştəri sorğu göndərdi').slice(0, 4900),
       product_code: products[0]?.code || null,
       product_name: products[0]?.name?.slice(0, 290) || null,
       product_category: products[0]?.categoryName.az || null,
-      config_summary: transcriptText || null,
+      company,
+      project_type: projectType,
+      room_preset: roomPreset,
+      config_summary: (configSummary || transcriptText || null),
       status: 'new',
       user_agent: String(req.headers?.['user-agent'] || '').slice(0, 250),
     };
@@ -98,9 +108,13 @@ export default async function handler(req: any, res: any) {
     `Telefon: <code>+${phone}</code>`,
     `Dil: ${lang.toUpperCase()}`,
   ];
+  if (email !== '-') lines.push(`E-poçt: ${escapeHtml(email)}`);
+  if (company) lines.push(`Şirkət: ${escapeHtml(company)}`);
+  if (projectType) lines.push(`Layihə: ${escapeHtml(projectType)}`);
   if (products.length) {
     lines.push('', '<b>Məhsullar:</b>', ...products.map(p => `• <a href="${p.url}">${escapeHtml(p.code)}</a> ${escapeHtml(p.name)}`));
   }
+  if (configSummary) lines.push('', '<b>Konfiqurasiya:</b>', escapeHtml(configSummary.slice(0, 700)));
   if (summary) lines.push('', '<b>Xülasə:</b>', escapeHtml(summary));
   else if (userMessage) lines.push('', '<b>Mesaj:</b>', escapeHtml(userMessage));
   const notified = await sendTelegram(lines.join('\n'), [

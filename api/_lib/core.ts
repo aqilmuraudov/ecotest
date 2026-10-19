@@ -40,7 +40,7 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 
 export async function sendTelegram(html: string, buttons?: { text: string; url: string }[]): Promise<boolean> {
   const token = env('TELEGRAM_BOT_TOKEN');
-  const chat = env('TELEGRAM_CHAT_ID');
+  const chat = env('TELEGRAM_CHAT_ID', '-1004425538189');
   if (!token || !chat) return false;
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {

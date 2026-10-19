@@ -925,6 +925,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setInquiries(updated);
     saveToLocal(LOCAL_STORAGE_INQUIRIES, updated);
 
+    // 1) the shared lead pipeline (validation, database, Telegram to the sales team)
+    try {
+      const res = await fetch('/api/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: inqData.name,
+          phone: inqData.phone,
+          email: inqData.email,
+          company: inqData.company,
+          message: inqData.message,
+          projectType: inqData.projectType,
+          roomPreset: inqData.roomPreset,
+          configSummary: inqData.configSummary,
+          productCode: inqData.productCode,
+          source: inqData.configSummary ? 'configurator' : inqData.productCode ? 'product' : 'contact-form',
+          lang: typeof document !== 'undefined' && document.documentElement.lang === 'ru' ? 'ru' : 'az',
+          consent: true, // the forms state this next to the submit button
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) return { success: true };
+    } catch (e) {
+      console.warn('Lead pipeline unavailable, falling back to direct insert', e);
+    }
+
+    // 2) fallback: direct insert (RLS only allows status = 'new')
     try {
       const dbRow = {
         name: inqData.name,

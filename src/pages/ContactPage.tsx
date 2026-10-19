@@ -315,6 +315,9 @@ export const ContactPage: React.FC<ContactPageProps> = ({ currentLang }) => {
                   <EdButton type="submit" arrow disabled={isSubmitting} className="w-full justify-center !py-4">
                     {isSubmitting ? t.contact.form.submitting : t.contact.form.submit}
                   </EdButton>
+                  <p className="text-[11px] leading-snug text-mute mt-3">
+                    {currentLang === 'az' ? 'Sorğunu göndərməklə məlumatlarınızın sorğunun işlənməsi üçün istifadəsinə razılıq verirsiniz.' : currentLang === 'ru' ? 'Отправляя заявку, вы соглашаетесь на обработку данных для её рассмотрения.' : 'By sending this request you agree to your data being used to process it.'}
+                  </p>
                 </form>
               )}
             </FadeIn>
