@@ -163,6 +163,9 @@ function makeTextSink(lang: 'az' | 'ru', emit: Emit) {
 // ---------------------------------------------------------------- model transport
 interface StreamResult { text: string; toolCalls: { id: string; name: string; args: string }[] }
 
+const effortFor = (model: string) =>
+  model === env('AI_MODEL_THINK', 'MiniMaxAI/MiniMax-M2.7') ? env('AI_EFFORT_THINK', 'medium') : env('AI_EFFORT_LIGHT', 'low');
+
 async function streamOnce(model: string, messages: any[], useTools: boolean, sink: ReturnType<typeof makeTextSink>): Promise<StreamResult> {
   const base = env('AI_BASE_URL', 'https://api.gonkarouter.io/v1').replace(/\/+$/, '');
   const ctl = new AbortController();
@@ -171,7 +174,7 @@ async function streamOnce(model: string, messages: any[], useTools: boolean, sin
     method: 'POST',
     signal: ctl.signal,
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env('AI_API_KEY')}` },
-    body: JSON.stringify({ model, messages, stream: true, temperature: 0.5, max_tokens: 900, ...(useTools ? { tools: TOOLS, tool_choice: 'auto' } : {}) }),
+    body: JSON.stringify({ model, messages, stream: true, temperature: 0.5, max_tokens: 900, reasoning_effort: effortFor(model), ...(useTools ? { tools: TOOLS, tool_choice: 'auto' } : {}) }),
   });
   clearTimeout(timer);
   if (!res.ok || !res.body) throw new Error(`model ${model} HTTP ${res.status}`);
@@ -268,7 +271,7 @@ export async function summarize(history: ChatMsg[]): Promise<string> {
         method: 'POST',
         signal: ctl.signal,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env('AI_API_KEY')}` },
-        body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], max_tokens: 500, temperature: 0.2 }),
+        body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], max_tokens: 500, temperature: 0.2, reasoning_effort: 'low' }),
       });
       clearTimeout(t);
       if (!res.ok) continue;

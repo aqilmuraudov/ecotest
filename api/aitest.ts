@@ -4,6 +4,8 @@ import { env, rateLimit, clientIp } from './_lib/core.js';
 const VARIANTS: Record<string, Record<string, unknown>> = {
   base: {},
   effort_low: { reasoning_effort: 'low' },
+  effort_medium: { reasoning_effort: 'medium' },
+  effort_high: { reasoning_effort: 'high' },
   effort_minimal: { reasoning_effort: 'minimal' },
   effort_none: { reasoning_effort: 'none' },
   thinking_disabled: { thinking: { type: 'disabled' } },
