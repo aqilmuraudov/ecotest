@@ -24,6 +24,7 @@ interface ChatMessage {
   content: string;
   products?: ProductCard[];
   consultation?: string; // the AI asked for the secure contact form
+  status?: string; // short progress note while tools run
   local?: boolean; // greeting and system notices, never sent to the model
   error?: boolean;
 }
@@ -233,10 +234,11 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate 
           if (!part.startsWith('data:')) continue;
           let evt: any;
           try { evt = JSON.parse(part.slice(5)); } catch { continue; }
-          if (evt.type === 'text') patchLast(m => ({ ...m, content: m.content + evt.delta }));
+          if (evt.type === 'text') patchLast(m => ({ ...m, content: m.content + evt.delta, status: undefined }));
+          else if (evt.type === 'status') patchLast(m => ({ ...m, status: String(evt.text || '') }));
           else if (evt.type === 'products') patchLast(m => ({ ...m, products: evt.items }));
           else if (evt.type === 'consultation') patchLast(m => ({ ...m, consultation: evt.summary || '' }));
-          else if (evt.type === 'reset') patchLast(m => ({ ...m, content: '', products: undefined, consultation: undefined }));
+          else if (evt.type === 'reset') patchLast(m => ({ ...m, content: '', status: undefined, products: undefined, consultation: undefined }));
           else if (evt.type === 'error') throw new Error(evt.code || 'error');
         }
       }
@@ -374,7 +376,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate 
               <div ref={scroller} className="flex-1 overflow-y-auto px-4 py-5 space-y-4 scroll-smooth" aria-live="polite">
                 {messages.map((m, i) => {
                   const isUser = m.role === 'user';
-                  const typing = !isUser && !m.content && !m.products && !m.consultation && busy && i === lastIndex;
+                  const typing = !isUser && !m.content && !m.consultation && busy && i === lastIndex;
                   if (!isUser && !m.content && !typing && !m.products && m.consultation === undefined) return null;
                   return (
                     <div key={m.id} className={`flex flex-col gap-2 ${isUser ? 'items-end' : 'items-start'}`}>
@@ -387,10 +389,13 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate 
                           }`}
                         >
                           {typing ? (
-                            <span className="inline-flex items-center gap-1.5 h-5" aria-label="…">
-                              {[0, 1, 2].map(n => (
-                                <span key={n} className="w-1.5 h-1.5 rounded-full bg-[#9a9a9f] animate-pulse" style={{ animationDelay: `${n * 160}ms` }} />
-                              ))}
+                            <span className="inline-flex items-center gap-2 h-5" aria-label="…">
+                              <span className="inline-flex items-center gap-1.5">
+                                {[0, 1, 2].map(n => (
+                                  <span key={n} className="w-1.5 h-1.5 rounded-full bg-[#9a9a9f] animate-pulse" style={{ animationDelay: `${n * 160}ms` }} />
+                                ))}
+                              </span>
+                              {m.status && <span className="text-[12px] text-[#9a9a9f]">{m.status}</span>}
                             </span>
                           ) : (
                             m.content
