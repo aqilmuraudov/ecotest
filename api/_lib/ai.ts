@@ -4,12 +4,19 @@ export type ChatMsg = { role: 'user' | 'assistant'; content: string };
 export type Emit = (evt: Record<string, unknown>) => void;
 
 // ---------------------------------------------------------------- prompt
-export async function buildSystemPrompt(): Promise<string> {
+export async function buildSystemPrompt(history: ChatMsg[] = []): Promise<string> {
   const items = await loadCatalog();
   const cats = new Map<string, string>();
   items.forEach(i => cats.set(i.category, `${i.categoryName.az} / ${i.categoryName.en} / ${i.categoryName.ru}`));
   const catList = [...cats.entries()].map(([id, n]) => `- ${id}: ${n}`).join('\n') || '(catalogue unavailable)';
   const hours = bakuNow();
+
+  // retrieval before the model call: candidates for what the customer just talked about
+  const recentUser = history.filter(m => m.role === 'user').slice(-2).map(m => m.content).join(' ');
+  const cands = recentUser.trim() ? await searchCatalog({ query: recentUser, limit: 8 }) : [];
+  const candList = cands.length
+    ? cands.map(i => `- ${i.code} | ${i.name} | ${i.categoryName.en || i.category}`).join('\n')
+    : '(none matched yet: ask a question or use search_products)';
 
   return `You are "AISeller", the virtual sales consultant of Ecolife, an architectural LED lighting company in Baku, Azerbaijan.
 
@@ -20,7 +27,7 @@ LANGUAGE
 YOUR JOB
 - Help the customer find the right lighting and keep them engaged by asking ONE focused question per message.
 - Discover, in a natural order: type of space (home, office, shop, restaurant, hotel...), size/area, ceiling height, desired mood or colour temperature, new build or renovation, whether a track/magnetic/recessed installation already exists, timeline.
-- After you understand enough (usually 3-5 exchanges) search the catalogue and recommend 1-3 suitable products with recommend_products. Explain briefly why each fits.
+- After you understand enough (usually 3-5 exchanges) recommend 1-3 suitable products: write one or two sentences about why they fit AND call recommend_products in that same reply. Use search_products only if the listed candidates are not enough.
 - Do not use tools for a plain greeting or small talk; first learn what the customer needs.
 - Call request_consultation ONLY when the customer asks for a price, an offer, an order, a call or a contact, or after you have recommended products and the needs are clear. Never on the first answer.
 
@@ -35,7 +42,9 @@ HARD RULES
 CONTEXT
 - Current time: ${hours.label}. Consultants work Monday-Saturday 09:00-18:00. If outside these hours and the customer wants a consultant, say they will answer on the next working day.
 - Catalogue categories (id: names):
-${catList}`;
+${catList}
+- Catalogue items that match the customer's latest messages (prefer these; recommend ONLY codes that appear here or in tool results):
+${candList}`;
 }
 
 // ---------------------------------------------------------------- tools
@@ -232,7 +241,7 @@ function pickModels(history: ChatMsg[]): string[] {
 
 // ---------------------------------------------------------------- public API
 export async function runChat(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit): Promise<{ model: string; text: string }> {
-  const system = await buildSystemPrompt();
+  const system = await buildSystemPrompt(history);
   const convo: any[] = [{ role: 'system', content: system }, ...history];
   let lastError = '';
 
@@ -243,6 +252,7 @@ export async function runChat(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit)
       for (let step = 0; step < 4; step++) {
         const r = await streamOnce(model, messages, true, sink);
         if (!r.toolCalls.length) { return { model, text: sink.finish() }; }
+        const terminal = r.toolCalls.every(c => c.name === 'recommend_products' || c.name === 'request_consultation');
         messages.push({
           role: 'assistant',
           content: r.text || null,
@@ -255,6 +265,8 @@ export async function runChat(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit)
           const out = await runTool(c.name, args, emit, { userTurns: history.filter(m => m.role === 'user').length, lastUser: history.filter(m => m.role === 'user').pop()?.content || '' });
           messages.push({ role: 'tool', tool_call_id: c.id || `call_${step}_${c.name}`, content: out });
         }
+        // cards/forms are rendered by the client; if the model already wrote its words we are done (saves a full round trip)
+        if (terminal && r.text.trim().length > 20) return { model, text: sink.finish() };
       }
       return { model, text: sink.finish() };
     } catch (e: any) {
