@@ -189,7 +189,7 @@ function makeTextSink(lang: 'az' | 'ru', emit: Emit) {
 interface StreamResult { text: string; toolCalls: { id: string; name: string; args: string }[] }
 
 /** One concrete place to send a request to: provider endpoint + key + model + reasoning effort. */
-interface Target { label: string; base: string; key: string; model: string; effort?: string; firstByteMs: number }
+export interface Target { label: string; base: string; key: string; model: string; effort?: string; firstByteMs: number }
 
 const trimSlash = (s: string) => s.replace(/\/+$/, '');
 
@@ -273,12 +273,12 @@ async function streamOnce(target: Target, messages: any[], useTools: boolean, si
 }
 
 // ---------------------------------------------------------------- public API
-export async function runChat(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit): Promise<{ model: string; text: string }> {
+export async function runChat(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit, override?: Target[]): Promise<{ model: string; text: string }> {
   const system = await buildSystemPrompt(history);
   const convo: any[] = [{ role: 'system', content: system }, ...history];
   let lastError = '';
 
-  const chain = targets(history);
+  const chain = override ?? targets(history);
   if (chain.length === 0) throw new Error('no AI provider configured');
   for (const target of chain) {
     const model = `${target.label}:${target.model}`;
