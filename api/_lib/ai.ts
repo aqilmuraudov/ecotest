@@ -287,27 +287,31 @@ export async function runChat(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit)
   throw new Error(lastError || 'all models failed');
 }
 
-/** One-shot summary of the conversation for the sales team (Azerbaijani). */
+/** Short summary for the sales team (Azerbaijani). Never blocks the hand-off: one fast model, hard 9 s cap, plain fallback. */
 export async function summarize(history: ChatMsg[]): Promise<string> {
-  const transcript = history.map(m => `${m.role === 'user' ? 'Müştəri' : 'AISeller'}: ${m.content}`).join('\n').slice(0, 6000);
+  const fallback = history
+    .filter(m => m.role === 'user')
+    .slice(-3)
+    .map(m => m.content.replace(/\s+/g, ' ').slice(0, 220))
+    .join(' | ');
+  const transcript = history.map(m => `${m.role === 'user' ? 'Müştəri' : 'AISeller'}: ${m.content}`).join('\n').slice(0, 5000);
   const base = env('AI_BASE_URL', 'https://api.gonkarouter.io/v1').replace(/\/+$/, '');
-  const prompt = `Aşağıdakı söhbətdən satış məsləhətçisi üçün 3-5 sətirlik qısa xülasə yaz (Azərbaycan dilində): müştərinin ehtiyacı, məkan/sahə, seçilmiş və ya maraqlandığı məhsullar, vaxt. Qiymət uydurma. Yalnız xülasəni yaz.\n\n${transcript}`;
-  for (const model of [env('AI_MODEL_THINK', 'MiniMaxAI/MiniMax-M2.7'), env('AI_MODEL_LIGHT', 'zai-org/GLM-5.3-Flash')]) {
-    try {
-      const ctl = new AbortController();
-      const t = setTimeout(() => ctl.abort(), 25000);
-      const res = await fetch(`${base}/chat/completions`, {
-        method: 'POST',
-        signal: ctl.signal,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env('AI_API_KEY')}` },
-        body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], max_tokens: 500, temperature: 0.2, reasoning_effort: 'low' }),
-      });
-      clearTimeout(t);
-      if (!res.ok) continue;
+  const prompt = `Aşağıdakı söhbətdən satış məsləhətçisi üçün 3-4 sətirlik qısa xülasə yaz (Azərbaycan dilində): müştərinin ehtiyacı, məkan/sahə, seçilmiş və ya maraqlandığı məhsullar, vaxt. Qiymət uydurma. Yalnız xülasəni yaz.\n\n${transcript}`;
+  try {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 9000);
+    const res = await fetch(`${base}/chat/completions`, {
+      method: 'POST',
+      signal: ctl.signal,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env('AI_API_KEY')}` },
+      body: JSON.stringify({ model: env('AI_MODEL_LIGHT', 'zai-org/GLM-5.3-Flash'), messages: [{ role: 'user', content: prompt }], max_tokens: 350, temperature: 0.2, reasoning_effort: 'low' }),
+    });
+    clearTimeout(timer);
+    if (res.ok) {
       const j: any = await res.json();
       const out = String(j.choices?.[0]?.message?.content || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
       if (out) return out.slice(0, 900);
-    } catch { /* try next model */ }
-  }
-  return '';
+    }
+  } catch { /* fall through to the plain summary */ }
+  return fallback ? `Müştərinin yazdıqları: ${fallback}` : '';
 }
