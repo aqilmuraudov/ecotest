@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Language, Product } from '../types';
+import { Language, Product, Project } from '../types';
 import { translations } from '../data/translations';
 import { solutions } from '../data/solutions';
 import { useData } from '../context/DataContext';
 import { getLocalizedText } from '../utils/lang';
-import { motion, useScroll, useTransform } from 'motion/react';
+import { motion, useScroll, useTransform, useReducedMotion, MotionValue } from 'motion/react';
 import { FadeIn } from '../components/ui/FadeIn';
 import { EdButton, EdLink, EdSectionHead, EdHairline } from '../components/ed/EditorialUI';
 import { EdProductCard } from '../components/ed/EdProductCard';
@@ -26,6 +26,114 @@ const PILL_DEFS: { id: string; match: string[] }[] = [
   { id: 'outdoor', match: ['outdoor', 'wall-washers', 'floodlight'] },
   { id: 'strip-lights', match: ['strip-lights'] },
 ];
+
+/**
+ * Featured projects as a sticky stack: each project pins under the header and the
+ * next one slides over it, the earlier card recedes (scale + dim). Pure CSS sticky
+ * plus Motion scroll values, no scroll listeners. Collapses to a static stack when
+ * the visitor prefers reduced motion.
+ */
+const ProjectStackCard: React.FC<{
+  project: Project;
+  index: number;
+  total: number;
+  progress: MotionValue<number>;
+  lang: Language;
+  viewLabel: string;
+  onOpen: () => void;
+}> = ({ project, index, total, progress, lang, viewLabel, onOpen }) => {
+  const reduce = useReducedMotion();
+  const isLast = index === total - 1;
+  const start = index / total;
+  const end = (index + 1) / total;
+  const recede = useTransform(progress, [start, end], [1, 0.94]);
+  const dim = useTransform(progress, [start, end], [0, 0.55]);
+
+  return (
+    <motion.div
+      style={{ top: 88 + index * 14, scale: isLast || reduce ? 1 : recede, transformOrigin: 'top center' }}
+      className="sticky mb-6 sm:mb-10 last:mb-0"
+    >
+      <button
+        onClick={onOpen}
+        className="group relative block w-full h-[62vh] min-h-[380px] lg:h-[72vh] overflow-hidden text-left"
+      >
+        <img
+          src={project.coverImage}
+          alt={project.title}
+          loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.03]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#1d1d1b]/90 via-[#1d1d1b]/15 to-transparent" />
+        {!isLast && !reduce && (
+          <motion.div style={{ opacity: dim }} className="absolute inset-0 bg-[#08090A] pointer-events-none" />
+        )}
+        <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 lg:p-12 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
+          <div>
+            <h3 className="ed-display-md font-display text-ivory max-w-3xl">{project.title}</h3>
+            <div className="font-micro text-[9px] text-soft mt-4 flex flex-wrap gap-x-6 gap-y-1">
+              <span>{project.location}</span>
+              <span>{project.categoryName?.[lang] || project.category}</span>
+              <span>{project.year}</span>
+            </div>
+          </div>
+          <span className="font-micro text-[10px] text-ivory flex items-center gap-2 shrink-0">
+            {viewLabel}
+            <ArrowRight className="w-4 h-4 text-amber-warm transition-transform duration-300 group-hover:translate-x-1.5" />
+          </span>
+        </div>
+      </button>
+    </motion.div>
+  );
+};
+
+const ProjectStack: React.FC<{
+  projects: Project[];
+  lang: Language;
+  viewLabel: string;
+  onOpen: (p: Project) => void;
+}> = ({ projects, lang, viewLabel, onOpen }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end end'] });
+  return (
+    <div ref={ref} className="relative">
+      {projects.map((p, i) => (
+        <ProjectStackCard
+          key={p.id}
+          project={p}
+          index={i}
+          total={projects.length}
+          progress={scrollYProgress}
+          lang={lang}
+          viewLabel={viewLabel}
+          onOpen={() => onOpen(p)}
+        />
+      ))}
+    </div>
+  );
+};
+
+/**
+ * Light pool under the pendant. On load it warms up like an LED driver (a short
+ * stepped ramp, no strobing); on scroll it recedes so the lamp "stays behind".
+ */
+const HeroGlow: React.FC<{ progress: MotionValue<number> }> = ({ progress }) => {
+  const recede = useTransform(progress, [0, 0.7], [1, 0.15]);
+  return (
+    <motion.div
+      aria-hidden="true"
+      style={{ opacity: recede }}
+      className="absolute top-[48%] left-1/2 -translate-x-1/2 w-[130%] h-[85%] pointer-events-none"
+    >
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0.4, 0.3, 1] }}
+        transition={{ duration: 1.8, delay: 0.5, times: [0, 0.3, 0.45, 1], ease: 'easeOut' }}
+        className="w-full h-full bg-[radial-gradient(ellipse_at_50%_15%,_rgba(245,185,55,0.24)_0%,_rgba(245,180,50,0.08)_42%,_rgba(245,180,50,0.02)_65%,_transparent_80%)] blur-3xl"
+      />
+    </motion.div>
+  );
+};
 
 export const HomePage: React.FC<HomePageProps> = ({
   currentLang,
@@ -129,7 +237,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   ];
 
   return (
-    <div className="bg-[var(--ed-bg)] text-[var(--ed-ivory)] overflow-hidden">
+    <div className="bg-[var(--ed-bg)] text-[var(--ed-ivory)] overflow-x-clip">
 
       {/* ============================================================ */}
       {/* HERO — asymmetric dark canvas, oversized type, glowing object */}
@@ -174,38 +282,44 @@ export const HomePage: React.FC<HomePageProps> = ({
         {/* MOBILE Pendant Lamp (centered between logo & search) */}
         <motion.div
           style={{ y: productY }}
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0, scale: 0.96, filter: 'brightness(0.55)' }}
+          animate={{ opacity: 1, scale: 1, filter: 'brightness(1)' }}
           transition={{ duration: 1.2, ease: [0.22, 0.61, 0.36, 1], delay: 0.35 }}
           className="ed-hero-lamp-wrap lg:hidden absolute top-0 left-1/2 -translate-x-1/2 w-[440px] sm:w-[500px] pointer-events-none z-0 flex flex-col items-center"
         >
-          {/* Warm ambient downward light pool */}
-          <div className="absolute top-[48%] left-1/2 -translate-x-1/2 w-[130%] h-[85%] bg-[radial-gradient(ellipse_at_50%_15%,_rgba(245,185,55,0.24)_0%,_rgba(245,180,50,0.08)_42%,_rgba(245,180,50,0.02)_65%,_transparent_80%)] blur-3xl pointer-events-none" />
+          <HeroGlow progress={scrollYProgress} />
 
           <img
-            src="/hero-pendant-light-mobile.png"
+            src="/hero-pendant-light-mobile.webp"
             alt="Ecolife Architectural Lighting - Mobile"
+            width={824}
+            height={827}
             className="w-full h-auto object-contain select-none ed-hero-lamp-shadow"
             loading="eager"
+            fetchPriority="high"
+            decoding="async"
           />
         </motion.div>
 
         {/* DESKTOP Pendant Lamp (hanging from top right) */}
         <motion.div
           style={{ y: productY }}
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0, scale: 0.96, filter: 'brightness(0.55)' }}
+          animate={{ opacity: 1, scale: 1, filter: 'brightness(1)' }}
           transition={{ duration: 1.2, ease: [0.22, 0.61, 0.36, 1], delay: 0.35 }}
-          className="ed-hero-lamp-wrap hidden lg:flex absolute top-0 right-[-6%] xl:right-[-2%] translate-x-[60px] w-[1230px] xl:w-[1440px] pointer-events-none z-0 flex-col items-center"
+          className="ed-hero-lamp-wrap hidden lg:flex absolute top-0 right-[-6%] xl:right-[-2%] translate-x-[60px] w-[940px] xl:w-[1230px] 2xl:w-[1440px] pointer-events-none z-0 flex-col items-center"
         >
-          {/* Warm ambient downward light pool */}
-          <div className="absolute top-[48%] left-1/2 -translate-x-1/2 w-[130%] h-[85%] bg-[radial-gradient(ellipse_at_50%_15%,_rgba(245,185,55,0.24)_0%,_rgba(245,180,50,0.08)_42%,_rgba(245,180,50,0.02)_65%,_transparent_80%)] blur-3xl pointer-events-none" />
+          <HeroGlow progress={scrollYProgress} />
 
           <img
-            src="/hero-pendant-light-desktop.png"
+            src="/hero-pendant-light-desktop.webp"
             alt="Ecolife Architectural Lighting - Desktop"
+            width={1024}
+            height={880}
             className="w-full h-auto object-contain select-none ed-hero-lamp-shadow"
             loading="eager"
+            fetchPriority="high"
+            decoding="async"
           />
         </motion.div>
 
@@ -345,69 +459,12 @@ export const HomePage: React.FC<HomePageProps> = ({
               </FadeIn>
             </div>
 
-            {/* Lead project — full-width cinematic */}
-            {featuredProjects[0] && (
-              <FadeIn>
-                <button
-                  onClick={() => onNavigate('projects', featuredProjects[0].slug || featuredProjects[0].id)}
-                  className="group relative w-full aspect-[16/10] lg:aspect-[21/9] overflow-hidden text-left"
-                >
-                  <img
-                    src={featuredProjects[0].coverImage}
-                    alt={featuredProjects[0].title}
-                    loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.03]"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#1d1d1b]/90 via-[#1d1d1b]/20 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-7 lg:p-12 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-                    <div>
-                      <h3 className="ed-display-md font-display text-ivory max-w-3xl">
-                        {featuredProjects[0].title}
-                      </h3>
-                      <div className="font-micro text-[9px] text-soft mt-4 flex flex-wrap gap-x-6 gap-y-1">
-                        <span>{featuredProjects[0].location}</span>
-                        <span>{featuredProjects[0].categoryName?.[currentLang] || featuredProjects[0].category}</span>
-                        <span>{featuredProjects[0].year}</span>
-                      </div>
-                    </div>
-                    <span className="font-micro text-[10px] text-ivory flex items-center gap-2 shrink-0">
-                      {t.projects.viewProject}
-                      <ArrowRight className="w-4 h-4 text-amber-warm transition-transform duration-300 group-hover:translate-x-1.5" />
-                    </span>
-                  </div>
-                </button>
-              </FadeIn>
-            )}
-
-            {/* Two-column composition */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mt-4 sm:mt-6">
-              {featuredProjects.slice(1).map((project, i) => (
-                <FadeIn key={project.id} delay={0.1 * i}>
-                  <button
-                    onClick={() => onNavigate('projects', project.slug || project.id)}
-                    className="group relative w-full aspect-[4/3] overflow-hidden text-left"
-                  >
-                    <img
-                      src={project.coverImage}
-                      alt={project.title}
-                      loading="lazy"
-                      className="w-full h-full object-cover transition-transform duration-[1100ms] ease-out group-hover:scale-[1.05]"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#1d1d1b]/85 via-transparent to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-7 lg:p-9">
-                      <h3 className="ed-display-sm font-display text-ivory">
-                        {project.title}
-                      </h3>
-                      <div className="font-micro text-[9px] text-soft mt-3 flex flex-wrap gap-x-5 gap-y-1">
-                        <span>{project.location}</span>
-                        <span>{project.categoryName?.[currentLang] || project.category}</span>
-                        <span>{project.year}</span>
-                      </div>
-                    </div>
-                  </button>
-                </FadeIn>
-              ))}
-            </div>
+            <ProjectStack
+              projects={featuredProjects}
+              lang={currentLang}
+              viewLabel={t.projects.viewProject}
+              onOpen={(p) => onNavigate('projects', p.slug || p.id)}
+            />
           </div>
         </section>
       )}

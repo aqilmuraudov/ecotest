@@ -18,7 +18,7 @@ export const EdCategoryPills: React.FC<EdCategoryPillsProps> = ({
   scrollOnMobile = true
 }) => (
   <div
-    className={`${scrollOnMobile ? 'flex overflow-x-auto md:overflow-visible -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap' : 'flex flex-wrap'} gap-2.5 justify-start md:justify-center items-center ${className}`}
+    className={`${scrollOnMobile ? 'ed-pill-row flex overflow-x-auto md:overflow-visible -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap' : 'flex flex-wrap'} gap-2.5 justify-start md:justify-center items-center ${className}`}
     style={{ scrollbarWidth: 'none' }}
   >
     {items.map((item) => {

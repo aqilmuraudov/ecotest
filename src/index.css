@@ -56,7 +56,7 @@ html.light {
   body {
     background-color: var(--ed-bg);
     color: var(--ed-ivory);
-    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Montserrat Variable', 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
   html.light body {
@@ -97,14 +97,14 @@ html.light {
 
 /* Oversized display type — light weights, tight tracking */
 .font-display {
-  font-family: 'Montserrat', -apple-system, sans-serif;
+  font-family: 'Montserrat Variable', 'Montserrat', -apple-system, sans-serif;
   letter-spacing: -0.035em;
   font-weight: 200;
 }
 
 /* Micro typography — tiny uppercase supporting copy */
 .font-micro {
-  font-family: 'Montserrat', -apple-system, sans-serif;
+  font-family: 'Montserrat Variable', 'Montserrat', -apple-system, sans-serif;
   font-size: 0.6875rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -112,7 +112,7 @@ html.light {
 }
 
 .font-mono-tech {
-  font-family: 'Space Grotesk', ui-monospace, monospace;
+  font-family: 'Space Grotesk Variable', 'Space Grotesk', ui-monospace, monospace;
   letter-spacing: 0.08em;
 }
 
@@ -154,9 +154,14 @@ html.light {
   background: linear-gradient(90deg, transparent, var(--ed-line-amber), transparent);
 }
 
-/* White product plate — clean studio frame for isolated product cutouts */
+/* Studio product plate. Supplier shots have white backgrounds, so the image is
+   multiplied into a soft grey plate: the white disappears and the product sits
+   on one continuous surface instead of a hard white rectangle on the dark page. */
 .ed-plate {
-  background: #ffffff;
+  background: radial-gradient(ellipse 80% 70% at 50% 42%, #eeeeea 0%, #e2e2dd 62%, #d6d6d0 100%);
+}
+.ed-plate img {
+  mix-blend-mode: multiply;
 }
 
 /* ============================================================
@@ -164,6 +169,7 @@ html.light {
    ============================================================ */
 
 .ed-pill {
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -432,3 +438,21 @@ html.light .ed-hero-bottom-fade {
   );
 }
 
+
+/* Category pill rows scroll sideways on phones: fade the right edge as a scroll cue */
+@media (max-width: 767px) {
+  .ed-pill-row {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent 100%);
+    mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent 100%);
+  }
+}
+
+/* Reduced motion: no ambient or scroll-driven movement, instant state changes */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+  .group:hover img { transform: none !important; }
+}

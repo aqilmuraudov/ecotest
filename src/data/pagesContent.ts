@@ -156,8 +156,8 @@ export const initialPagesContent: SitePagesData = {
       en: 'Explore Collection',
       ru: 'Исследовать коллекцию'
     },
-    desktopLampImage: '/hero-pendant-light-desktop.png',
-    mobileLampImage: '/hero-pendant-light-mobile.png',
+    desktopLampImage: '/hero-pendant-light-desktop.webp',
+    mobileLampImage: '/hero-pendant-light-mobile.webp',
     discoveryTitleA: {
       az: 'arxitektur',
       en: 'architectural',

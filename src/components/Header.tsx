@@ -35,7 +35,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -93,7 +93,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           {/* Center Navigation — small, generous spacing, underline animation */}
-          <nav className="hidden lg:flex items-center gap-10 xl:gap-12" aria-label="Main Navigation">
+          <nav className="hidden xl:flex items-center gap-10 2xl:gap-12" aria-label="Main Navigation">
             {navItems.map((item) => {
               const isActive = activePage === item.id || (item.id === 'catalog' && activePage.startsWith('catalog-'));
 
@@ -162,7 +162,7 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
 
           {/* Right controls: search · language · contact */}
-          <div className="hidden lg:flex items-center gap-2">
+          <div className="hidden xl:flex items-center gap-2">
             {/* Search */}
             <button
               onClick={() => onOpenSearch ? onOpenSearch() : onNavigate('catalog')}
@@ -218,17 +218,17 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Mobile icons */}
-          <div className="flex items-center gap-1 lg:hidden">
+          <div className="flex items-center gap-0.5 xl:hidden">
             <button
               onClick={() => onOpenSearch ? onOpenSearch() : onNavigate('catalog')}
-              className="p-2.5 text-[var(--ed-soft)] hover:text-amber-warm transition-colors"
+              className="p-3 text-[var(--ed-soft)] hover:text-amber-warm transition-colors"
               aria-label="Search"
             >
               <Search className="w-5 h-5" />
             </button>
             <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="p-2.5 text-ivory hover:text-amber-warm transition-colors"
+              className="p-3 text-ivory hover:text-amber-warm transition-colors"
               aria-label="Open menu"
             >
               <Menu className="w-6 h-6" />
@@ -251,14 +251,14 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-1">
               <button
                 onClick={onToggleTheme}
-                className="p-2.5 text-[var(--ed-soft)] hover:text-amber-warm"
+                className="p-3 text-[var(--ed-soft)] hover:text-amber-warm"
                 aria-label="Toggle theme"
               >
                 {currentTheme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="p-2.5 text-ivory hover:text-amber-warm"
+                className="p-3 text-ivory hover:text-amber-warm"
                 aria-label="Close menu"
               >
                 <X className="w-6 h-6" />
