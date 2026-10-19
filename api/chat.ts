@@ -22,11 +22,10 @@ export default async function handler(req: any, res: any) {
 
   // lean context: the model gets the last 10 messages; older customer messages shrink to a short memory so nothing is forgotten
   const recent = history.slice(-10);
-  const memory = history
-    .slice(0, -10)
-    .filter(m => m.role === 'user')
-    .slice(-6)
-    .map(m => `- ${m.content.replace(/\s+/g, ' ').slice(0, 160)}`)
+  // the opening messages usually hold the key facts (space, size), so they are kept first, then the most recent older ones
+  const older = history.slice(0, -10).filter(m => m.role === 'user');
+  const memory = [...older.slice(0, 2), ...older.slice(2).slice(-4)]
+    .map(m => `- ${m.content.replace(/\s+/g, ' ').slice(0, 200)}`)
     .join('\n');
 
   const ip = clientIp(req);

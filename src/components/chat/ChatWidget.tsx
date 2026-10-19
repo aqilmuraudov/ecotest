@@ -232,7 +232,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate 
         body: JSON.stringify({
           lang: apiLang,
           // greeting and error notices are UI-only; the server keeps only the recent turns anyway
-          messages: history.filter(m => !m.error && !m.local && m.content).slice(-14).map(m => ({ role: m.role, content: m.content })),
+          messages: history.filter(m => !m.error && !m.local && m.content).slice(-30).map(m => ({ role: m.role, content: m.content })),
         }),
       });
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
