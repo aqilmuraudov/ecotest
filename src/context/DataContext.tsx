@@ -916,12 +916,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       const { error } = await supabase.from('inquiries').insert([dbRow]);
       if (error) {
-        console.warn('Inquiry insert warning:', error.message);
+        console.error('Inquiry insert error:', error.message);
+        return { success: false, error: error.message };
       }
       return { success: true };
     } catch (e: any) {
       console.error('Inquiry insert error:', e);
-      return { success: true };
+      return { success: false, error: e?.message || 'Network error' };
     }
   };
 

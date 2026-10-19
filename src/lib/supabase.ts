@@ -226,6 +226,12 @@ CREATE TABLE IF NOT EXISTS public.inquiries (
   product_name TEXT,
   room_preset TEXT,
   config_summary TEXT,
+  product_image TEXT,
+  product_category TEXT,
+  product_specs TEXT,
+  project_type TEXT,
+  config_pdf_url TEXT,
+  config_pdf_name TEXT,
   status TEXT DEFAULT 'new',
   ip_hash TEXT,
   user_agent TEXT,
@@ -370,8 +376,8 @@ CREATE POLICY "Secure Modify Projects" ON public.projects
 
 -- 4. INQUIRIES (Müştəri Sorğuları): Müştəri yalnız forma göndərə bilər (INSERT).
 -- Digər müştərilərin məlumatlarını görmək və ya silmək YALNIZ adminlər üçündür.
-CREATE POLICY "Secure Insert Inquiries" ON public.inquiries 
-  FOR INSERT WITH CHECK (true);
+CREATE POLICY "Secure Insert Inquiries" ON public.inquiries
+  FOR INSERT TO anon, authenticated WITH CHECK (status = 'new');
 CREATE POLICY "Secure Manage Inquiries" ON public.inquiries 
   FOR ALL TO authenticated 
   USING (public.is_admin()) 

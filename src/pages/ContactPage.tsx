@@ -92,7 +92,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ currentLang }) => {
     setIsSubmitting(true);
     try {
       const fingerprint = getClientFingerprint();
-      await addInquiry({
+      const result = await addInquiry({
         name: `${cleanFirstName} ${cleanLastName}`.trim() || 'Adsız Müştəri',
         email: cleanEmail,
         phone: cleanPhone,
@@ -101,9 +101,14 @@ export const ContactPage: React.FC<ContactPageProps> = ({ currentLang }) => {
         message: cleanMessage,
         ipHash: fingerprint,
       } as any);
-      setIsSubmitted(true);
+      if (result.success) {
+        setIsSubmitted(true);
+      } else {
+        setValidationError(currentLang === 'az' ? 'Mesaj göndərilmədi. Zəhmət olmasa bir az sonra yenidən cəhd edin.' : currentLang === 'ru' ? 'Не удалось отправить сообщение. Попробуйте позже.' : 'Your message could not be sent. Please try again shortly.');
+      }
     } catch (err) {
       console.error('Failed to submit contact form:', err);
+      setValidationError(currentLang === 'az' ? 'Mesaj göndərilmədi. Zəhmət olmasa bir az sonra yenidən cəhd edin.' : currentLang === 'ru' ? 'Не удалось отправить сообщение. Попробуйте позже.' : 'Your message could not be sent. Please try again shortly.');
     } finally {
       setIsSubmitting(false);
     }
