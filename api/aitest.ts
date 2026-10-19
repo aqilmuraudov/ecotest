@@ -48,6 +48,19 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json(out);
   }
 
+  if (q.diag) {
+    const dp = PROVIDERS[String(q.diag)];
+    const key = dp?.key();
+    if (!dp || !key) return res.status(400).json({ error: 'no key' });
+    const out: any[] = [];
+    for (const ua of ['', 'Mozilla/5.0 (compatible; EcolifeBot/1.0)', 'OpenAI/JS 4.0.0']) {
+      const r = await fetch(`${dp.base.replace(/\/+$/, '')}/models`, { headers: { Authorization: `Bearer ${key}`, ...(ua ? { 'User-Agent': ua } : {}) } });
+      const body = (await r.text()).slice(0, 300);
+      out.push({ ua: ua || 'default(node)', status: r.status, server: r.headers.get('server'), cf: r.headers.get('cf-ray') ? 'cloudflare' : null, body });
+    }
+    return res.status(200).json(out);
+  }
+
   const p = PROVIDERS[String(q.p || '')];
   const sc = SCEN[String(q.s || '')];
   const model = String(q.m || '');
