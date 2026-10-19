@@ -188,21 +188,56 @@ function makeTextSink(lang: 'az' | 'ru', emit: Emit) {
 // ---------------------------------------------------------------- model transport
 interface StreamResult { text: string; toolCalls: { id: string; name: string; args: string }[] }
 
-const effortFor = (model: string) =>
-  model === env('AI_MODEL_THINK', 'MiniMaxAI/MiniMax-M2.7') ? env('AI_EFFORT_THINK', 'medium') : env('AI_EFFORT_LIGHT', 'low');
+/** One concrete place to send a request to: provider endpoint + key + model + reasoning effort. */
+interface Target { label: string; base: string; key: string; model: string; effort?: string; firstByteMs: number }
 
-async function streamOnce(model: string, messages: any[], useTools: boolean, sink: ReturnType<typeof makeTextSink>): Promise<StreamResult> {
-  const base = env('AI_BASE_URL', 'https://api.gonkarouter.io/v1').replace(/\/+$/, '');
+const trimSlash = (s: string) => s.replace(/\/+$/, '');
+
+function isComplex(history: ChatMsg[]): boolean {
+  const users = history.filter(m => m.role === 'user');
+  const last = users[users.length - 1]?.content || '';
+  return users.length >= 4 || last.length > 280 || (/\d+\s?(m2|m²|kv|кв|w|вт)\b/i.test(last) && users.length >= 2);
+}
+
+/** Ordered fallback chain. Groq (very fast) goes first when GROQ_API_KEY is set; Gonka models are the safety net. */
+function targets(history: ChatMsg[]): Target[] {
+  const complex = isComplex(history);
+  const gBase = trimSlash(env('AI_BASE_URL', 'https://api.gonkarouter.io/v1'));
+  const gKey = env('AI_API_KEY');
+  const gonka = (model: string, effort: string): Target => ({ label: 'gonka', base: gBase, key: gKey, model, effort, firstByteMs: 22000 });
+  const light = gonka(env('AI_MODEL_LIGHT', 'zai-org/GLM-5.3-Flash'), env('AI_EFFORT_LIGHT', 'low'));
+  const think = gonka(env('AI_MODEL_THINK', 'MiniMaxAI/MiniMax-M2.7'), env('AI_EFFORT_THINK', 'medium'));
+  const backup = gonka(env('AI_MODEL_FALLBACK', 'deepseek-ai/DeepSeek-V4-Flash-0731'), env('AI_EFFORT_LIGHT', 'low'));
+
+  const chain: Target[] = [];
+  const groqKey = env('GROQ_API_KEY');
+  if (groqKey) {
+    const model = env('GROQ_MODEL', 'openai/gpt-oss-120b');
+    chain.push({
+      label: 'groq',
+      base: trimSlash(env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1')),
+      key: groqKey,
+      model,
+      // gpt-oss: low/medium/high; Qwen3 on Groq: none/default
+      effort: /qwen/i.test(model) ? 'none' : complex ? 'medium' : 'low',
+      firstByteMs: 10000,
+    });
+  }
+  if (gKey) chain.push(...(complex ? [think, light, backup] : [light, backup, think]));
+  return chain;
+}
+
+async function streamOnce(target: Target, messages: any[], useTools: boolean, sink: ReturnType<typeof makeTextSink>): Promise<StreamResult> {
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 22000);
-  const res = await fetch(`${base}/chat/completions`, {
+  const timer = setTimeout(() => ctl.abort(), target.firstByteMs);
+  const res = await fetch(`${target.base}/chat/completions`, {
     method: 'POST',
     signal: ctl.signal,
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env('AI_API_KEY')}` },
-    body: JSON.stringify({ model, messages, stream: true, temperature: 0.5, max_tokens: 900, reasoning_effort: effortFor(model), ...(useTools ? { tools: TOOLS, tool_choice: 'auto' } : {}) }),
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${target.key}` },
+    body: JSON.stringify({ model: target.model, messages, stream: true, temperature: 0.5, max_tokens: 900, ...(target.effort ? { reasoning_effort: target.effort } : {}), ...(useTools ? { tools: TOOLS, tool_choice: 'auto' } : {}) }),
   });
   clearTimeout(timer);
-  if (!res.ok || !res.body) throw new Error(`model ${model} HTTP ${res.status}`);
+  if (!res.ok || !res.body) throw new Error(`${target.label}:${target.model} HTTP ${res.status}`);
 
   const reader = res.body.getReader();
   const dec = new TextDecoder();
@@ -237,29 +272,21 @@ async function streamOnce(model: string, messages: any[], useTools: boolean, sin
   return { text, toolCalls: Object.values(calls).filter(c => c.name) };
 }
 
-function pickModels(history: ChatMsg[]): string[] {
-  const light = env('AI_MODEL_LIGHT', 'zai-org/GLM-5.3-Flash');
-  const think = env('AI_MODEL_THINK', 'MiniMaxAI/MiniMax-M2.7');
-  const backup = env('AI_MODEL_FALLBACK', 'deepseek-ai/DeepSeek-V4-Flash-0731');
-  const users = history.filter(m => m.role === 'user');
-  const last = users[users.length - 1]?.content || '';
-  const complex = users.length >= 4 || last.length > 280 || /\d+\s?(m2|m²|kv|кв|w|вт)\b/i.test(last) && users.length >= 2;
-  const order = complex ? [think, light, backup] : [light, backup, think];
-  return [...new Set(order)];
-}
-
 // ---------------------------------------------------------------- public API
 export async function runChat(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit): Promise<{ model: string; text: string }> {
   const system = await buildSystemPrompt(history);
   const convo: any[] = [{ role: 'system', content: system }, ...history];
   let lastError = '';
 
-  for (const model of pickModels(history)) {
+  const chain = targets(history);
+  if (chain.length === 0) throw new Error('no AI provider configured');
+  for (const target of chain) {
+    const model = `${target.label}:${target.model}`;
     const sink = makeTextSink(lang, emit);
     try {
       const messages = [...convo];
       for (let step = 0; step < 4; step++) {
-        const r = await streamOnce(model, messages, true, sink);
+        const r = await streamOnce(target, messages, true, sink);
         if (!r.toolCalls.length) { return { model, text: sink.finish() }; }
         const terminal = r.toolCalls.every(c => c.name === 'recommend_products' || c.name === 'request_consultation');
         messages.push({
@@ -295,23 +322,25 @@ export async function summarize(history: ChatMsg[]): Promise<string> {
     .map(m => m.content.replace(/\s+/g, ' ').slice(0, 220))
     .join(' | ');
   const transcript = history.map(m => `${m.role === 'user' ? 'Müştəri' : 'AISeller'}: ${m.content}`).join('\n').slice(0, 5000);
-  const base = env('AI_BASE_URL', 'https://api.gonkarouter.io/v1').replace(/\/+$/, '');
   const prompt = `Aşağıdakı söhbətdən satış məsləhətçisi üçün 3-4 sətirlik qısa xülasə yaz (Azərbaycan dilində): müştərinin ehtiyacı, məkan/sahə, seçilmiş və ya maraqlandığı məhsullar, vaxt. Qiymət uydurma. Yalnız xülasəni yaz.\n\n${transcript}`;
-  try {
-    const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 9000);
-    const res = await fetch(`${base}/chat/completions`, {
-      method: 'POST',
-      signal: ctl.signal,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env('AI_API_KEY')}` },
-      body: JSON.stringify({ model: env('AI_MODEL_LIGHT', 'zai-org/GLM-5.3-Flash'), messages: [{ role: 'user', content: prompt }], max_tokens: 350, temperature: 0.2, reasoning_effort: 'low' }),
-    });
-    clearTimeout(timer);
-    if (res.ok) {
-      const j: any = await res.json();
-      const out = String(j.choices?.[0]?.message?.content || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-      if (out) return out.slice(0, 900);
-    }
-  } catch { /* fall through to the plain summary */ }
+  const target = targets([])[0];
+  if (target) {
+    try {
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), 9000);
+      const res = await fetch(`${target.base}/chat/completions`, {
+        method: 'POST',
+        signal: ctl.signal,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${target.key}` },
+        body: JSON.stringify({ model: target.model, messages: [{ role: 'user', content: prompt }], max_tokens: 350, temperature: 0.2, ...(target.effort ? { reasoning_effort: target.effort } : {}) }),
+      });
+      clearTimeout(timer);
+      if (res.ok) {
+        const j: any = await res.json();
+        const out = String(j.choices?.[0]?.message?.content || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+        if (out) return out.slice(0, 900);
+      }
+    } catch { /* fall through to the plain summary */ }
+  }
   return fallback ? `Müştərinin yazdıqları: ${fallback}` : '';
 }
