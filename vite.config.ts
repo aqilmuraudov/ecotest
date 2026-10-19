@@ -1,9 +1,10 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
+import {defineConfig, loadEnv} from 'vite';
 
-export default defineConfig(() => {
+export default defineConfig(({mode}) => {
+  const env = loadEnv(mode, process.cwd(), '');
   return {
     base: '/',
     plugins: [react(), tailwindcss()],
@@ -28,7 +29,7 @@ export default defineConfig(() => {
       // Proxy /storage to Supabase public bucket for local development
       proxy: {
         '/storage': {
-          target: 'https://ijorncdyzoxkiyxslxkf.supabase.co/storage/v1/object/public/ecolife',
+          target: `${env.VITE_SUPABASE_URL}/storage/v1/object/public/ecolife`,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/storage/, ''),
         },

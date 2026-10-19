@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-const DEFAULT_SUPABASE_URL = 'https://ijorncdyzoxkiyxslxkf.supabase.co';
-const DEFAULT_SUPABASE_KEY = 'sb_publishable_5pho3SEQtACiXeiAkAzbPg_FqnMaTv_';
+const ENV_URL = import.meta.env?.VITE_SUPABASE_URL as string | undefined;
+const ENV_KEY = import.meta.env?.VITE_SUPABASE_ANON_KEY as string | undefined;
 
-const ENV_URL = (import.meta.env?.VITE_SUPABASE_URL as string | undefined) || DEFAULT_SUPABASE_URL;
-const ENV_KEY = (import.meta.env?.VITE_SUPABASE_ANON_KEY as string | undefined) || DEFAULT_SUPABASE_KEY;
+if (!ENV_URL || !ENV_KEY) {
+  throw new Error('VITE_SUPABASE_URL və VITE_SUPABASE_ANON_KEY təyin olunmayıb (.env faylı və ya Vercel Environment Variables).');
+}
 
 export const SUPABASE_URL = ENV_URL;
 export const SUPABASE_ANON_KEY = ENV_KEY;
