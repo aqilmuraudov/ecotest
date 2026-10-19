@@ -161,8 +161,10 @@ function makeTextSink(lang: 'az' | 'ru', emit: Emit) {
       p = p.replace(TOOL_NAME_RE, '');
       if (!p.trim()) continue;
       const safe = PRICE_RE.test(p) ? PRICE_REPLY[lang] + (/\s$/.test(p) ? ' ' : '') : p;
-      total += safe;
-      emit({ type: 'text', delta: safe });
+      // some models glue sentences together ("...клиентов.Подскажите"); restore the space, never inside numbers like 1.5
+      const out = /[a-zа-яəıöüçşğ][.!?]$/i.test(total) && /^[A-ZА-ЯƏİÖÜÇŞĞ]/.test(safe) ? ' ' + safe : safe;
+      total += out;
+      emit({ type: 'text', delta: out });
     }
     buf = keep;
   };
