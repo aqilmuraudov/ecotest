@@ -1,4 +1,4 @@
-﻿import { env, rateLimit, clientIp } from './_lib/core.js';
+import { env, rateLimit, clientIp } from './_lib/core.js';
 import { runChat, type ChatMsg, type Target } from './_lib/ai.js';
 
 // TEMPORARY latency lab for provider selection. Remove after the benchmark.
@@ -36,7 +36,7 @@ export default async function handler(req: any, res: any) {
   const q: Record<string, any> = req.query && Object.keys(req.query).length ? req.query : Object.fromEntries(new URL(req.url || '', 'http://x').searchParams);
 
   if (q.list) {
-    const out: Record<string, unknown> = {};
+    const out: Record<string, unknown> = { flags: { service_role: !!env('SUPABASE_SERVICE_ROLE_KEY'), turnstile_secret: !!env('TURNSTILE_SECRET_KEY'), turnstile_site: !!env('VITE_TURNSTILE_SITE_KEY') } };
     for (const [name, p] of Object.entries(PROVIDERS)) {
       const key = p.key();
       if (!key) { out[name] = 'no key'; continue; }

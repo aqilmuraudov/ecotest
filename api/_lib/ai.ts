@@ -259,7 +259,7 @@ function targets(history: ChatMsg[]): Target[] {
   const gonkaChain: Target[] = gKey ? (complex ? [think, light, backup] : [light, backup, think]) : [];
   const all: Record<string, Target[]> = { groq, itera, gonka: gonkaChain };
   // AI_ORDER decides who is asked first, e.g. "itera,groq,gonka"; unlisted providers are simply not used
-  const order = env('AI_ORDER', 'groq,itera,gonka').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  const order = env('AI_ORDER', 'groq,gonka').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
   return order.flatMap(k => all[k] || []);
 }
 
