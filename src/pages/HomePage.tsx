@@ -16,17 +16,6 @@ interface HomePageProps {
   onNavigate: (page: string, param?: string) => void;
   onOpenContact: () => void;
 }
-
-/** Editorial pill → real product category ids */
-const PILL_DEFS: { id: string; match: string[] }[] = [
-  { id: 'linear-profiles', match: ['linear-profiles', 'led-profiles'] },
-  { id: 'magnetic-systems', match: ['magnetic-systems', 'track-systems'] },
-  { id: 'spot-downlight', match: ['spot-downlight', 'recessed', 'downlights'] },
-  { id: 'pendants', match: ['pendants'] },
-  { id: 'outdoor', match: ['outdoor', 'wall-washers', 'floodlight'] },
-  { id: 'strip-lights', match: ['strip-lights'] },
-];
-
 /**
  * Featured projects as a sticky stack: each project pins under the header and the
  * next one slides over it, the earlier card recedes (scale + dim). Pure CSS sticky
@@ -207,6 +196,7 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
   const [body, setBody] = useState(44); // body height/depth in design units (thicker on phones)
   const [mode, setMode] = useState<'phone' | 'tablet' | 'desktop'>('desktop');
   const [pitch, setPitch] = useState(FX_PITCH);
+  const amp = useRef(1); // swing amplitude factor (small screens need a bigger swing to read)
   useEffect(() => {
     const el = boxRef.current;
     if (!el) return;
@@ -220,6 +210,7 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
       setBody(desktop ? 44 : tablet ? 64 : 88);
       setYaw(desktop ? FX_YAW : tablet ? -20 : -15);
       setPitch(desktop ? FX_PITCH : 8);
+      amp.current = desktop ? 1 : tablet ? 1.6 : 2.2;
       // desktop: fixed wire; phones/tablets: hang the bar ~200 / ~230px below the top whatever the width
       setWire(desktop ? 120 : Math.round((tablet ? 230 : 200) / s));
     };
@@ -245,13 +236,13 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
         await go(drop, 1, 2.8, [0.33, 0.9, 0.4, 1]);
         if (cancelled) return;
         for (const a of [3.4, -2.9, 2.3, -1.8, 1.4, -1.1]) {
-          await go(theta, a, 1.7, 'easeInOut');
+          await go(theta, a * amp.current, 1.7, 'easeInOut');
           if (cancelled) return;
         }
         let dir = 1;
         while (!cancelled) {
           const t0 = performance.now();
-          await go(theta, 2.5 * dir, 4.6, 'easeInOut');
+          await go(theta, 2.5 * amp.current * dir, 4.6, 'easeInOut');
           if (performance.now() - t0 < 500) break; // animations disabled: never spin
           dir = -dir;
         }
@@ -466,7 +457,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 }) => {
   const t = translations[currentLang];
   const ed = t.ed;
-  const { products, projects } = useData();
+  const { products, projects, categories } = useData();
 
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const heroRef = useRef<HTMLElement>(null);
@@ -532,35 +523,23 @@ export const HomePage: React.FC<HomePageProps> = ({
     return picked;
   }, [products, randomSeed]);
 
+  // Home pills follow the real catalogue categories (first six that actually have products)
+  const productCats = (p: Product): string[] =>
+    Array.isArray(p.categories) && p.categories.length > 0 ? p.categories : [p.category];
+  const catLabel = (cat: { nameAz: string; nameEn: string; nameRu: string }) =>
+    currentLang === 'az' ? cat.nameAz : currentLang === 'ru' ? cat.nameRu : cat.nameEn;
+
   const pills = useMemo(() => {
-    const base = [
-      { id: 'all', label: ed.catAll, match: [] as string[] },
-      ...PILL_DEFS.map((d, i) => ({
-        id: d.id,
-        match: d.match,
-        label: [ed.catLinear, ed.catMagnetic, ed.catSpot, ed.catPendant, ed.catOutdoor, ed.catDecorative][i] || d.id
-      }))
+    const withProducts = categories.filter(cat => cat.id !== 'all' && products.some(p => productCats(p).includes(cat.id)));
+    return [
+      { id: 'all', label: ed.catAll },
+      ...withProducts.slice(0, 6).map(cat => ({ id: cat.id, label: catLabel(cat) })),
     ];
-    // Only keep pills that have at least one real product (plus "all")
-    const hasProducts = (match: string[]) =>
-      products.some(p => {
-        const cats = Array.isArray(p.categories) && p.categories.length > 0 ? p.categories : [p.category];
-        return cats.some(c => match.includes(c));
-      });
-    return base.filter(b => b.id === 'all' || hasProducts(b.match));
-  }, [products, ed]);
+  }, [categories, products, ed, currentLang]);
 
   const gridProducts = useMemo(() => {
-    const def = PILL_DEFS.find(d => d.id === activeCategory);
-    if (!def) {
-      return products.slice(0, 6);
-    }
-    const matched = products.filter(p => {
-      const cats = Array.isArray(p.categories) && p.categories.length > 0 ? p.categories : [p.category];
-      return cats.some(c => def.match.includes(c));
-    });
-    // If a curated pill has no real inventory, fall back to featured items
-    return (matched.length > 0 ? matched : products.filter(p => p.featured).length > 0 ? products.filter(p => p.featured) : products).slice(0, 6);
+    if (activeCategory === 'all') return products.slice(0, 6);
+    return products.filter(p => productCats(p).includes(activeCategory)).slice(0, 6);
   }, [products, activeCategory]);
 
   const featuredProjects = useMemo(() => {

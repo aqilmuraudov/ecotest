@@ -16,18 +16,25 @@ export interface ResolvedCategory {
  * saytın daxili kateqoriya id-lərinə + lokalizə olunmuş adlarına map olunur.
  */
 export const IMPORT_CATEGORY_MAP: Record<string, ResolvedCategory> = {
-  'GÖMÜLMÜŞ': { id: 'recessed', az: 'Gömülmüş', en: 'Recessed', ru: 'Встраиваемые' },
-  'STRIP_LENT': { id: 'strip-lights', az: 'Lent İşıqlar', en: 'LED Strips', ru: 'Светодиодные ленты' },
-  'STRIP LENT': { id: 'strip-lights', az: 'Lent İşıqlar', en: 'LED Strips', ru: 'Светодиодные ленты' },
-  'STRIP': { id: 'strip-lights', az: 'Lent İşıqlar', en: 'LED Strips', ru: 'Светодиодные ленты' },
-  'TREK': { id: 'track-systems', az: 'Trek Sistemləri', en: 'Track Systems', ru: 'Трековые системы' },
-  'ASMA': { id: 'pendants', az: 'Asma İşıqlar', en: 'Pendant Lights', ru: 'Подвесные светильники' },
-  'SƏTHI': { id: 'surface-mounted', az: 'Səthi Quraşdırma', en: 'Surface Mounted', ru: 'Накладные' },
-  'BULB': { id: 'bulbs', az: 'Lampalar', en: 'Bulbs', ru: 'Лампы' },
-  'DRIVER': { id: 'drivers', az: 'Driver', en: 'Drivers', ru: 'Блоки питания' },
-  'PCB': { id: 'pcb-boards', az: 'PCB Platalar', en: 'PCB Boards', ru: 'PCB платы' },
-  'DEKORATIV': { id: 'decorative', az: 'Dekorativ', en: 'Decorative', ru: 'Декоративные' },
-  'SPOT': { id: 'spot-downlight', az: 'Spot & Downlight', en: 'Spot & Downlight', ru: 'Споты и даунлайты' }
+  'XƏTTI': { id: 'linear', az: 'Xətti işıqlandırma', en: 'Linear Lighting', ru: 'Линейное освещение' },
+  'LINEAR': { id: 'linear', az: 'Xətti işıqlandırma', en: 'Linear Lighting', ru: 'Линейное освещение' },
+  'MAQNIT': { id: 'magnetic-systems', az: 'Maqnit sistemlər', en: 'Magnetic Systems', ru: 'Магнитные системы' },
+  'MAGNETIC': { id: 'magnetic-systems', az: 'Maqnit sistemlər', en: 'Magnetic Systems', ru: 'Магнитные системы' },
+  'TREK': { id: 'track-lights', az: 'Trek işıqlandırma', en: 'Track Lights', ru: 'Трековые светильники' },
+  'TRACK': { id: 'track-lights', az: 'Trek işıqlandırma', en: 'Track Lights', ru: 'Трековые светильники' },
+  'GÖMÜLMÜŞ': { id: 'downlights', az: 'Downlight', en: 'Downlights', ru: 'Даунлайты' },
+  'DOWNLIGHT': { id: 'downlights', az: 'Downlight', en: 'Downlights', ru: 'Даунлайты' },
+  'SPOT': { id: 'downlights', az: 'Downlight', en: 'Downlights', ru: 'Даунлайты' },
+  'PANEL': { id: 'panels', az: 'LED panellər', en: 'LED Panels', ru: 'LED панели' },
+  'SƏTHI': { id: 'panels', az: 'LED panellər', en: 'LED Panels', ru: 'LED панели' },
+  'STRIP_LENT': { id: 'led-lent', az: 'LED lentlər', en: 'LED Strips', ru: 'LED ленты' },
+  'STRIP LENT': { id: 'led-lent', az: 'LED lentlər', en: 'LED Strips', ru: 'LED ленты' },
+  'STRIP': { id: 'led-lent', az: 'LED lentlər', en: 'LED Strips', ru: 'LED ленты' },
+  'BULB': { id: 'bulbs', az: 'Lampalar', en: 'LED Bulbs', ru: 'Лампы' },
+  'DEKORATIV': { id: 'outdoor', az: 'Xarici işıqlandırma', en: 'Outdoor & Floodlights', ru: 'Уличное освещение' },
+  'PCB': { id: 'pcb-modules', az: 'PCB modullar', en: 'PCB Modules', ru: 'PCB модули' },
+  'DRIVER': { id: 'drivers', az: 'Drayverlər', en: 'Drivers', ru: 'Драйверы' },
+  'AKSESUAR': { id: 'accessories', az: 'Aksesuarlar', en: 'Accessories', ru: 'Аксессуары' },
 };
 
 /** id/slug generasiyası üçün təhlükəsiz qısa slug */

@@ -34,8 +34,11 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
     if (!categories || categories.length === 0) {
       return productCategoriesList;
     }
-    return [allTab, ...categories];
-  }, [categories]);
+    // Hide categories that have no products yet (they reappear as soon as one is added)
+    const used = new Set<string>();
+    products.forEach(p => (Array.isArray(p.categories) && p.categories.length > 0 ? p.categories : [p.category]).forEach(c => used.add(c)));
+    return [allTab, ...categories.filter(c => used.has(c.id))];
+  }, [categories, products]);
 
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'all');
   const [searchQuery, setSearchQuery] = useState('');

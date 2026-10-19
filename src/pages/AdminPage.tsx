@@ -180,7 +180,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
 
       const code = getCol('code') || `ECL-IMP-${i}`;
       const name = getCol('name') || `Product ${i}`;
-      const category = getCol('category') || 'linear-profiles';
+      const category = getCol('category') || 'linear';
       const subtitle = getCol('subtitle') || 'Peşəkar İşıqlandırma';
       const description = getCol('description') || 'Yüksək keyfiyyətli memarlıq işıqlandırma məhsulu.';
       const image = getCol('image') || 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1000&q=80';
@@ -218,7 +218,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   };
 
   const handleDownloadCsvTemplate = () => {
-    const csvContent = "code,name,category,subtitle,description,image\nECL-LIN-001,LINEAR ARCHITECTURAL 50,linear-profiles,Peşəkar xətti profil,Yüksək keyfiyyətli işıqlandırma,https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1000&q=80\n";
+    const csvContent = "code,name,category,subtitle,description,image\nECL-LIN-001,LINEAR ARCHITECTURAL 50,linear,Peşəkar xətti profil,Yüksək keyfiyyətli işıqlandırma,https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1000&q=80\n";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -1566,7 +1566,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                 rows={9}
                 value={importJsonText}
                 onChange={(e) => setImportJsonText(e.target.value)}
-                placeholder='[{"code":"ECL-001","name":"LINEAR 50","category":"linear-profiles","image":"https://..."}]'
+                placeholder='[{"code":"ECL-001","name":"LINEAR 50","category":"linear","image":"https://..."}]'
                 className="w-full bg-[#0E0F14] border border-white/15 rounded-xl p-4 text-xs font-mono text-white focus:border-[#FFD21A] focus:outline-none"
               />
 

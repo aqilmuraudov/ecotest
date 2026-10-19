@@ -1,18 +1,19 @@
 export type Language = 'az' | 'en' | 'ru';
 export type Theme = 'dark' | 'light';
 
-export type ProductCategory = 
+export type ProductCategory =
   | 'all'
-  | 'linear-profiles'
-  | 'led-profiles'
-  | 'strip-lights'
-  | 'recessed'
-  | 'track-systems'
-  | 'spot-downlight'
+  | 'linear'
+  | 'magnetic-systems'
+  | 'track-lights'
+  | 'downlights'
+  | 'panels'
+  | 'led-lent'
+  | 'bulbs'
+  | 'outdoor'
+  | 'pcb-modules'
   | 'drivers'
   | 'accessories'
-  | 'panels'
-  | 'magnetic-systems'
   | string;
 
 export interface CategoryItem {

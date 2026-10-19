@@ -193,7 +193,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: String(dbRow.id),
       slug: String(dbRow.slug || dbRow.id),
       name: dbRow.name || 'Məhsul',
-      category: dbRow.category || 'linear-profiles',
+      category: dbRow.category || 'linear',
       categories: rawCategories,
       categoryName: catNameObj,
       categoryNames: catNamesList,
@@ -212,7 +212,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Convert Product interface to DB product record
   const mapProductToDb = (p: any) => {
-    const safeCategory = p.category || 'linear-profiles';
+    const safeCategory = p.category || 'linear';
     const cats: string[] = Array.isArray(p.categories) && p.categories.length > 0
       ? p.categories
       : [safeCategory];
