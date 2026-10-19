@@ -298,8 +298,8 @@ export default function App() {
         </Suspense>
       </main>
 
-      {/* AI digital seller (not shown inside the admin panel) */}
-      {activePage !== 'admin' && (
+      {/* AI digital seller (not shown in the admin panel; set VITE_AI_CHAT=off in Vercel and redeploy to hide it) */}
+      {activePage !== 'admin' && import.meta.env.VITE_AI_CHAT !== 'off' && (
         <Suspense fallback={null}>
           <ChatWidget currentLang={currentLang} onNavigate={handleNavigate} />
         </Suspense>
