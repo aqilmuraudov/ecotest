@@ -57,7 +57,7 @@ const ProjectStackCard: React.FC<{
         {!isLast && !reduce && (
           <motion.div style={{ opacity: dim }} className="absolute inset-0 bg-[#08090A] pointer-events-none" />
         )}
-        <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 lg:p-12 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
+        <div className="ed-dark-scope absolute bottom-0 left-0 right-0 p-6 sm:p-8 lg:p-12 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
           <div>
             <h3 className="ed-display-md font-display text-ivory max-w-3xl">{project.title}</h3>
             <div className="font-micro text-[9px] text-soft mt-4 flex flex-wrap gap-x-6 gap-y-1">
@@ -907,7 +907,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#1d1d1b]/75 via-transparent to-transparent" />
-                    <span className="absolute bottom-3 left-3 font-micro text-[9px] text-ivory/90">{ed.facilityTag}</span>
+                    <span className="ed-dark-scope absolute bottom-3 left-3 font-micro text-[9px]">{ed.facilityTag}</span>
                   </div>
                   <div className="relative overflow-hidden aspect-[16/11]">
                     <img
@@ -917,7 +917,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#1d1d1b]/75 via-transparent to-transparent" />
-                    <span className="absolute bottom-3 left-3 font-micro text-[9px] text-ivory/90">{ed.assemblyTag}</span>
+                    <span className="ed-dark-scope absolute bottom-3 left-3 font-micro text-[9px]">{ed.assemblyTag}</span>
                   </div>
                 </div>
               </FadeIn>

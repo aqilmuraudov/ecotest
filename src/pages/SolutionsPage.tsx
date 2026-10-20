@@ -277,7 +277,7 @@ export const SolutionsPage: React.FC<SolutionsPageProps> = ({
 
           {/* Right: Animated Visual Stage + Thumbnail Switcher */}
           <div className="lg:col-span-7 flex flex-col justify-between">
-            <div className="relative aspect-[16/10] w-full overflow-hidden border border-[var(--ed-line)] bg-[#141413]">
+            <div className="ed-dark-scope relative aspect-[16/10] w-full overflow-hidden border border-[var(--ed-line)] bg-[#141413]">
               <AnimatePresence mode="wait">
                 <motion.img
                   key={`${currentSolution.id}-${selectedGalleryIndex}`}
@@ -464,7 +464,7 @@ export const SolutionsPage: React.FC<SolutionsPageProps> = ({
                       key={proj.id}
                       type="button"
                       onClick={() => onNavigate('projects', proj.slug || proj.id)}
-                      className="group relative w-full aspect-[4/3] overflow-hidden text-left border border-[var(--ed-line)]"
+                      className="ed-dark-scope group relative w-full aspect-[4/3] overflow-hidden text-left border border-[var(--ed-line)]"
                     >
                       <img
                         src={proj.coverImage}

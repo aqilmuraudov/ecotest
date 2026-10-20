@@ -59,10 +59,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4 bg-[#141412]/90 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4 bg-[var(--ed-scrim)] backdrop-blur-md animate-fadeIn">
       <div
         id="ecolife-global-search-modal"
-        className="relative w-full max-w-2xl bg-[#24231f] border border-[var(--ed-line)] rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.85)] overflow-hidden text-[var(--ed-ivory)]"
+        className="relative w-full max-w-2xl bg-[var(--ed-modal)] border border-[var(--ed-line)] rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.45)] overflow-hidden text-[var(--ed-ivory)]"
       >
         {/* Search input */}
         <div className="relative border-b border-[var(--ed-line)] p-5 flex items-center gap-3">
@@ -77,7 +77,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
           />
           <button
             onClick={onClose}
-            className="text-[var(--ed-mute)] hover:text-amber-warm p-1.5 rounded-full hover:bg-white/5 transition-colors"
+            className="text-[var(--ed-mute)] hover:text-amber-warm p-1.5 rounded-full hover:bg-[var(--ed-line-soft)] transition-colors"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
@@ -120,7 +120,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                       <button
                         key={p.id}
                         onClick={() => handleSelect('catalog', p.slug)}
-                        className="w-full flex items-center justify-between p-3 rounded-xl border border-transparent hover:border-[var(--ed-line)] hover:bg-white/[0.03] transition-all text-left group"
+                        className="w-full flex items-center justify-between p-3 rounded-xl border border-transparent hover:border-[var(--ed-line)] hover:bg-[var(--ed-line-soft)] transition-all text-left group"
                       >
                         <div className="flex items-center gap-3">
                           <img
@@ -154,7 +154,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                       <button
                         key={pr.id}
                         onClick={() => handleSelect('projects', pr.slug)}
-                        className="w-full flex items-center justify-between p-3 rounded-xl border border-transparent hover:border-[var(--ed-line)] hover:bg-white/[0.03] transition-all text-left group"
+                        className="w-full flex items-center justify-between p-3 rounded-xl border border-transparent hover:border-[var(--ed-line)] hover:bg-[var(--ed-line-soft)] transition-all text-left group"
                       >
                         <div>
                           <div className="text-xs font-medium text-[var(--ed-ivory)] group-hover:text-amber-warm transition-colors">

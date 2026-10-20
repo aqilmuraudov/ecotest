@@ -86,7 +86,7 @@ export const AdminTopBar: React.FC<{
       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         <div className="flex items-center rounded-lg bg-white/[0.05] border border-white/10 p-0.5 text-[11px] font-semibold" role="group" aria-label="Language">
           <Globe className="w-3.5 h-3.5 text-[#FFD21A] mx-1.5 hidden sm:block" />
-          {(['az', 'en', 'ru'] as Language[]).map(l => (
+          {(['az', 'ru'] as Language[]).map(l => (
             <button key={l} type="button" onClick={() => onLang(l)} className={`px-2 py-1 rounded-md uppercase transition-colors ${lang === l ? 'bg-[#FFD21A] text-black' : 'text-gray-400 hover:text-white'}`}>{l}</button>
           ))}
         </div>

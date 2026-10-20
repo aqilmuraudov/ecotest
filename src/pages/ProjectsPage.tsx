@@ -84,7 +84,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ currentLang, onNavig
                     className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.03]"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#1d1d1b]/92 via-[#1d1d1b]/25 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-7 lg:p-12 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+                  <div className="ed-dark-scope absolute bottom-0 left-0 right-0 p-7 lg:p-12 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
                     <div>
                       <h2 className="ed-display-md font-display text-ivory max-w-3xl">
                         {lead.title}
@@ -120,7 +120,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ currentLang, onNavig
                       className="w-full h-full object-cover transition-transform duration-[1100ms] ease-out group-hover:scale-[1.05]"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#1d1d1b]/85 via-transparent to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-7 lg:p-9">
+                    <div className="ed-dark-scope absolute bottom-0 left-0 right-0 p-7 lg:p-9">
                       <h3 className="ed-display-sm font-display text-ivory">
                         {project.title}
                       </h3>

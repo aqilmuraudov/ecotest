@@ -1,0 +1,88 @@
+/* Chat widget: light palette (the widget is written with dark hex values; in the light theme they are remapped here).
+   Selectors cover the marked element itself and everything inside it. */
+html.light .ecolife-chat { color-scheme: light; }
+
+
+html.light .ecolife-chat .bg-\[\#15161a\],
+html.light .ecolife-chat.bg-\[\#15161a\] {
+  background-color: #f6f2e8;
+}
+
+html.light .ecolife-chat .bg-\[\#1b1c21\],
+html.light .ecolife-chat.bg-\[\#1b1c21\] {
+  background-color: #fbf9f4;
+}
+
+html.light .ecolife-chat .bg-\[\#111216\],
+html.light .ecolife-chat.bg-\[\#111216\] {
+  background-color: #ffffff;
+}
+
+html.light .ecolife-chat .bg-\[\#202228\],
+html.light .ecolife-chat.bg-\[\#202228\],
+html.light .ecolife-chat .bg-\[\#202228\]\/90,
+html.light .ecolife-chat.bg-\[\#202228\]\/90 {
+  background-color: #ece7dc;
+}
+
+html.light .ecolife-chat .bg-\[\#2c2e35\],
+html.light .ecolife-chat.bg-\[\#2c2e35\] {
+  background-color: #e2dccb;
+}
+
+html.light .ecolife-chat .bg-\[\#9a9a9f\],
+html.light .ecolife-chat.bg-\[\#9a9a9f\] {
+  background-color: #8a8478;
+}
+
+html.light .ecolife-chat .text-\[\#f2ede3\],
+html.light .ecolife-chat.text-\[\#f2ede3\],
+html.light .ecolife-chat .text-\[\#d9d9dc\],
+html.light .ecolife-chat.text-\[\#d9d9dc\],
+html.light .ecolife-chat .text-\[\#c9c9cd\],
+html.light .ecolife-chat.text-\[\#c9c9cd\] {
+  color: #1d1d1b;
+}
+
+html.light .ecolife-chat .text-\[\#b6b6bb\],
+html.light .ecolife-chat.text-\[\#b6b6bb\],
+html.light .ecolife-chat .text-\[\#a8a8ad\],
+html.light .ecolife-chat.text-\[\#a8a8ad\] {
+  color: #4a4638;
+}
+
+html.light .ecolife-chat .text-\[\#9a9a9f\],
+html.light .ecolife-chat.text-\[\#9a9a9f\] {
+  color: #625d50;
+}
+
+html.light .ecolife-chat .text-\[\#8d8d92\],
+html.light .ecolife-chat.text-\[\#8d8d92\] {
+  color: #7d776a;
+}
+
+html.light .ecolife-chat .text-\[\#ff8a80\],
+html.light .ecolife-chat.text-\[\#ff8a80\],
+html.light .ecolife-chat .hover\:text-\[\#ff8a80\]:hover,
+html.light .ecolife-chat.hover\:text-\[\#ff8a80\]:hover {
+  color: #c23a30;
+}
+
+html.light .ecolife-chat .hover\:text-white:hover,
+html.light .ecolife-chat.hover\:text-white:hover {
+  color: #000;
+}
+
+html.light .ecolife-chat input::placeholder, html.light .ecolife-chat textarea::placeholder { color: #9a9486; }
+
+html.light .ecolife-chat [class*="border-white"], html.light .ecolife-chat[class*="border-white"] { border-color: rgba(29, 29, 27, 0.13); }
+
+html.light .ecolife-chat [class*="hover:bg-white"]:hover { background-color: rgba(29, 29, 27, 0.07); }
+
+html.light .ecolife-chat [class*="bg-white/"] { background-color: rgba(29, 29, 27, 0.05); }
+
+html.light .ecolife-chat.shadow-\[0_30px_90px_rgba\(0\,0\,0\,0\.65\)\] { box-shadow: 0 30px 90px rgba(29, 29, 27, 0.28); }
+
+html.light .ecolife-chat input, html.light .ecolife-chat textarea { background-color: #ffffff; color: #1d1d1b; border-color: rgba(29, 29, 27, 0.18); }
+
+html.light .ecolife-chat .bg-\[var\(--ed-amber\)\] { color: #1d1d1b; }

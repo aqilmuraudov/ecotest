@@ -163,7 +163,7 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#1d1d1b]/60 via-transparent to-transparent" />
                 {sideImages.length > 0 && (
-                  <div className="absolute bottom-4 right-4 z-10 font-mono-tech text-[10px] tracking-widest text-ivory/90 bg-[#141412]/80 backdrop-blur-sm px-3 py-1.5 border border-white/10">
+                  <div className="ed-dark-scope absolute bottom-4 right-4 z-10 font-mono-tech text-[10px] tracking-widest bg-[#141412]/80 backdrop-blur-sm px-3 py-1.5 border border-white/10">
                     1 / {allImages.length}
                   </div>
                 )}
@@ -236,7 +236,7 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
                           loading="lazy"
                           className="w-full h-full object-cover transition-transform duration-[1100ms] group-hover:scale-[1.03]"
                         />
-                        <div className="absolute inset-0 bg-[#141412]/85 flex flex-col items-center justify-center gap-1 group-hover:bg-[#141412]/70 transition-colors">
+                        <div className="ed-dark-scope absolute inset-0 bg-[#141412]/85 flex flex-col items-center justify-center gap-1 group-hover:bg-[#141412]/70 transition-colors">
                           <span className="font-mono-tech text-2xl text-ivory">+{hiddenCount}</span>
                           <span className="font-micro text-[9px] tracking-widest text-[var(--ed-soft)] group-hover:text-amber-warm transition-colors">
                             {t.projects.galleryTitle}
@@ -317,7 +317,7 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
       {lightboxImg && (
         <div
           onClick={() => setLightboxImg(null)}
-          className="fixed inset-0 z-[100] bg-[#141412]/98 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out animate-fadeIn"
+          className="ed-dark-scope fixed inset-0 z-[100] bg-[#141412]/98 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out animate-fadeIn"
         >
           <div className="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
             <button

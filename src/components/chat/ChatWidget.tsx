@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import './chat-light.css';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowUp, Calculator, ImagePlus, Lightbulb, MessageCircle, Star, X } from 'lucide-react';
 import { Language } from '../../types';
@@ -54,7 +55,7 @@ interface ChatWidgetProps {
 }
 
 export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate, page }) => {
-  const lang = (currentLang === 'ru' || currentLang === 'en' ? currentLang : 'az') as ChatLang;
+  const lang = (currentLang === 'ru' ? 'ru' : 'az') as ChatLang;
   const t = STR[lang];
   const apiLang = currentLang === 'ru' ? 'ru' : 'az';
   const variant = useMemo(() => getVariant(), []);
@@ -484,7 +485,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="pointer-events-auto relative w-[min(280px,calc(100vw-2rem))] bg-[#202228] text-[#f2ede3] rounded-2xl rounded-br-md px-4 py-3.5 border border-[var(--ed-amber)]/35 shadow-[0_14px_44px_rgba(0,0,0,0.55)]"
+              className="ecolife-chat pointer-events-auto relative w-[min(280px,calc(100vw-2rem))] bg-[#202228] text-[#f2ede3] rounded-2xl rounded-br-md px-4 py-3.5 border border-[var(--ed-amber)]/35 shadow-[0_14px_44px_rgba(0,0,0,0.55)]"
             >
               <button type="button" onClick={() => { track('nudge_click', page.type, { part: 'text' }); openSrc.current = 'nudge'; setOpen(true); }} className="block w-full text-left text-[13.5px] leading-snug">
                 {teaser.text}
@@ -519,7 +520,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
               onClick={() => setOpen(true)}
               tabIndex={-1}
               aria-hidden="true"
-              className="ed-launcher-label hidden sm:block rounded-full bg-[#202228]/90 backdrop-blur border border-[var(--ed-amber)]/40 text-[var(--ed-amber)] text-[13px] font-medium px-4 py-2 shadow-[0_8px_28px_rgba(0,0,0,0.45)]"
+              className="ecolife-chat ed-launcher-label hidden sm:block rounded-full bg-[#202228]/90 backdrop-blur border border-[var(--ed-amber)]/40 text-[var(--ed-amber)] text-[13px] font-medium px-4 py-2 shadow-[0_8px_28px_rgba(0,0,0,0.45)]"
             >
               {t.name} · {t.cta}
             </button>
@@ -557,7 +558,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 24, scale: 0.98 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="fixed z-[72] inset-x-0 bottom-0 h-[88dvh] md:inset-x-auto md:right-6 md:bottom-6 md:w-[410px] md:h-[min(660px,calc(100dvh-3rem))] flex flex-col bg-[#15161a] text-[#f2ede3] border border-white/10 rounded-t-3xl md:rounded-3xl shadow-[0_30px_90px_rgba(0,0,0,0.65)] overflow-hidden"
+              className="ecolife-chat fixed z-[72] inset-x-0 bottom-0 h-[88dvh] md:inset-x-auto md:right-6 md:bottom-6 md:w-[410px] md:h-[min(660px,calc(100dvh-3rem))] flex flex-col bg-[#15161a] text-[#f2ede3] border border-white/10 rounded-t-3xl md:rounded-3xl shadow-[0_30px_90px_rgba(0,0,0,0.65)] overflow-hidden"
             >
               {/* header */}
               <header className="flex items-center gap-3 px-5 py-4 border-b border-white/10 bg-[#1b1c21]">

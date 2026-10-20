@@ -429,7 +429,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
       {/* Lightbox — preserved */}
       {lightboxOpen && (
-        <div className="fixed inset-0 z-[100] bg-[#141412]/98 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 animate-fadeIn">
+        <div className="ed-dark-scope fixed inset-0 z-[100] bg-[#141412]/98 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 animate-fadeIn">
           {/* Top bar */}
           <div className="flex items-center justify-between border-b border-[var(--ed-line)] pb-4 max-w-7xl mx-auto w-full">
             <div className="flex items-center gap-3">

@@ -36,7 +36,7 @@ export default function App() {
   // Language State with localStorage recovery
   const [currentLang, setCurrentLang] = useState<Language>(() => {
     const saved = localStorage.getItem('ecolife_lang');
-    return (saved === 'en' || saved === 'ru') ? saved : 'az';
+    return saved === 'ru' ? 'ru' : 'az'; // English is switched off for now (a saved 'en' falls back to Azerbaijani)
   });
 
   // Sync theme with HTML document
@@ -115,7 +115,7 @@ export default function App() {
   }, [currentLang]);
 
   const handleLanguageChange = (lang: Language) => {
-    setCurrentLang(lang);
+    setCurrentLang(lang === 'en' ? 'az' : lang);
   };
 
   const handleNavigate = useCallback((page: string, param?: string, replace: boolean = false) => {

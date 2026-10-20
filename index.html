@@ -27,6 +27,19 @@
     <link rel="preload" as="image" type="image/webp" href="/hero-pendant-light-desktop.webp" media="(min-width: 1024px)" fetchpriority="high" />
     <meta name="theme-color" content="#1D1D1B" />
 
+    <!-- Theme before first paint: no dark flash for visitors on the light theme -->
+    <script>
+      (function () {
+        try {
+          if (localStorage.getItem('ecolife_theme') === 'light') {
+            var d = document.documentElement;
+            d.classList.add('light'); d.classList.remove('dark'); d.setAttribute('data-theme', 'light');
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <style>html{background:#1d1d1b}html.light{background:#f3efe6}</style>
+
     <!-- GitHub Pages SPA Redirect Handler -->
     <script type="text/javascript">
       (function(l) {
@@ -41,7 +54,7 @@
       }(window.location))
     </script>
   </head>
-  <body class="antialiased overflow-x-hidden" style="background-color:#1D1D1B;color:#F2EDE3;">
+  <body class="antialiased overflow-x-hidden">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

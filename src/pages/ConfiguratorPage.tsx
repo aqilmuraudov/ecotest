@@ -546,7 +546,7 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
               </div>
 
               {/* Interactive Stage Canvas */}
-              <div className="h-72 sm:h-80 bg-[#121211] border border-[var(--ed-line)] relative overflow-hidden flex flex-col justify-between p-4 select-none">
+              <div className="ed-dark-scope h-72 sm:h-80 bg-[#121211] border border-[var(--ed-line)] relative overflow-hidden flex flex-col justify-between p-4 select-none">
                 
                 {/* Architectural Grid & Ambient Ceiling */}
                 <div className="absolute inset-0 pointer-events-none [background-image:linear-gradient(to_right,rgba(242,237,227,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(242,237,227,0.04)_1px,transparent_1px)] [background-size:24px_24px]" />
@@ -977,7 +977,7 @@ export const ConfiguratorPage: React.FC<ConfiguratorPageProps> = ({
                   )}
 
                   {/* Floating Measurement Stamp */}
-                  <div className="text-[10px] font-mono-tech border border-[var(--ed-line)] bg-black/40 px-2.5 py-1 text-soft flex-shrink-0">
+                  <div className="text-[10px] font-mono-tech border border-[var(--ed-line)] bg-[var(--ed-bg-2)] px-2.5 py-1 text-soft flex-shrink-0">
                     {config.length}mm • {config.cct.toUpperCase()}
                   </div>
                 </div>

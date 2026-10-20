@@ -145,10 +145,10 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#141412]/92 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[var(--ed-scrim)] backdrop-blur-md animate-fadeIn">
       <div 
         id="ecolife-inquiry-modal"
-        className="relative w-full max-w-2xl bg-[#24231f] border border-[var(--ed-line)] rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.85)] p-6 sm:p-8 max-h-[92vh] overflow-y-auto text-[var(--ed-ivory)] transition-all"
+        className="relative w-full max-w-2xl bg-[var(--ed-modal)] border border-[var(--ed-line)] rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.45)] p-6 sm:p-8 max-h-[92vh] overflow-y-auto text-[var(--ed-ivory)] transition-all"
       >
         {/* Top subtle linear LED light accent */}
         <div className="absolute top-0 left-12 right-12 h-[2px] bg-gradient-to-r from-transparent via-[#FFD21A]/60 to-transparent pointer-events-none" />
@@ -156,7 +156,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-[var(--ed-mute)] hover:text-amber-warm p-2 rounded-full hover:bg-white/5 transition-colors z-20"
+          className="absolute top-4 right-4 text-[var(--ed-mute)] hover:text-amber-warm p-2 rounded-full hover:bg-[var(--ed-line-soft)] transition-colors z-20"
           aria-label="Close"
         >
           <X className="w-5 h-5" />
@@ -174,7 +174,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
               {t.contact.form.success}
             </p>
             {prefilledProduct && (
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-[var(--ed-line)] text-xs text-amber-warm font-mono-tech">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--ed-line-soft)] border border-[var(--ed-line)] text-xs text-amber-warm font-mono-tech">
                 <span>{prefilledProduct.name} [{prefilledProduct.code}]</span>
               </div>
             )}
@@ -216,15 +216,15 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
             {/* REAL SELECTED PRODUCT CARD PREVIEW */}
             {prefilledProduct && (
-              <div className="mt-4 p-4 bg-[#2b2a26] border border-[var(--ed-line)] rounded-xl flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all">
+              <div className="mt-4 p-4 bg-[var(--ed-bg-2)] border border-[var(--ed-line)] rounded-xl flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all">
                 {/* Product Thumbnail */}
-                <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-black/60 border border-white/10 flex-shrink-0 flex items-center justify-center">
+                <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-[var(--ed-cream)] border border-[var(--ed-line)] flex-shrink-0 flex items-center justify-center">
                   <img
                     src={prefilledProduct.image || (prefilledProduct.gallery && prefilledProduct.gallery[0]) || 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=300&q=80'}
                     alt={prefilledProduct.name}
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute top-1 left-1 bg-black/80 px-1.5 py-0.5 rounded text-[9px] font-mono-tech text-[#FFD21A] font-bold">
+                  <div className="absolute top-1 left-1 ed-dark-scope bg-black/80 px-1.5 py-0.5 rounded text-[9px] font-mono-tech text-[#FFD21A] font-bold">
                     {prefilledProduct.code}
                   </div>
                 </div>
@@ -232,37 +232,37 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                 {/* Product Meta & Key Specs */}
                 <div className="flex-1 space-y-1.5 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-bold text-white uppercase tracking-tight truncate">
+                    <h3 className="text-sm sm:text-base font-bold text-ivory uppercase tracking-tight truncate">
                       {prefilledProduct.name}
                     </h3>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-white/10 text-gray-300">
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-[var(--ed-line)] text-soft">
                       {getLocalizedText(prefilledProduct.categoryName, currentLang)}
                     </span>
                   </div>
 
-                  <p className="text-[11px] text-gray-300 line-clamp-1">
+                  <p className="text-[11px] text-soft line-clamp-1">
                     {getLocalizedText(prefilledProduct.subtitle, currentLang)}
                   </p>
 
                   {/* Spec badges */}
-                  <div className="flex flex-wrap gap-1.5 pt-1 text-[10px] font-mono text-gray-300">
+                  <div className="flex flex-wrap gap-1.5 pt-1 text-[10px] font-mono text-soft">
                     {prefilledProduct.specs.dimensions && (
-                      <span className="px-2 py-0.5 rounded bg-black/40 border border-white/5 text-[#FFD21A]">
+                      <span className="px-2 py-0.5 rounded bg-[var(--ed-bg)] border border-[var(--ed-line)] text-amber-warm">
                         {prefilledProduct.specs.dimensions}
                       </span>
                     )}
                     {prefilledProduct.specs.mounting && (
-                      <span className="px-2 py-0.5 rounded bg-black/40 border border-white/5 text-gray-300">
+                      <span className="px-2 py-0.5 rounded bg-[var(--ed-bg)] border border-[var(--ed-line)] text-soft">
                         {prefilledProduct.specs.mounting}
                       </span>
                     )}
                     {prefilledProduct.specs.ipRating && (
-                      <span className="px-2 py-0.5 rounded bg-black/40 border border-white/5 text-gray-300">
+                      <span className="px-2 py-0.5 rounded bg-[var(--ed-bg)] border border-[var(--ed-line)] text-soft">
                         {prefilledProduct.specs.ipRating}
                       </span>
                     )}
                     {prefilledProduct.specs.power && (
-                      <span className="px-2 py-0.5 rounded bg-black/40 border border-white/5 text-emerald-400">
+                      <span className="px-2 py-0.5 rounded bg-[var(--ed-bg)] border border-[var(--ed-line)] text-ok">
                         {prefilledProduct.specs.power}
                       </span>
                     )}
@@ -273,12 +273,12 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
             {/* Custom Configuration Summary Banner if from Configurator */}
             {!prefilledProduct && configSummary && (
-              <div className="mt-4 p-3.5 bg-[#16181F] border border-emerald-500/30 rounded-xl space-y-1">
-                <div className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+              <div className="mt-4 p-3.5 bg-[var(--ed-bg-2)] border border-emerald-500/30 rounded-xl space-y-1">
+                <div className="text-[11px] font-bold text-ok uppercase tracking-wider flex items-center gap-1.5">
                   <Sliders className="w-3.5 h-3.5" />
                   <span>Xüsusi Konfiqurasiya</span>
                 </div>
-                <div className="text-xs font-mono text-gray-200 whitespace-pre-line leading-relaxed">
+                <div className="text-xs font-mono text-soft whitespace-pre-line leading-relaxed">
                   {configSummary}
                 </div>
               </div>

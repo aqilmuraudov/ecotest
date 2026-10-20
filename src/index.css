@@ -33,6 +33,14 @@
   /* Cream product plates */
   --ed-cream: #ece4d2;
   --ed-cream-2: #e4dcc8;
+
+  /* Amber as TEXT (the bright amber is for fills; on cream paper it needs a deeper tone to stay readable) */
+  --ed-amber-ink: #f5a623;
+  --ed-ok: #34d399;
+
+  /* Floating panels (modals, search, toast) and the scrim behind them */
+  --ed-modal: #24231f;
+  --ed-scrim: rgba(20, 20, 18, 0.92);
 }
 
 html.light {
@@ -50,6 +58,10 @@ html.light {
   --ed-line-soft: rgba(29, 29, 27, 0.08);
   --ed-cream: #f7f4ec;
   --ed-cream-2: #efe9dc;
+  --ed-amber-ink: #9c5c00;
+  --ed-ok: #0f7a4f;
+  --ed-modal: #fbf9f4;
+  --ed-scrim: rgba(29, 29, 27, 0.5);
 }
 
 @layer base {
@@ -134,7 +146,8 @@ html.light {
   line-height: 1.12;
 }
 
-.text-amber-warm { color: var(--ed-amber); }
+.text-amber-warm { color: var(--ed-amber-ink); }
+.text-ok { color: var(--ed-ok); }
 .text-ivory { color: var(--ed-ivory); }
 .text-soft { color: var(--ed-soft); }
 .text-mute { color: var(--ed-mute); }
@@ -401,6 +414,50 @@ html.light select:focus,
 html.light textarea:focus {
   border-color: var(--ed-amber);
 }
+/* ------------------------------------------------------------------
+   A surface that stays dark in the light theme (text over photos, the light simulators, lightboxes).
+   It re-declares the dark tokens, so every token-based class inside (text-ivory, text-soft, borders...) reads as on a dark canvas.
+   ------------------------------------------------------------------ */
+.ed-dark-scope {
+  --ed-bg: #1d1d1b;
+  --ed-bg-2: #20201e;
+  --ed-bg-3: #24231f;
+  --ed-raise: #262522;
+  --ed-well: #171715;
+  --ed-ivory: #f2ede3;
+  --ed-warmwhite: #eae4d8;
+  --ed-soft: #b3ac9e;
+  --ed-mute: #7c766a;
+  --ed-faint: #4c483f;
+  --ed-line: rgba(242, 237, 227, 0.1);
+  --ed-line-soft: rgba(242, 237, 227, 0.06);
+  --ed-amber-ink: #f5a623;
+  --ed-ok: #34d399;
+  color: var(--ed-ivory);
+}
+html.light .ed-dark-scope .text-white { color: #ffffff !important; }
+html.light .ed-dark-scope input,
+html.light .ed-dark-scope select,
+html.light .ed-dark-scope textarea {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #f2ede3;
+  border-color: rgba(242, 237, 227, 0.18);
+}
+html.light .ed-dark-scope .text-\[\#FFD21A\],
+html.light .ed-dark-scope .text-\[\#F5A623\] { color: #ffd21a; }
+
+/* the yellow used as text in older components: deeper amber on cream paper */
+html.light .text-\[\#FFD21A\],
+html.light .text-\[\#F5A623\],
+html.light .text-\[var\(--ed-amber\)\] { color: var(--ed-amber-ink); }
+
+/* status text colours written for dark canvases, deeper tones on cream */
+html.light .text-red-400, html.light .text-red-300 { color: #c23a30; }
+html.light .text-emerald-400, html.light .text-emerald-300, html.light .text-green-400 { color: #0f7a4f; }
+html.light .text-amber-300, html.light .text-amber-400, html.light .text-yellow-400 { color: #92600a; }
+html.light .text-blue-400, html.light .text-sky-400 { color: #1d5fb4; }
+html.light .ed-dark-scope .text-red-400, html.light .ed-dark-scope .text-red-300 { color: #f87171; }
+html.light .ed-dark-scope .text-emerald-400, html.light .ed-dark-scope .text-emerald-300 { color: #34d399; }
 html.light .dark-logo { display: none !important; }
 html.light .light-logo { display: block !important; }
 
