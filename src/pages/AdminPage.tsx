@@ -18,6 +18,7 @@ import { BlogFormModal } from '../components/admin/BlogFormModal';
 import { ProjectFormModal } from '../components/admin/ProjectFormModal';
 import { InquiryViewModal } from '../components/admin/InquiryViewModal';
 import { UsersTab } from '../components/admin/UsersTab';
+import { ChatLogsTab } from '../components/admin/ChatLogsTab';
 import { PagesEditorTab } from '../components/admin/PagesEditorTab';
 import { adminTranslations } from '../data/adminTranslations';
 import { 
@@ -117,7 +118,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   }, [isAuthenticated]);
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'overview' | 'pages' | 'products' | 'blog' | 'projects' | 'inquiries' | 'users' | 'import_export' | 'database'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'pages' | 'products' | 'blog' | 'projects' | 'inquiries' | 'ai' | 'users' | 'import_export' | 'database'>('overview');
 
   // Inquiries Search & Filter
   const [inquirySearch, setInquirySearch] = useState<string>('');
@@ -558,6 +559,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                 highlightCount: newInquiriesCount, 
                 icon: Mail 
               },
+              { id: 'ai', label: 'AI söhbətlər', icon: Sparkles },
               ...(userRole === 'admin' ? [
                 { id: 'users', label: t.tabs.users, icon: Users },
                 { id: 'import_export', label: t.tabs.import_export, icon: UploadCloud },
@@ -1375,6 +1377,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         {/* ========================================================================= */}
         {/* TAB 5.5: USERS */}
         {/* ========================================================================= */}
+        {activeTab === 'ai' && <ChatLogsTab canDelete={userRole === 'admin'} />}
+
         {activeTab === 'users' && userRole === 'admin' && (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
             <UsersTab />

@@ -10,7 +10,7 @@ type L = 'az' | 'ru' | 'en';
 const pick = <T,>(lang: L, az: T, ru: T, en: T): T => (lang === 'ru' ? ru : lang === 'en' ? en : az);
 
 /** `label` is the localized name of the category / product / project the visitor is looking at (may be empty). */
-export function nudgeFor(page: ChatPage, lang: L, label: string): Nudge | null {
+function baseNudge(page: ChatPage, lang: L, label: string): Nudge | null {
   const key = `${page.type}:${page.id || ''}`;
   const chip = (id: string, a: string, r: string, e: string, qa = a, qr = r, qe = e): Chip => ({ id: `${page.type}-${id}`, label: pick(lang, a, r, e), q: pick(lang, qa, qr, qe) });
   const n = (text: string, chips: Chip[], delayMs: number): Nudge => ({ key, text, chips, delayMs });
@@ -84,6 +84,30 @@ export function nudgeFor(page: ChatPage, lang: L, label: string): Nudge | null {
     default:
       return null; // blog, about, contact, admin: never interrupt
   }
+}
+
+/**
+ * A/B test: variant A asks a helpful question, variant B offers the instant room calculator.
+ * The admin panel compares how often each variant opens a chat and ends in a request.
+ */
+export const CALC_CHIP_Q = '__calc__';
+export function nudgeFor(page: ChatPage, lang: L, label: string, variant: 'A' | 'B' = 'A'): Nudge | null {
+  const a = baseNudge(page, lang, label);
+  if (!a || variant === 'A') return a;
+  const calc: Chip = { id: `${page.type}-calc`, label: pick(lang, 'Otaq kalkulyatoru', 'Калькулятор освещения', 'Lighting calculator'), q: CALC_CHIP_Q };
+  const name = label || pick(lang, 'bu kateqoriya', 'эта категория', 'this category');
+  const copy: Record<string, [string, string, string]> = {
+    home: ['Otaq növünü və sahəni yazın: işıqlandırmanı hesablayım, uyğun modelləri də göstərim.', 'Напишите тип помещения и площадь: рассчитаю освещение и покажу подходящие модели.', 'Tell me the room type and area: I will calculate the lighting and show matching models.'],
+    catalog: ['Sahəni yazın, neçə işıq lazım olduğunu hesablayım və uyğun məhsulları seçim.', 'Укажите площадь: посчитаю, сколько света нужно, и подберу товары.', 'Give me the area: I will work out how much light you need and pick products.'],
+    category: [`${name} üçün neçə ədəd lazımdır? Sahəni deyin, hesablayım.`, `Сколько нужно: ${name}? Назовите площадь, я посчитаю.`, `How many do you need: ${name}? Tell me the area and I will calculate.`],
+    product: ['Bu məhsuldan otağınıza neçə ədəd lazım olduğunu hesablayım?', 'Посчитать, сколько таких светильников нужно для вашего помещения?', 'Shall I calculate how many of these your room needs?'],
+    project: ['Belə bir həll istəyirsiniz? Məkanınızı yazın, işığı hesablayıb təklif edim.', 'Хотите такое же решение? Опишите помещение, посчитаю и предложу.', 'Want a similar solution? Describe your space and I will calculate and suggest.'],
+    projects: ['Layihələrimizdən hansı sizə yaxındır? Sizin məkan üçün işığı hesablayım.', 'Какой проект вам ближе? Посчитаю освещение для вашего помещения.', 'Which project is closest to yours? I will calculate the lighting for your space.'],
+    solutions: ['Məkanınızın sahəsini yazın, həlli və işıq sayını hesablayım.', 'Напишите площадь помещения: подберу решение и посчитаю количество.', 'Tell me your area and I will pick a solution and count the fixtures.'],
+  };
+  const c = copy[page.type];
+  if (!c) return a;
+  return { ...a, text: pick(lang, c[0], c[1], c[2]), chips: [calc, ...a.chips.slice(-1)] };
 }
 
 // ---- how often we may speak up: a few times per session, never twice on the same page, silent after the visitor dismisses it

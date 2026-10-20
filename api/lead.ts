@@ -1,5 +1,6 @@
 import { env, rateLimit, clientIp, sendTelegram, escapeHtml, loadCatalog, checkHuman, SALES_WHATSAPP, SITE_URL } from './_lib/core.js';
 import { summarize, type ChatMsg } from './_lib/ai.js';
+import { linkLead } from './_lib/log.js';
 
 // POST /api/lead  { name, phone, message?, source, lang, products?: string[], transcript?: ChatMsg[], consent, website }
 // One pipeline for every request: validate -> save to Supabase (inquiries) -> notify the sales team on Telegram.
@@ -9,6 +10,17 @@ const SOURCES: Record<string, string> = {
   'contact-form': 'Əlaqə forması',
   product: 'Məhsul səhifəsi',
   configurator: 'Konfiqurator',
+};
+
+// when the customer wants the call (labels are for the sales team, in Azerbaijani)
+const CALLBACK: Record<string, string> = {
+  asap: 'Mümkün qədər tez',
+  'today-am': 'Bu gün 09:00-12:00',
+  'today-noon': 'Bu gün 12:00-15:00',
+  'today-pm': 'Bu gün 15:00-18:00',
+  'tmrw-am': 'Sabah 09:00-12:00',
+  'tmrw-noon': 'Sabah 12:00-15:00',
+  'tmrw-pm': 'Sabah 15:00-18:00',
 };
 
 function normalizePhone(input: string): string | null {
@@ -67,10 +79,16 @@ export default async function handler(req: any, res: any) {
 
   // products referenced by the customer/AI (validated against the real catalogue)
   const catalog = await loadCatalog();
-  const wanted: string[] = (Array.isArray(body.products) ? body.products.map(String) : []).concat(body.productCode ? [String(body.productCode)] : []).slice(0, 5);
+  // what the customer starred in the chat wins; otherwise the products that were shown
+  const starred: string[] = (Array.isArray(body.shortlist) ? body.shortlist.map(String) : []).slice(0, 12);
+  const wanted: string[] = starred.length
+    ? starred
+    : (Array.isArray(body.products) ? body.products.map(String) : []).concat(body.productCode ? [String(body.productCode)] : []).slice(0, 5);
   const products = wanted.map(c => catalog.find(i => i.code.toLowerCase() === c.toLowerCase())).filter(Boolean) as typeof catalog;
 
   const userMessage = String(body.message || '').trim().slice(0, 1500);
+  const callbackLabel = CALLBACK[String(body.callback)] || '';
+  const sid = String(body.sid || '').replace(/[^\w\-.]/g, '').slice(0, 40);
   const summary = history.length ? await summarize(history) : '';
 
   const id = `inq-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -89,7 +107,7 @@ export default async function handler(req: any, res: any) {
       email,
       phone: '+' + phone,
       subject: SOURCES[sourceKey],
-      message: (summary || userMessage || 'Müştəri sorğu göndərdi').slice(0, 4900),
+      message: ((callbackLabel ? `Zəng vaxtı: ${callbackLabel}. ` : '') + (summary || userMessage || 'Müştəri sorğu göndərdi')).slice(0, 4900),
       product_code: products[0]?.code || null,
       product_name: products[0]?.name?.slice(0, 290) || null,
       product_category: products[0]?.categoryName.az || null,
@@ -126,8 +144,9 @@ export default async function handler(req: any, res: any) {
   if (email !== '-') lines.push(`E-poçt: ${escapeHtml(email)}`);
   if (company) lines.push(`Şirkət: ${escapeHtml(company)}`);
   if (projectType) lines.push(`Layihə: ${escapeHtml(projectType)}`);
+  if (callbackLabel) lines.push(`Zəng vaxtı: <b>${escapeHtml(callbackLabel)}</b>`);
   if (products.length) {
-    lines.push('', '<b>Məhsullar:</b>', ...products.map(p => `• <a href="${p.url}">${escapeHtml(p.code)}</a> ${escapeHtml(p.name)}`));
+    lines.push('', starred.length ? `<b>Müştərinin seçdikləri (${products.length}):</b>` : '<b>Məhsullar:</b>', ...products.map(p => `• <a href="${p.url}">${escapeHtml(p.code)}</a> ${escapeHtml(p.name)}`));
   }
   if (configSummary) lines.push('', '<b>Konfiqurasiya:</b>', escapeHtml(configSummary.slice(0, 700)));
   if (summary) lines.push('', '<b>Xülasə:</b>', escapeHtml(summary));
@@ -143,6 +162,7 @@ export default async function handler(req: any, res: any) {
 
   // the lead is considered received if it is stored or the team was notified
   if (!saved && !notified) return res.status(502).json({ error: 'unavailable' });
+  if (saved && sid) await linkLead(sid, id);
   const out = {
     ok: true,
     id,

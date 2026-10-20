@@ -1,5 +1,6 @@
 import { env, rateLimit, clientIp, checkHuman } from './_lib/core.js';
-import { runChat, shouldOfferForm, type ChatMsg, type PageCtx } from './_lib/ai.js';
+import { logSession } from './_lib/log.js';
+import { calcReply, directCalc, runChat, shouldOfferForm, type ChatMsg, type PageCtx, type PromptExtra } from './_lib/ai.js';
 
 // First answers to the one-tap page questions ("canned" chips) do not depend on the visitor, so they are computed once and replayed:
 // popular pages then cost no model call at all.
@@ -50,6 +51,13 @@ export default async function handler(req: any, res: any) {
   const pageType = String(body.page?.type ?? '');
   const page: PageCtx | undefined = PAGE_TYPES.has(pageType) ? { type: pageType, id: safeId(body.page?.id) || undefined } : undefined;
   const canned = safeId(body.canned, 40);
+  const sid = safeId(body.sid, 40);
+  const variant = body.variant === 'B' ? 'B' : 'A';
+  // favourites the customer starred in the chat and (optionally) what the vision model saw in their room photo
+  const extra: PromptExtra = {
+    shortlist: (Array.isArray(body.shortlist) ? body.shortlist : []).slice(0, 8).map((s: any) => ({ code: safeId(s?.code, 20), name: String(s?.name ?? '').slice(0, 100) })).filter((s: any) => s.code),
+    vision: typeof body.vision === 'string' ? body.vision.replace(/\s+/g, ' ').slice(0, 900) : undefined,
+  };
 
   // lean context: the model gets the last 10 messages; older customer messages shrink to a short memory so nothing is forgotten
   const recent = history.slice(-10);
@@ -70,11 +78,29 @@ export default async function handler(req: any, res: any) {
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('X-Accel-Buffering', 'no');
   res.status(200);
+  let replyText = '';
+  let replyCards: string[] = [];
   const send = (evt: Record<string, unknown>) => {
+    if (evt.type === 'text') replyText += String(evt.delta || '');
+    else if (evt.type === 'products') replyCards = ((evt.items as any[]) || []).map(i => String(i.code));
+    else if (evt.type === 'reset') { replyText = ''; replyCards = []; }
     res.write(`data: ${JSON.stringify(evt)}\n\n`);
     (res as any).flush?.();
   };
+  const finishAndLog = async () => {
+    if (sid && replyText) await logSession({ sid, lang, page: page?.type, variant, history, reply: replyText, cards: replyCards });
+    res.end();
+  };
 
+  if (body.calc && typeof body.calc === 'object') {
+    const ok = await calcReply({ room: safeId(body.calc.room, 20), area: Number(body.calc.area), height: Number(body.calc.height) || undefined, cct: Number(body.calc.cct) || undefined }, lang, send);
+    send(ok ? { type: 'done', model: 'calc' } : { type: 'error', code: 'unavailable' });
+    return finishAndLog();
+  }
+  if (!body.calc && (await directCalc(history, lang, send))) {
+    send({ type: 'done', model: 'calc' });
+    return finishAndLog();
+  }
   if (!env('AI_API_KEY') && !env('GROQ_API_KEY')) {
     send({ type: 'error', code: 'not_configured' });
     return res.end();
@@ -86,7 +112,7 @@ export default async function handler(req: any, res: any) {
   if (cached) {
     for (const evt of cached) send(evt);
     send({ type: 'done', model: 'cache' });
-    return res.end();
+    return finishAndLog();
   }
   const recorded: Record<string, unknown>[] = [];
 
@@ -100,7 +126,7 @@ export default async function handler(req: any, res: any) {
     send(evt);
   };
   try {
-    const { model } = await runChat(recent, lang, tracked, undefined, memory, page);
+    const { model } = await runChat(recent, lang, tracked, undefined, memory, page, extra);
     if (!formShown && shouldOfferForm(history)) {
       if (textLen < 40) {
         const line = lang === 'ru'
@@ -116,5 +142,5 @@ export default async function handler(req: any, res: any) {
     console.error('[chat] failed:', e?.message || e);
     send({ type: 'error', code: e?.message === 'rate_limited' ? 'busy' : 'unavailable' });
   }
-  res.end();
+  await finishAndLog();
 }

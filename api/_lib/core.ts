@@ -235,6 +235,7 @@ export interface ProjectInfo {
   desc: { az: string; ru: string };
   solution: { az: string; ru: string };
   products: string[];
+  image: string;
 }
 let projectCache: { at: number; items: ProjectInfo[] } | null = null;
 
@@ -247,7 +248,7 @@ export async function loadProjects(): Promise<ProjectInfo[]> {
   if (!url || !key) return projectCache?.items || [];
   try {
     const res = await fetch(
-      `${url}/rest/v1/projects?select=slug,title,category,location,year,short_description,lighting_solution,products_used&limit=200`,
+      `${url}/rest/v1/projects?select=slug,title,category,location,year,short_description,lighting_solution,products_used,cover_image&limit=200`,
       { headers: { apikey: key, Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(6000) }
     );
     if (!res.ok) return projectCache?.items || [];
@@ -261,6 +262,7 @@ export async function loadProjects(): Promise<ProjectInfo[]> {
       desc: { az: tr(r.short_description, 'az'), ru: tr(r.short_description, 'ru') },
       solution: { az: tr(r.lighting_solution, 'az'), ru: tr(r.lighting_solution, 'ru') },
       products: Array.isArray(r.products_used) ? r.products_used.map(String) : [],
+      image: typeof r.cover_image === 'string' && r.cover_image.startsWith('http') ? r.cover_image : '',
     }));
     projectCache = { at: Date.now(), items };
     return items;
