@@ -8,7 +8,7 @@ export type Emit = (evt: Record<string, unknown>) => void;
 /** The page the customer is looking at (sent by the site; resolved against the real catalogue/projects on the server). */
 export type PageCtx = { type: string; id?: string };
 /** Extra per-request context: what the customer has shortlisted and, when they sent a room photo, what the vision model saw. */
-export type PromptExtra = { shortlist?: { code: string; name: string }[]; vision?: string; visionNew?: boolean };
+export type PromptExtra = { shortlist?: { code: string; name: string }[]; vision?: string; visionNew?: boolean; visionEnabled?: boolean };
 
 // ---------------------------------------------------------------- prompt
 const trim = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
@@ -132,6 +132,7 @@ ${catList}
 CONTEXT
 ${pg.text ? `- PAGE: ${pg.text}\n` : ''}${memory ? `- Earlier in this conversation the customer said (older messages, already answered; do not ask for these again):\n${memory}\n` : ''}${extra.shortlist?.length ? `- The customer has shortlisted: ${extra.shortlist.slice(0, 8).map(s => `${s.name} [${s.code}]`).join('; ')}. Treat these as their favourites when advising.\n` : ''}${extra.vision ? `- The customer sent a photo of their space${extra.visionNew ? ' just now' : ' earlier in this conversation'}. What the vision model saw: ${extra.vision}\nAnswer questions about the photo and the space from this description, keep the conversation about their space, and never claim to see more than it says.\n` : ''}${kn.text ? `KNOWLEDGE:\n${kn.text}\n` : ''}${plan ? `${planPrompt(plan, planFresh)}\n` : ''}- Catalogue items that match the customer's latest messages, the page or the calculation (prefer these; recommend ONLY codes that appear here or in tool results):
 ${candList}
+- Chat tools the customer can use: a room calculator (calculator icon next to the message box)${extra.visionEnabled ? ' and a room photo upload (picture icon next to the message box)' : ''}. When the customer talks about their own space or asks what to choose, mention them ONCE per conversation in one short sentence (for example: "If you like, send a photo of your room with the picture icon and I will analyse it, or use the calculator icon to get the numbers"), and never repeat it or mention one they already used.
 - Current time: ${hours.label}. Consultants work Monday-Saturday 09:00-18:00. If outside these hours and the customer wants a consultant, say they will answer on the next working day.`;
   return { system, cands: top, projectCards: kn.projectCards, plan, planFresh };
 }

@@ -62,6 +62,7 @@ export default async function handler(req: any, res: any) {
     vision: typeof body.vision === 'string' ? body.vision.replace(/\s+/g, ' ').slice(0, 900) : undefined,
     visionNew: body.visionNew === true,
   };
+  extra.visionEnabled = await visionAvailable();
 
   // lean context: the model gets the last 10 messages; older customer messages shrink to a short memory so nothing is forgotten
   const recent = history.slice(-10);

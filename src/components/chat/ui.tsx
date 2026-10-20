@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calculator, Check, MessageCircle, Star, X } from 'lucide-react';
+import { Calculator, Check, ImagePlus, MessageCircle, Star, X } from 'lucide-react';
 import { ROOM_LABELS, type ChatLang, type Strings } from './strings';
 
 export interface ProductCard {
@@ -248,3 +248,35 @@ export async function resizeImage(file: File, max = 896, quality = 0.78): Promis
   bmp.close?.();
   return canvas.toDataURL('image/jpeg', quality);
 }
+
+// ------------------------------------------------------------------ the two tools, explained in words (icons alone are easy to miss)
+export const ToolCards: React.FC<{ t: Strings; photoOn: boolean; busy: boolean; onCalc: () => void; onPhoto: () => void }> = ({ t, photoOn, busy, onCalc, onPhoto }) => {
+  const card = 'w-full flex items-start gap-3 text-left rounded-2xl border border-[var(--ed-amber)]/30 bg-[#1b1c21] hover:border-[var(--ed-amber)] p-3.5 transition-colors disabled:opacity-50';
+  const icon = 'w-9 h-9 shrink-0 rounded-full bg-[var(--ed-amber)]/15 text-[var(--ed-amber)] grid place-items-center';
+  return (
+    <div className="grid gap-2 pt-1">
+      <button type="button" onClick={onCalc} className={card}>
+        <span className={icon}><Calculator className="w-[18px] h-[18px]" /></span>
+        <span className="min-w-0"><span className="block text-[13.5px] font-semibold">{t.toolCalcTitle}</span><span className="block text-[12px] text-[#a8a8ad] leading-snug mt-0.5">{t.toolCalcDesc}</span></span>
+      </button>
+      {photoOn && (
+        <button type="button" onClick={onPhoto} disabled={busy} className={card}>
+          <span className={icon}><ImagePlus className="w-[18px] h-[18px]" /></span>
+          <span className="min-w-0"><span className="block text-[13.5px] font-semibold">{t.toolPhotoTitle}</span><span className="block text-[12px] text-[#a8a8ad] leading-snug mt-0.5">{t.toolPhotoDesc}</span></span>
+        </button>
+      )}
+    </div>
+  );
+};
+
+export const ToolChips: React.FC<{ t: Strings; calcOn: boolean; photoOn: boolean; onCalc: () => void; onPhoto: () => void }> = ({ t, calcOn, photoOn, onCalc, onPhoto }) => {
+  const chip = 'inline-flex items-center gap-1.5 min-h-[38px] rounded-full border border-white/15 hover:border-[var(--ed-amber)] hover:text-[var(--ed-amber)] px-3.5 text-[12.5px] text-[#d9d9dc] transition-colors';
+  if (!calcOn && !photoOn) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2 pt-0.5">
+      <span className="text-[12px] text-[#8d8d92]">{t.toolsLead}</span>
+      {calcOn && <button type="button" onClick={onCalc} className={chip}><Calculator className="w-3.5 h-3.5" /> {t.toolCalcChip}</button>}
+      {photoOn && <button type="button" onClick={onPhoto} className={chip}><ImagePlus className="w-3.5 h-3.5" /> {t.toolPhotoChip}</button>}
+    </div>
+  );
+};

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowUp, Calculator, ImagePlus, Lightbulb, MessageCircle, Mic, Square, Star, X } from 'lucide-react';
+import { ArrowUp, Calculator, ImagePlus, Lightbulb, MessageCircle, Star, X } from 'lucide-react';
 import { Language } from '../../types';
 import { clearPass, getTurnstileToken, readPass, storePass, turnstileEnabled } from '../../lib/turnstile';
 import { getSid, getVariant, track } from '../../lib/track';
@@ -8,7 +8,7 @@ import { useData } from '../../context/DataContext';
 import { CALC_CHIP_Q, MAX_NUDGES, NUDGE_GAP_MS, nudgeFor, readNudgeState, writeNudgeState, type ChatPage, type Nudge } from './nudges';
 import { STR, WHATSAPP, type ChatLang } from './strings';
 import {
-  CalcCard, LeadDoneView, LeadForm, LinkText, ProductCardView, ProjectCardView, ShortlistTray, resizeImage,
+  CalcCard, LeadDoneView, LeadForm, LinkText, ProductCardView, ProjectCardView, ShortlistTray, ToolCards, ToolChips, resizeImage,
   type CalcInput, type LeadState, type ProductCard, type ProjectCard,
 } from './ui';
 
@@ -47,8 +47,6 @@ function validPhone(input: string): boolean {
   return d.length >= 11 && d.length <= 15;
 }
 
-const SpeechRec: any = typeof window !== 'undefined' ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition : undefined;
-
 interface ChatWidgetProps {
   currentLang: Language;
   onNavigate: (page: string, param?: string) => void;
@@ -85,16 +83,18 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
   const [shortlist, setShortlist] = useState<ProductCard[]>(() => {
     try { const s = JSON.parse(sessionStorage.getItem(FAV_KEY) || '[]'); return Array.isArray(s) ? s.slice(0, 12) : []; } catch { return []; }
   });
-  const [listening, setListening] = useState(false);
+  // which helpers the customer has already used (the suggestions stop once they have)
+  const [toolsUsed, setToolsUsed] = useState<{ calc: boolean; photo: boolean }>(() => {
+    try { return { calc: false, photo: false, ...JSON.parse(sessionStorage.getItem('ecolife-chat-tools') || '{}') }; } catch { return { calc: false, photo: false }; }
+  });
   const [visionOn, setVisionOn] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoHint, setPhotoHint] = useState(false);
 
   const scroller = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const recRef = useRef<any>(null);
   // what the vision model saw in the customer's photo: kept for the whole chat so questions about the room keep working
   const visionRef = useRef<string>((() => { try { return sessionStorage.getItem('ecolife-chat-vision') || ''; } catch { return ''; } })());
   const photoTimes = useRef<number[]>([]);
@@ -173,6 +173,15 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
     if (!open || visionOn) return;
     fetch('/api/vision').then(r => r.json()).then(j => setVisionOn(!!j?.enabled)).catch(() => undefined);
   }, [open, visionOn]);
+
+  // the message box grows with the text (up to about 6 lines) so the customer always sees everything they wrote
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 150)}px`;
+    el.style.overflowY = el.scrollHeight > 150 ? 'auto' : 'hidden'; // no scrollbar until the text really exceeds the box
+  }, [input, open]);
 
   useEffect(() => {
     const el = scroller.current;
@@ -313,7 +322,14 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
     await runRequest(history, { canned, calc, first });
   }, [busy, messages, page, runRequest]);
 
+  const markUsed = (k: 'calc' | 'photo') => setToolsUsed(prev => {
+    const next = { ...prev, [k]: true };
+    try { sessionStorage.setItem('ecolife-chat-tools', JSON.stringify(next)); } catch { /* ignore */ }
+    return next;
+  });
+
   const runCalc = (c: CalcInput) => {
+    markUsed('calc');
     track('calc_used', page.type, { room: c.room });
     void send(c.label, undefined, c);
   };
@@ -374,24 +390,6 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
     }
   };
 
-  // ---- voice input (browser speech recognition, nothing goes to our server)
-  const toggleMic = () => {
-    if (!SpeechRec) return;
-    if (listening) { recRef.current?.stop(); return; }
-    try {
-      const rec = new SpeechRec();
-      rec.lang = lang === 'ru' ? 'ru-RU' : lang === 'en' ? 'en-US' : 'az-AZ';
-      rec.interimResults = true;
-      rec.onresult = (ev: any) => setInput(Array.from(ev.results).map((r: any) => r[0].transcript).join(' '));
-      rec.onend = () => setListening(false);
-      rec.onerror = () => setListening(false);
-      recRef.current = rec;
-      rec.start();
-      setListening(true);
-      track('voice_used', page.type);
-    } catch { setListening(false); }
-  };
-
   // ---- room photo: checked and downscaled in the browser, analysed (and screened) by the vision model on the server, never stored
   const notice = (text: string) => setMessages(prev => [...prev, { id: uid(), role: 'assistant', content: text, local: true }]);
 
@@ -437,6 +435,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
       visionRef.current = String(j.summary).slice(0, 900);
       try { sessionStorage.setItem('ecolife-chat-vision', visionRef.current); } catch { /* ignore */ }
       track('photo_used', page.type);
+      markUsed('photo');
       setPhotoBusy(false);
       await runRequest(history, { first, visionNew: true });
     } catch {
@@ -469,6 +468,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
     if (last.projects?.length) return [t.qProjects, t.qMine];
     return [];
   }, [busy, userStarted, last, leadDone, t]);
+
+  const userCount = messages.filter(m => m.role === 'user').length;
+  const showTools = !busy && !photoBusy && !calcOpen && userCount >= 1 && userCount <= 4 && !leadDone && !!last && last.role === 'assistant' && !last.local && !last.error && !!last.content && last.consultation === undefined && (!toolsUsed.calc || (visionOn && !toolsUsed.photo));
 
   return (
     <>
@@ -685,11 +687,30 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
                   </div>
                 )}
 
+                {showTools && (
+                  <ToolChips
+                    t={t}
+                    calcOn={!toolsUsed.calc}
+                    photoOn={visionOn && !toolsUsed.photo}
+                    onCalc={() => { track('chip_click', page.type, { id: 'tools-calc' }); setCalcOpen(true); }}
+                    onPhoto={() => { track('chip_click', page.type, { id: 'tools-photo' }); fileRef.current?.click(); }}
+                  />
+                )}
+
+                {!userStarted && (
+                  <ToolCards
+                    t={t}
+                    photoOn={visionOn}
+                    busy={busy || photoBusy}
+                    onCalc={() => { track('chip_click', page.type, { id: 'tool-calc' }); setCalcOpen(true); }}
+                    onPhoto={() => { track('chip_click', page.type, { id: 'tool-photo' }); fileRef.current?.click(); }}
+                  />
+                )}
+
                 {!userStarted && (
                   <div className="flex flex-wrap gap-2 pt-1">
                     {[
                       ...(pageNudge ? pageNudge.chips.map(c => ({ key: c.id, label: c.label, go: () => tapChip(c.id, c.q) })) : t.chips.slice(0, 3).map(c => ({ key: c, label: c, go: () => { track('chip_click', page.type, { id: 'generic' }); void send(c); } }))),
-                      { key: 'calc', label: t.calcTitle, go: () => { track('chip_click', page.type, { id: 'calc' }); setCalcOpen(true); } },
                       { key: 'generic-last', label: t.chips[3], go: () => send(t.chips[3]) },
                     ].map(c => (
                       <button
@@ -710,14 +731,14 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
 
               {/* composer */}
               <form onSubmit={(e) => { e.preventDefault(); void send(input); }} className="px-4 pt-3 pb-3 border-t border-white/10 bg-[#1b1c21]">
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-end gap-1.5">
                   <button
                     type="button"
                     onClick={() => setCalcOpen(v => !v)}
                     aria-label={t.calcTitle}
                     title={t.calcTitle}
                     aria-pressed={calcOpen}
-                    className="w-10 h-10 shrink-0 grid place-items-center rounded-full text-[#9a9a9f] hover:text-[var(--ed-amber)] hover:bg-white/5"
+                    className="w-10 h-[46px] shrink-0 grid place-items-center rounded-full text-[#9a9a9f] hover:text-[var(--ed-amber)] hover:bg-white/5"
                   >
                     <Calculator className="w-[18px] h-[18px]" />
                   </button>
@@ -730,33 +751,26 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
                         disabled={photoBusy || busy}
                         aria-label={t.photo}
                         title={`${t.photo}. ${t.photoNote}`}
-                        className={`w-10 h-10 shrink-0 grid place-items-center rounded-full hover:text-[var(--ed-amber)] hover:bg-white/5 disabled:opacity-40 ${photoHint ? 'text-[var(--ed-amber)] ring-2 ring-[var(--ed-amber)] animate-pulse' : 'text-[#9a9a9f]'}`}
+                        className={`w-10 h-[46px] shrink-0 grid place-items-center rounded-full hover:text-[var(--ed-amber)] hover:bg-white/5 disabled:opacity-40 ${photoHint ? 'text-[var(--ed-amber)] ring-2 ring-[var(--ed-amber)] animate-pulse' : 'text-[#9a9a9f]'}`}
                       >
                         <ImagePlus className="w-[18px] h-[18px]" />
                       </button>
                     </>
                   )}
-                  <input
+                  <textarea
                     ref={inputRef}
                     value={input}
                     onChange={e => setInput(e.target.value)}
+                    onKeyDown={e => {
+                      // Enter sends, Shift+Enter starts a new line
+                      if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(input); }
+                    }}
+                    rows={1}
                     placeholder={photoBusy ? t.photoBusy : t.placeholder}
                     maxLength={1000}
                     enterKeyHint="send"
-                    className="flex-1 min-w-0 min-h-[46px] rounded-full bg-[#111216] border border-white/15 focus:border-[var(--ed-amber)] outline-none px-4 text-[14px] placeholder:text-[#8d8d92]"
+                    className="flex-1 min-w-0 min-h-[46px] max-h-[150px] resize-none overflow-y-auto rounded-3xl bg-[#111216] border border-white/15 focus:border-[var(--ed-amber)] outline-none px-4 py-[13px] text-[14px] leading-snug placeholder:text-[#8d8d92]"
                   />
-                  {SpeechRec && (
-                    <button
-                      type="button"
-                      onClick={toggleMic}
-                      aria-label={listening ? t.micStop : t.mic}
-                      title={listening ? t.micStop : t.mic}
-                      aria-pressed={listening}
-                      className={`w-10 h-10 shrink-0 grid place-items-center rounded-full hover:bg-white/5 ${listening ? 'text-[#ff8a80] animate-pulse' : 'text-[#9a9a9f] hover:text-[var(--ed-amber)]'}`}
-                    >
-                      {listening ? <Square className="w-4 h-4" fill="currentColor" /> : <Mic className="w-[18px] h-[18px]" />}
-                    </button>
-                  )}
                   <button
                     type="submit"
                     disabled={busy || !input.trim()}
