@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { env, rateLimit, clientIp, checkHuman } from './_lib/core.js';
 import { addStrike, checkBan } from './_lib/log.js';
+import { visionPrompt } from './_lib/visionPrompt.js';
 
 // GET  /api/vision -> { enabled }  (the chat shows the photo button only when this is true)
 // POST /api/vision { image: dataURL (jpeg/png/webp, already downscaled by the browser), lang, pass|cfToken }
@@ -10,15 +11,6 @@ import { addStrike, checkBan } from './_lib/log.js';
 // People, nudity, violence, documents and unrelated pictures are rejected, and 3 rejections in 24 h block the address from uploading for 24 h.
 // Configure with: VISION_API_KEY, VISION_MODEL and (for non-OpenAI providers) VISION_BASE_URL. Any OpenAI-compatible vision model works.
 const enabled = () => !!(env('VISION_API_KEY') && env('VISION_MODEL'));
-
-const PROMPT = `You are the picture gatekeeper and describer for the assistant of a lighting company's website.
-ALLOWED pictures: interiors and exteriors of rooms and buildings (spaces to be lit), facades, outdoor areas, floor plans and architectural drawings, lighting fixtures and LED products, installed lighting, screenshots of the Ecolife website.
-REJECT everything else, in particular: a person (face or body) as a main or clearly visible subject (selfies, portraits, groups, crowds), nudity or sexual content, violence, gore, hateful content, weapons, drugs, identity documents, bank cards, chat screenshots or other personal data, memes, food, animals or vehicles as the subject, landscapes, and anything not related to lighting a space or Ecolife products.
-Answer in exactly one of these forms and nothing else:
-REJECT:PEOPLE
-REJECT:NSFW
-REJECT:UNRELATED
-OK: <at most 90 words of plain text, no markdown, no lists: space type, approximate size (small / medium / large and a rough area in m2 only if it can be judged), ceiling (height impression and type: plasterboard, suspended, wooden, concrete, beams), existing lighting, wall and floor colours (light or dark), windows and natural light, style, furniture layout, installation constraints. For a product photo or a drawing, describe that instead. Describe only what is visible.>`;
 
 const ipHash = (ip: string) => createHash('sha256').update(`${ip}|${env('SUPABASE_SERVICE_ROLE_KEY').slice(-12) || 'ecolife'}`).digest('hex').slice(0, 32);
 
@@ -64,7 +56,7 @@ export default async function handler(req: any, res: any) {
         model: env('VISION_MODEL'),
         temperature: 0.1,
         max_tokens: 1200, // reasoning models spend part of the budget thinking before the visible answer
-        messages: [{ role: 'user', content: [{ type: 'text', text: PROMPT }, { type: 'image_url', image_url: { url: image } }] }],
+        messages: [{ role: 'user', content: [{ type: 'text', text: visionPrompt(body.lang === 'ru' ? 'ru' : 'az') }, { type: 'image_url', image_url: { url: image } }] }],
       }),
       signal: AbortSignal.timeout(50000),
     });
