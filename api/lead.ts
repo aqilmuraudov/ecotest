@@ -5,12 +5,16 @@ import { linkLead } from './_lib/log.js';
 // POST /api/lead  { name, phone, message?, source, lang, products?: string[], transcript?: ChatMsg[], consent, website }
 // One pipeline for every request: validate -> save to Supabase (inquiries) -> notify the sales team on Telegram.
 
+// source key -> label stored with the inquiry (subject) and the Telegram headline: the sales team sees at a glance where it came from
 const SOURCES: Record<string, string> = {
-  'ai-chat': 'AI söhbət',
-  'contact-form': 'Əlaqə forması',
-  product: 'Məhsul səhifəsi',
-  configurator: 'Konfiqurator',
+  'ai-chat': 'AI Chatbot ilə sorğu',
+  product: 'Satış sorğusu (məhsul)',
+  configurator: 'Konfiqurator sorğusu',
+  project: 'Layihə sorğusu',
+  'contact-form': 'Layihə sorğusu',
+  'contact-page': 'Əlaqə səhifəsindən sorğu',
 };
+const SOURCE_ICON: Record<string, string> = { 'ai-chat': '🤖', product: '🛒', configurator: '🎛', project: '🏗', 'contact-form': '🏗', 'contact-page': '✉️' };
 
 // when the customer wants the call (labels are for the sales team, in Azerbaijani)
 const CALLBACK: Record<string, string> = {
@@ -70,6 +74,9 @@ export default async function handler(req: any, res: any) {
   const company = String(body.company || '').trim().slice(0, 190) || null;
   const projectType = String(body.projectType || '').trim().slice(0, 190) || null;
   const roomPreset = String(body.roomPreset || '').trim().slice(0, 190) || null;
+  const sourceRef = String(body.sourceRef || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+  const rawPath = String(body.pageUrl || '');
+  const pagePath = /^\/[\w\-./%]{0,150}$/.test(rawPath) && rawPath !== '/' ? rawPath : ''; // only a site-relative path is ever linked
   const configSummary = String(body.configSummary || '').trim().slice(0, 4000);
   const sourceKey = SOURCES[String(body.source)] ? String(body.source) : 'contact-form';
   const history: ChatMsg[] = (Array.isArray(body.transcript) ? body.transcript : [])
@@ -137,7 +144,7 @@ export default async function handler(req: any, res: any) {
     ? `Здравствуйте, ${name}! Это Ecolife. Получили вашу заявку №${short}.`
     : `Salam, ${name}! Ecolife-dan yazırıq. Sorğunuz (№${short}) qəbul olundu.`;
   const lines = [
-    `<b>Yeni sorğu №${short}</b> · ${escapeHtml(SOURCES[sourceKey])}`,
+    `${SOURCE_ICON[sourceKey] || '📩'} <b>${escapeHtml(SOURCES[sourceKey])}</b> · №${short}`,
     `Ad: <b>${escapeHtml(name)}</b>`,
     `Telefon: <code>+${phone}</code>`,
     `Dil: ${lang.toUpperCase()}`,
@@ -146,6 +153,8 @@ export default async function handler(req: any, res: any) {
   if (company) lines.push(`Şirkət: ${escapeHtml(company)}`);
   if (projectType) lines.push(`Layihə: ${escapeHtml(projectType)}`);
   if (callbackLabel) lines.push(`Zəng vaxtı: <b>${escapeHtml(callbackLabel)}</b>`);
+  if (sourceRef) lines.push(escapeHtml(sourceRef));
+  if (pagePath) lines.push(`Səhifə: <a href="${SITE_URL()}${pagePath}">${escapeHtml(pagePath)}</a>`);
   if (products.length) {
     lines.push('', starred.length ? `<b>Müştərinin seçdikləri (${products.length}):</b>` : '<b>Məhsullar:</b>', ...products.map(p => `• <a href="${p.url}">${escapeHtml(p.code)}</a> ${escapeHtml(p.name)}`));
   }

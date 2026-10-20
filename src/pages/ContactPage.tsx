@@ -99,6 +99,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ currentLang }) => {
         company: cleanCompany,
         projectType: formData.projectType,
         message: cleanMessage,
+        source: 'contact-page',
         ipHash: fingerprint,
       } as any);
       if (result.success) {

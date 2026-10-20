@@ -1089,6 +1089,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                               <div className="font-bold text-white flex items-center gap-1.5">
                                 <span>{inq.name}</span>
                               </div>
+                              {inq.subject && <span className="inline-block mt-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#FFD21A]/12 text-[#FFD21A]">{inq.subject}</span>}
                               {inq.company && <div className="text-[10px] text-gray-400 font-medium">{inq.company}</div>}
                               
                               {/* Quick contact buttons */}

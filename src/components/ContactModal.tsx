@@ -18,6 +18,9 @@ interface ContactModalProps {
   currentLang: Language;
   prefilledProduct?: Product | null;
   configSummary?: string | null;
+  /** the page the visitor was on when the form opened (tells the sales team where the request came from) */
+  contextPage?: string;
+  contextParam?: string;
 }
 
 export const ContactModal: React.FC<ContactModalProps> = ({
@@ -25,7 +28,9 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   onClose,
   currentLang,
   prefilledProduct,
-  configSummary
+  configSummary,
+  contextPage,
+  contextParam
 }) => {
   const t = translations[currentLang];
   const { addInquiry } = useData();
@@ -116,6 +121,9 @@ export const ContactModal: React.FC<ContactModalProps> = ({
         productCategory: prefilledProduct?.category,
         productSpecs: prefilledProduct?.specs,
         configSummary: configSummary ? sanitizeText(configSummary, 1000) : undefined,
+        // product quote, configurator, or a project request (from a project / solution page or the general form)
+        source: prefilledProduct ? 'product' : configSummary ? 'configurator' : 'project',
+        sourceRef: !prefilledProduct && !configSummary && (contextPage === 'projects' || contextPage === 'solutions') && contextParam ? `${contextPage === 'projects' ? 'Layihə' : 'Həll'}: ${sanitizeText(contextParam, 120)}` : undefined,
         ipHash: fingerprint,
       } as any);
       if (result.success) {

@@ -943,7 +943,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           roomPreset: inqData.roomPreset,
           configSummary: inqData.configSummary,
           productCode: inqData.productCode,
-          source: inqData.configSummary ? 'configurator' : inqData.productCode ? 'product' : 'contact-form',
+          source: inqData.source || (inqData.configSummary ? 'configurator' : inqData.productCode ? 'product' : 'contact-form'),
+          sourceRef: inqData.sourceRef,
+          pageUrl: typeof window !== 'undefined' ? window.location.pathname : undefined,
           lang: typeof document !== 'undefined' && document.documentElement.lang === 'ru' ? 'ru' : 'az',
           consent: true, // the forms state this next to the submit button
         }),

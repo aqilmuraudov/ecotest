@@ -340,6 +340,8 @@ export default function App() {
         currentLang={currentLang}
         prefilledProduct={selectedProductForInquiry}
         configSummary={configSummaryForInquiry}
+        contextPage={activePage}
+        contextParam={pageParam}
       />
 
       {/* Global Search Modal */}

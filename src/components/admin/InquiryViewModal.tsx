@@ -76,6 +76,7 @@ export const InquiryViewModal: React.FC<InquiryViewModalProps> = ({
               </span>
             </div>
             <h3 className="text-xl font-bold text-white tracking-tight mt-1">{inquiry.name}</h3>
+            {inquiry.subject && <span className="inline-block mt-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#FFD21A]/12 text-[#FFD21A]">{inquiry.subject}</span>}
           </div>
 
           {/* Status Selector in Header */}

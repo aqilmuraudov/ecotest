@@ -218,6 +218,10 @@ export interface Inquiry {
   roomPreset?: string;
   configSummary?: string;
   projectType?: string;
+  /** where the request came from: product | configurator | project | contact-form | contact-page (sent to /api/lead) */
+  source?: string;
+  /** the project / solution / page the request was sent from, for the sales team */
+  sourceRef?: string;
   ipHash?: string;
   userAgent?: string;
   createdAt: string;
