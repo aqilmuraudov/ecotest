@@ -254,7 +254,8 @@ const PRICE_REPLY = {
 // internal product codes belong on the cards, not in the sentence
 const CODE_RE = /\s?\(?\bA\d{9,12}\b\)?/g;
 // tool arguments written into the sentence, e.g. ({"codes":["",""]})
-const LEAK_RE = /\(?\s*\{\s*"(?:codes|query|category|code|project_summary)"\s*:[^}]*\}\s*\)?/g;
+// also the bracket form: [ codes=["",""]] / codes: ["A1"]
+const LEAK_RE = /\(?\s*\{\s*"(?:codes|query|category|code|project_summary)"\s*:[^}]*\}\s*\)?|[(\[]\s*"?(?:codes|query|category|code|project_summary)"?\s*[:=]\s*(?:\[[^\]]*\]|"[^"]*")\s*[)\]]?/g;
 const TOOL_NAME_RE = /\b(request_consulta\w*|recommend_products|search_products|get_product)\b/g;
 
 function makeTextSink(lang: 'az' | 'ru', emit: Emit) {
@@ -269,7 +270,9 @@ function makeTextSink(lang: 'az' | 'ru', emit: Emit) {
       if (!p.trim()) continue;
       const safe = PRICE_RE.test(p) ? PRICE_REPLY[lang] + (/\s$/.test(p) ? ' ' : '') : p;
       // some models glue sentences together ("...клиентов.Подскажите"); restore the space, never inside numbers like 1.5
-      const out = /[a-zа-яəıöüçşğ][.!?]$/i.test(total) && /^[A-ZА-ЯƏİÖÜÇŞĞ]/.test(safe) ? ' ' + safe : safe;
+      const out = /[a-zа-яəıöüçşğ][.!?]$/i.test(total) && /^[A-ZА-ЯƏİÖÜÇŞĞ]/.test(safe) ? ' ' + safe
+        : total && !/\n$/.test(total) && /^[-•*]\s/.test(safe) ? '\n' + safe // glued list item ("...yayımı.- Next")
+        : safe;
       total += out;
       emit({ type: 'text', delta: out });
     }
@@ -414,7 +417,7 @@ export async function runChat(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit,
         const r = await streamOnce(target, messages, true, sink);
         if (!r.toolCalls.length) {
           // the call was written into the text instead of being made: do what the model meant (cards for the best matches)
-          const leaked = /\{\s*"codes"\s*:\s*\[([^\]]*)\]\s*\}/.exec(r.text);
+          const leaked = /"?codes"?\s*[:=]\s*\[([^\]]*)\]/.exec(r.text);
           if (leaked && !cardsShown) {
             const codes = (leaked[1].match(/"([^"]+)"/g) || []).map(s => s.replace(/"/g, ''));
             await runTool('recommend_products', { codes }, attemptEmit, { userTurns: history.filter(m => m.role === 'user').length, lastUser: '', cands, allowed });
