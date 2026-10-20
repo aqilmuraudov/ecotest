@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import {
   AlertTriangle, ArrowDown, ArrowUp, Bot, CheckCircle2, ChevronDown, FlaskConical, History, KeyRound, Loader2, Plus, RotateCcw, Save, Settings2, ShieldCheck, Trash2, X,
 } from 'lucide-react';
+import { ROLE_REASONING_TIPS, adjustEffort, reasoningSpec } from './reasoning';
 
 /**
  * Admin panel: AI Assistent. Providers (base URL + API key), which model plays which role, live tests, history and a short
@@ -14,7 +15,7 @@ type RoleName = 'fast' | 'thinking' | 'fallback' | 'vision' | 'summary';
 interface AiConfig { providers: ProviderCfg[]; roles: Record<RoleName, ModelRef[]> }
 interface ProviderStatus { id: string; keySource: 'db' | 'env' | 'none'; last4: string; updatedAt: string | null; updatedBy: string | null; envName: string | null; dbKeyUnreadable: boolean }
 interface HistoryRow { id: number; at: string; by: string | null; version: number | null; note: string | null; hasConfig: boolean }
-interface State { config: AiConfig; source: 'db' | 'env'; version: number; providers: ProviderStatus[]; secretsReady: boolean; history: HistoryRow[]; me: string }
+interface State { config: AiConfig; source: 'db' | 'env'; version: number; providers: ProviderStatus[]; secretsReady: boolean; history: HistoryRow[]; me: string; dbError?: string | null }
 interface TestResult { ok: boolean; ttfbMs?: number | null; totalMs?: number; text?: string; toolCalls?: number; error?: string; tokens?: number | null; status?: number }
 
 const ROLES: { id: RoleName; title: string; help: string }[] = [
@@ -23,9 +24,6 @@ const ROLES: { id: RoleName; title: string; help: string }[] = [
   { id: 'fallback', title: 'Ehtiyat modellər', help: 'Yuxarıdakı modellər xəta verəndə, limitə düşəndə və ya cavab verməyəndə avtomatik keçilir.' },
   { id: 'vision', title: 'Vision (şəkil analizi)', help: 'Müştərinin otaq şəklini yoxlayan və təsvir edən model (şəkil qəbul etməlidir). Boş olsa, şəkil düyməsi saytda görünmür.' },
   { id: 'summary', title: 'Xülasə modeli', help: 'Satış komandasına gedən qısa xülasə. Boş olsa, ilk sürətli model istifadə olunur.' },
-];
-const EFFORTS: { v: string; label: string }[] = [
-  { v: '', label: 'göndərmə' }, { v: 'none', label: 'none' }, { v: 'minimal', label: 'minimal' }, { v: 'low', label: 'low' }, { v: 'medium', label: 'medium' }, { v: 'high', label: 'high' },
 ];
 const PRESETS: Record<string, { label: string; baseUrl: string; limits: string; models: string[] }> = {
   groq: { label: 'Groq', baseUrl: 'https://api.groq.com/openai/v1', limits: 'Pulsuz plan çox kiçikdir (təxminən 30 sorğu/dəq, ~8K token/dəq). Developer (pullu) planda limitlər xeyli yüksəkdir, dəqiq rəqəmləri groq.com-da yoxlayın.', models: ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b'] },
@@ -62,6 +60,7 @@ export const AiSettingsTab: React.FC = () => {
   const [models, setModels] = useState<Record<string, string[]>>({});
   const [advanced, setAdvanced] = useState<Record<string, boolean>>({});
   const [guideOpen, setGuideOpen] = useState(false);
+  const [reasoningOpen, setReasoningOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -78,6 +77,12 @@ export const AiSettingsTab: React.FC = () => {
   useEffect(() => { void load(); }, [load]);
 
   const dirty = useMemo(() => !!state && !!draft && JSON.stringify(state.config) !== JSON.stringify(draft), [state, draft]);
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
   const statusOf = (id: string) => state?.providers.find(p => p.id === id);
 
   const flash = (m: string) => { setNotice(m); window.setTimeout(() => setNotice(''), 4000); };
@@ -94,7 +99,19 @@ export const AiSettingsTab: React.FC = () => {
     providers: d.providers.filter(p => p.id !== id),
     roles: Object.fromEntries(Object.entries(d.roles).map(([r, list]) => [r, (list as ModelRef[]).filter(m => m.provider !== id)])) as AiConfig['roles'],
   });
-  const patchModel = (role: RoleName, i: number, patch: Partial<ModelRef>) => setDraft(d => d && { ...d, roles: { ...d.roles, [role]: d.roles[role].map((m, k) => (k === i ? { ...m, ...patch } : m)) } });
+  // adjust = re-check the reasoning level against what the (new) model supports; done when the model field is left, not on every keystroke
+  const patchModel = (role: RoleName, i: number, patch: Partial<ModelRef>, adjust = false) => setDraft(d => d && {
+    ...d,
+    roles: {
+      ...d.roles,
+      [role]: d.roles[role].map((m, k) => {
+        if (k !== i) return m;
+        const n = { ...m, ...patch };
+        if (adjust) n.effort = adjustEffort(reasoningSpec(n.provider, n.model), n.effort);
+        return n;
+      }),
+    },
+  });
   const addModel = (role: RoleName) => setDraft(d => d && { ...d, roles: { ...d.roles, [role]: [...d.roles[role], { provider: d.providers[0]?.id || '', model: '', effort: '' }] } });
   const removeModel = (role: RoleName, i: number) => setDraft(d => d && { ...d, roles: { ...d.roles, [role]: d.roles[role].filter((_, k) => k !== i) } });
   const moveModel = (role: RoleName, i: number, dir: -1 | 1) => setDraft(d => {
@@ -248,6 +265,7 @@ export const AiSettingsTab: React.FC = () => {
           </span>
           {dirty && <span className="px-2.5 py-1 rounded-full border border-[#FFD21A]/40 text-[#FFD21A] bg-[#FFD21A]/10">Saxlanılmamış dəyişiklik var</span>}
         </div>
+        {state.dbError && <p className="mt-4 text-sm text-red-300 bg-red-500/10 border border-red-500/25 rounded-lg p-3 flex items-start gap-2"><AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" /> Bazadan oxuma xətası, buna görə ayarlar saxlanmış kimi görünmür: {state.dbError}</p>}
         {error && <p className="mt-4 text-sm text-red-300 flex items-start gap-2"><AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" /> {error}</p>}
         {notice && <p className="mt-4 text-sm text-emerald-300 flex items-start gap-2"><CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" /> {notice}</p>}
         {!state.secretsReady && (
@@ -313,12 +331,45 @@ export const AiSettingsTab: React.FC = () => {
         </div>
       </div>
 
+      {/* ------------------------------------------------------------ reasoning guide */}
+      <div className="bg-[#12131A] rounded-2xl border border-white/5 overflow-hidden">
+        <button className="w-full p-5 flex items-center justify-between text-left" onClick={() => setReasoningOpen(v => !v)}>
+          <span className="text-sm font-bold text-white">Reasoning (düşünmə dərinliyi) nədir? Hansını seçməli?</span>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${reasoningOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {reasoningOpen && (
+          <div className="px-5 pb-6 space-y-4 text-xs text-gray-400 leading-relaxed">
+            <p>Bəzi modellər cavab verməzdən əvvəl "içində düşünür". Bu cavabı dəqiqləşdirir, amma <b className="text-gray-200">gecikməni və xərci artırır</b>. Söhbət botu üçün sürət vacibdir, ona görə adətən ən aşağı səviyyə seçilir. Hər model üçün yalnız onun qəbul etdiyi seçimlər göstərilir; yanlış dəyər provayderdə xəta yaradır və söhbət növbəti modelə keçir.</p>
+            <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5">
+              <p><b className="text-gray-200">Göndərmə:</b> parametr yoxdur, model defoltu ilə işləyir.</p>
+              <p><b className="text-gray-200">none:</b> düşünmür. Ən sürətli.</p>
+              <p><b className="text-gray-200">minimal:</b> çox qısa düşünür. Söhbət üçün tövsiyə.</p>
+              <p><b className="text-gray-200">low:</b> yüngül düşünmə. Ehtiyat modellər üçün.</p>
+              <p><b className="text-gray-200">medium:</b> orta. "Düşünən" rol üçün.</p>
+              <p><b className="text-gray-200">high:</b> dərin və yavaş. Adi söhbətdə lazım deyil.</p>
+            </div>
+            <div className="rounded-lg border border-white/5 divide-y divide-white/5">
+              {[
+                ['Groq · Qwen3', 'yalnız none və ya göndərmə. Söhbət üçün none.'],
+                ['Groq · GPT-OSS', 'low / medium / high (söndürmək olmur). Söhbət üçün low.'],
+                ['Groq · Llama, Gemma və b.', 'reasoning yoxdur, sahə bağlıdır.'],
+                ['GPT-5 / luna', 'none, minimal, low, medium, high. Söhbət üçün minimal.'],
+                ['Gemini', 'minimal, low, medium, high. Söhbət və şəkil üçün minimal.'],
+                ['GLM, Seed, DeepSeek, MiniMax, Kimi (şlüzlərdə)', 'şlüz səviyyəni uyğunlaşdırır; minimal/low sınaqda yaxşı işlədi. Boş cavab olarsa göndərməyin.'],
+              ].map(([a, b]) => <p key={a} className="px-3 py-2"><b className="text-gray-200">{a}:</b> {b}</p>)}
+            </div>
+            <p>Əmin deyilsinizsə sətirdəki <b className="text-gray-200">Test</b> düyməsi ilə yoxlayın: ilk cavab vaxtı qısa və cavab boş deyilsə seçim düzgündür.</p>
+          </div>
+        )}
+      </div>
+
       {/* ------------------------------------------------------------ roles */}
       {ROLES.map(role => (
         <div key={role.id} className="bg-[#12131A] rounded-2xl border border-white/5 overflow-hidden">
           <div className="p-5 border-b border-white/5">
             <h3 className="text-sm font-bold text-white">{role.title}</h3>
             <p className="text-xs text-gray-500 mt-1 max-w-3xl leading-relaxed">{role.help}</p>
+            <p className="text-xs text-[#FFD21A]/90 mt-1.5 max-w-3xl leading-relaxed">{ROLE_REASONING_TIPS[role.id]}</p>
           </div>
           <div className="divide-y divide-white/5">
             {draft.roles[role.id].length === 0 && <p className="px-5 py-4 text-xs text-gray-500">Boşdur.</p>}
@@ -326,20 +377,27 @@ export const AiSettingsTab: React.FC = () => {
               const key = `${role.id}:${i}`;
               const listId = `models-${role.id}-${i}`;
               const p = draft.providers.find(x => x.id === m.provider);
+              const spec = reasoningSpec(m.provider, m.model);
+              const curEffort = m.effort || '';
+              const selected = spec.options.find(o => o.v === curEffort);
               const suggestions = Array.from(new Set([...(models[m.provider] || []), ...((PRESETS[m.provider.replace(/\d+$/, '')] || PRESETS.custom).models)]));
               return (
                 <div key={key} className="px-5 py-4 space-y-2.5">
-                  <div className="grid md:grid-cols-[150px_1fr_130px_auto] gap-2.5 items-center">
-                    <select className={input} value={m.provider} onChange={e => patchModel(role.id, i, { provider: e.target.value })} aria-label="Provayder">
+                  <div className="grid md:grid-cols-[150px_1fr_230px_auto] gap-2.5 items-start">
+                    <select className={input} value={m.provider} onChange={e => patchModel(role.id, i, { provider: e.target.value }, true)} aria-label="Provayder">
                       {draft.providers.map(x => <option key={x.id} value={x.id}>{x.label}</option>)}
                     </select>
                     <>
-                      <input className={input} list={listId} value={m.model} onChange={e => patchModel(role.id, i, { model: e.target.value })} placeholder="model adı (məs. gpt-5.6-luna)" aria-label="Model" />
+                      <input className={input} list={listId} value={m.model} onChange={e => patchModel(role.id, i, { model: e.target.value })} onBlur={() => patchModel(role.id, i, {}, true)} placeholder="model adı (məs. gpt-5.6-luna)" aria-label="Model" />
                       <datalist id={listId}>{suggestions.map(s => <option key={s} value={s} />)}</datalist>
                     </>
-                    <select className={input} value={m.effort || ''} onChange={e => patchModel(role.id, i, { effort: e.target.value })} aria-label="Reasoning effort" title="reasoning_effort: düşünmə dərinliyi. Sürət üçün minimal/low; Groq-da qwen üçün none.">
-                      {EFFORTS.map(e => <option key={e.v} value={e.v}>effort: {e.label}</option>)}
-                    </select>
+                    <div>
+                      <select className={`${input} ${spec.support === 'no' ? 'opacity-60' : ''}`} value={curEffort} disabled={spec.support === 'no'} onChange={e => patchModel(role.id, i, { effort: e.target.value })} aria-label="Reasoning (düşünmə dərinliyi)">
+                        {!selected && <option value={curEffort}>{`⚠ ${curEffort || 'göndərmə'} (bu model üçün uyğun deyil)`}</option>}
+                        {spec.options.map(o => <option key={o.v} value={o.v}>{o.label}</option>)}
+                      </select>
+                      <span className="block mt-1 text-[10.5px] text-gray-500">Düşünmə dərinliyi (reasoning)</span>
+                    </div>
                     <div className="flex items-center gap-1">
                       <button className={btnGhost} onClick={() => moveModel(role.id, i, -1)} disabled={i === 0} aria-label="Yuxarı"><ArrowUp className="w-3.5 h-3.5" /></button>
                       <button className={btnGhost} onClick={() => moveModel(role.id, i, 1)} disabled={i === draft.roles[role.id].length - 1} aria-label="Aşağı"><ArrowDown className="w-3.5 h-3.5" /></button>
@@ -347,6 +405,14 @@ export const AiSettingsTab: React.FC = () => {
                       <button className={`${btnGhost} text-red-300`} onClick={() => removeModel(role.id, i)} aria-label="Sil"><Trash2 className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
+                  {m.model && (
+                    <p className={`text-[11px] leading-relaxed rounded-lg px-3 py-2 border ${!selected ? 'border-amber-500/30 bg-amber-500/10 text-amber-200' : 'border-white/5 bg-white/[0.02] text-gray-400'}`}>
+                      <b className="text-gray-200">{spec.family}.</b>{' '}
+                      {selected && spec.support !== 'no' ? <><b className="text-gray-300">{selected.label.split(' · ')[0]}:</b> {selected.hint} </> : null}
+                      {spec.note}
+                      {!selected && <> <button className="underline font-semibold" onClick={() => patchModel(role.id, i, { effort: spec.fallback })}>Düzəlt</button></>}
+                    </p>
+                  )}
                   <div className="flex flex-wrap items-center gap-2">
                     <button className={btnGhost} disabled={!m.model || !p || tests[key] === 'busy'} onClick={() => void runTest(role.id, i)}><FlaskConical className="w-3.5 h-3.5" /> {role.id === 'vision' ? 'Test (nümunə şəkil)' : 'Test'}</button>
                     {role.id !== 'vision' && <button className={btnGhost} disabled={!m.model || !p || tests[`${key}:tools`] === 'busy'} onClick={() => void runTest(role.id, i, true)}>Alət çağırışı testi</button>}
@@ -450,6 +516,22 @@ export const AiSettingsTab: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* floating save bar: the page is long, the buttons at the top are out of sight while editing */}
+      {(dirty || saving || error) && (
+        <div className="fixed bottom-4 inset-x-4 z-40 flex justify-center pointer-events-none">
+          <div className="pointer-events-auto max-w-2xl w-full flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#FFD21A]/40 bg-[#161822]/90 backdrop-blur-xl px-4 py-3 shadow-2xl text-xs text-white">
+            <span className="min-w-0">
+              {error ? <span className="text-red-300 flex items-start gap-1.5"><AlertTriangle className="w-4 h-4 shrink-0" /> {error}</span> : <span className="text-[#FFD21A]">Saxlanılmamış dəyişiklik var. Saxlamasanız yeniləyəndə itəcək.</span>}
+            </span>
+            <span className="flex items-center gap-2 shrink-0">
+              {dirty && <button className={btnGhost} onClick={() => setDraft(JSON.parse(JSON.stringify(state.config)))}><X className="w-3.5 h-3.5" /> Ləğv et</button>}
+              {dirty && <button className={btnGold} disabled={saving} onClick={() => void save()}>{saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Saxla</button>}
+              {!dirty && error && <button className={btnGhost} onClick={() => setError('')}><X className="w-3.5 h-3.5" /> Bağla</button>}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

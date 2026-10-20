@@ -95,7 +95,7 @@ export function decryptSecret(stored: string): string | null {
 
 // ------------------------------------------------------------------ runtime (cached 30 s per server instance)
 export interface SecretMeta { last4: string; updatedAt: string; updatedBy: string | null }
-export interface AiRuntime { cfg: AiConfig; source: 'db' | 'env'; version: number; keys: Map<string, string>; meta: Map<string, SecretMeta> }
+export interface AiRuntime { cfg: AiConfig; source: 'db' | 'env'; version: number; keys: Map<string, string>; meta: Map<string, SecretMeta>; dbError?: string }
 let cache: { at: number; rt: AiRuntime } | null = null;
 const TTL = 30_000;
 
@@ -109,6 +109,9 @@ async function loadRuntime(): Promise<AiRuntime> {
       fetch(`${sbUrl()}/rest/v1/ai_settings?id=eq.main&select=config,version`, { headers: hdr(), signal: AbortSignal.timeout(4000) }).then(r => r.json()),
       fetch(`${sbUrl()}/rest/v1/ai_secrets?select=name,ciphertext,last4,updated_at,updated_by`, { headers: hdr(), signal: AbortSignal.timeout(4000) }).then(r => r.json()),
     ]);
+    // a failed read used to look exactly like "nothing saved yet"; keep the reason so the panel can show it
+    if (!Array.isArray(s)) base.dbError = `ai_settings oxunmadı: ${String((s as any)?.message || (s as any)?.error || 'naməlum cavab').slice(0, 160)}`;
+    else if (!Array.isArray(k)) base.dbError = `ai_secrets oxunmadı: ${String((k as any)?.message || (k as any)?.error || 'naməlum cavab').slice(0, 160)}`;
     const row = Array.isArray(s) ? s[0] : null;
     if (row?.config?.providers && row?.config?.roles) {
       base.cfg = { providers: row.config.providers, roles: { ...defaultConfig().roles, ...row.config.roles } };
@@ -126,7 +129,9 @@ async function loadRuntime(): Promise<AiRuntime> {
     }
   } catch (e) {
     console.error('[aiconfig] load failed, using the previous or the environment configuration', e);
-    return cache?.rt || base;
+    if (cache?.rt) return cache.rt;
+    base.dbError = `Baza ilə əlaqə alınmadı: ${String((e as any)?.message || e).slice(0, 120)}`;
+    return base;
   }
   return base;
 }
@@ -212,19 +217,35 @@ export function validateConfig(input: any): { ok: true; cfg: AiConfig } | { ok: 
 }
 
 // ------------------------------------------------------------------ persistence (used by /api/admin-ai)
+/** A Supabase REST failure turned into a readable message (status + the database's own explanation, never any key). */
+async function failure(what: string, r: Response): Promise<Error> {
+  const body: any = await r.json().catch(() => ({}));
+  return new Error(`${what}: HTTP ${r.status}${body?.message ? ` - ${String(body.message).slice(0, 160)}` : ''}${body?.hint ? ` (${String(body.hint).slice(0, 100)})` : ''}`);
+}
+
 export async function saveConfig(cfg: AiConfig, by: string, note: string): Promise<number> {
-  const current = await fetch(`${sbUrl()}/rest/v1/ai_settings?id=eq.main&select=version`, { headers: hdr() }).then(r => r.json()).catch(() => []);
+  const cur = await fetch(`${sbUrl()}/rest/v1/ai_settings?id=eq.main&select=version`, { headers: hdr(), signal: AbortSignal.timeout(8000) });
+  if (!cur.ok) throw await failure('Cari versiya oxunmadı', cur);
+  const current: any = await cur.json().catch(() => []);
   const version = (Array.isArray(current) && current[0]?.version ? Number(current[0].version) : 0) + 1;
   const row = { id: 'main', config: cfg, version, updated_at: new Date().toISOString(), updated_by: by };
-  const r = await fetch(`${sbUrl()}/rest/v1/ai_settings`, { method: 'POST', headers: hdr({ Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify(row) });
-  if (!r.ok) throw new Error(`save failed (${r.status})`);
+  const r = await fetch(`${sbUrl()}/rest/v1/ai_settings?on_conflict=id`, { method: 'POST', headers: hdr({ Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify(row), signal: AbortSignal.timeout(10000) });
+  if (!r.ok) throw await failure('Konfiqurasiya yazılmadı', r);
+  // read it back: only report success when the database really holds the new version
+  const back = await fetch(`${sbUrl()}/rest/v1/ai_settings?id=eq.main&select=version`, { headers: hdr(), signal: AbortSignal.timeout(8000) }).then(x => x.json()).catch(() => null);
+  if (!Array.isArray(back) || Number(back[0]?.version) !== version) throw new Error('Konfiqurasiya yazıldı kimi göründü, amma bazadan geri oxunmadı');
   await addHistory(by, version, cfg, note);
   clearAiCache();
   return version;
 }
 
 export async function addHistory(by: string, version: number | null, cfg: AiConfig | null, note: string) {
-  await fetch(`${sbUrl()}/rest/v1/ai_settings_history`, { method: 'POST', headers: hdr({ Prefer: 'return=minimal' }), body: JSON.stringify({ by, version, config: cfg, note: note.slice(0, 300) }) }).catch(() => undefined);
+  try {
+    const r = await fetch(`${sbUrl()}/rest/v1/ai_settings_history`, { method: 'POST', headers: hdr({ Prefer: 'return=minimal' }), body: JSON.stringify({ by, version, config: cfg, note: note.slice(0, 300) }), signal: AbortSignal.timeout(8000) });
+    if (!r.ok) console.error('[aiconfig] history not written', r.status);
+  } catch (e) {
+    console.error('[aiconfig] history not written', e);
+  }
 }
 
 export async function listHistory(): Promise<{ id: number; at: string; by: string | null; version: number | null; note: string | null; hasConfig: boolean }[]> {
@@ -239,12 +260,13 @@ export async function historyConfig(id: number): Promise<AiConfig | null> {
 
 export async function putSecret(name: string, plain: string, by: string): Promise<void> {
   const row = { name, ciphertext: encryptSecret(plain), last4: plain.slice(-4), updated_at: new Date().toISOString(), updated_by: by };
-  const r = await fetch(`${sbUrl()}/rest/v1/ai_secrets`, { method: 'POST', headers: hdr({ Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify(row) });
-  if (!r.ok) throw new Error(`secret save failed (${r.status})`);
+  const r = await fetch(`${sbUrl()}/rest/v1/ai_secrets?on_conflict=name`, { method: 'POST', headers: hdr({ Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify(row), signal: AbortSignal.timeout(10000) });
+  if (!r.ok) throw await failure('Açar yazılmadı', r);
   clearAiCache();
 }
 
 export async function removeSecret(name: string): Promise<void> {
-  await fetch(`${sbUrl()}/rest/v1/ai_secrets?name=eq.${encodeURIComponent(name)}`, { method: 'DELETE', headers: hdr({ Prefer: 'return=minimal' }) });
+  const r = await fetch(`${sbUrl()}/rest/v1/ai_secrets?name=eq.${encodeURIComponent(name)}`, { method: 'DELETE', headers: hdr({ Prefer: 'return=minimal' }), signal: AbortSignal.timeout(10000) });
+  if (!r.ok) throw await failure('Açar silinmədi', r);
   clearAiCache();
 }

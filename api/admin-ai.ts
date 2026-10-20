@@ -110,7 +110,7 @@ export default async function handler(req: any, res: any) {
         dbKeyUnreadable: !!db && !rt.keys.has(`provider:${p.id}`), // stored, but the master key does not open it
       };
     });
-    return res.status(200).json({ config: rt.cfg, source: rt.source, version: rt.version, providers, secretsReady: secretsReady(), history: await listHistory(), me: by });
+    return res.status(200).json({ config: rt.cfg, source: rt.source, version: rt.version, providers, secretsReady: secretsReady(), history: await listHistory(), me: by, dbError: rt.dbError || null });
   }
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'GET, POST');
@@ -201,7 +201,8 @@ export default async function handler(req: any, res: any) {
     }
   } catch (e: any) {
     console.error('[admin-ai]', action, e?.message || e);
-    return res.status(500).json({ error: 'Server xətası' });
+    // this endpoint is for the master admin only, and the message carries just the database's own explanation, never a key
+    return res.status(500).json({ error: `Server xətası: ${String(e?.message || e).slice(0, 220)}` });
   }
   return res.status(400).json({ error: 'Naməlum əməliyyat' });
 }
