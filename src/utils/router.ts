@@ -32,7 +32,8 @@ export function parseUrlToRoute(pathname: string): RouteState {
   }
 
   // Clean pathname (remove trailing slashes and decode URI)
-  const cleanPath = decodeURIComponent(path.replace(/\/+$/, '') || '/');
+  let cleanPath = path.replace(/\/+$/, '') || '/';
+  try { cleanPath = decodeURIComponent(cleanPath); } catch { /* malformed escape: use the raw path instead of crashing */ }
   let segments = cleanPath.split('/').filter(Boolean);
 
   if (segments.length === 0) {

@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import { lazyRetry } from './utils/lazyRetry';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Language, Theme, Product } from './types';
 import { parseUrlToRoute, buildRoutePath } from './utils/router';
 import { Header } from './components/Header';
@@ -9,17 +11,17 @@ import { Toast } from './components/Toast';
 
 // Pages
 import { HomePage } from './pages/HomePage';
-const CatalogPage = lazy(() => import('./pages/CatalogPage').then(module => ({ default: module.CatalogPage })));
-const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage').then(module => ({ default: module.ProductDetailPage })));
-const ProjectsPage = lazy(() => import('./pages/ProjectsPage').then(module => ({ default: module.ProjectsPage })));
-const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage').then(module => ({ default: module.ProjectDetailPage })));
-const SolutionsPage = lazy(() => import('./pages/SolutionsPage').then(module => ({ default: module.SolutionsPage })));
-const ConfiguratorPage = lazy(() => import('./pages/ConfiguratorPage').then(module => ({ default: module.ConfiguratorPage })));
-const BlogPage = lazy(() => import('./pages/BlogPage').then(module => ({ default: module.BlogPage })));
-const ChatWidget = lazy(() => import('./components/chat/ChatWidget').then(m => ({ default: m.ChatWidget })));
-const AdminPage = lazy(() => import('./pages/AdminPage').then(module => ({ default: module.AdminPage })));
-const AboutPage = lazy(() => import('./pages/AboutPage').then(module => ({ default: module.AboutPage })));
-const ContactPage = lazy(() => import('./pages/ContactPage').then(module => ({ default: module.ContactPage })));
+const CatalogPage = lazyRetry(() => import('./pages/CatalogPage').then(module => ({ default: module.CatalogPage })));
+const ProductDetailPage = lazyRetry(() => import('./pages/ProductDetailPage').then(module => ({ default: module.ProductDetailPage })));
+const ProjectsPage = lazyRetry(() => import('./pages/ProjectsPage').then(module => ({ default: module.ProjectsPage })));
+const ProjectDetailPage = lazyRetry(() => import('./pages/ProjectDetailPage').then(module => ({ default: module.ProjectDetailPage })));
+const SolutionsPage = lazyRetry(() => import('./pages/SolutionsPage').then(module => ({ default: module.SolutionsPage })));
+const ConfiguratorPage = lazyRetry(() => import('./pages/ConfiguratorPage').then(module => ({ default: module.ConfiguratorPage })));
+const BlogPage = lazyRetry(() => import('./pages/BlogPage').then(module => ({ default: module.BlogPage })));
+const ChatWidget = lazyRetry(() => import('./components/chat/ChatWidget').then(m => ({ default: m.ChatWidget })));
+const AdminPage = lazyRetry(() => import('./pages/AdminPage').then(module => ({ default: module.AdminPage })));
+const AboutPage = lazyRetry(() => import('./pages/AboutPage').then(module => ({ default: module.AboutPage })));
+const ContactPage = lazyRetry(() => import('./pages/ContactPage').then(module => ({ default: module.ContactPage })));
 import { useData } from './context/DataContext';
 import { productCategoriesList } from './data/products';
 
@@ -305,9 +307,11 @@ export default function App() {
 
       {/* Main Routed Page Content */}
       <main className="min-h-screen">
-        <Suspense fallback={<div className="min-h-screen bg-[var(--ed-bg)]" aria-label="Səhifə yüklənir" />}>
-          {renderPage()}
-        </Suspense>
+        <ErrorBoundary resetKey={`${activePage}/${pageParam ?? ''}`}>
+          <Suspense fallback={<div className="min-h-screen bg-[var(--ed-bg)]" aria-label="Səhifə yüklənir" />}>
+            {renderPage()}
+          </Suspense>
+        </ErrorBoundary>
       </main>
 
       {/* AI digital seller (not shown in the admin panel; set VITE_AI_CHAT=off in Vercel and redeploy to hide it) */}
