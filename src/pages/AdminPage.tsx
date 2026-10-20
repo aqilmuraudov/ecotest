@@ -20,6 +20,7 @@ import { InquiryViewModal } from '../components/admin/InquiryViewModal';
 import { UsersTab } from '../components/admin/UsersTab';
 import { ChatLogsTab } from '../components/admin/ChatLogsTab';
 import { AiSettingsTab } from '../components/admin/AiSettingsTab';
+import { AdminHub, AdminTopBar, SectionHeader, adminText, type SectionDef } from '../components/admin/AdminShell';
 import { PagesEditorTab } from '../components/admin/PagesEditorTab';
 import { adminTranslations } from '../data/adminTranslations';
 import { 
@@ -461,8 +462,28 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     return matchesSearch && matchesCategory;
   });
 
+  // Sections shown as cards on the dashboard (the same list feeds the quick switcher inside a section)
+  const sections: SectionDef[] = [
+    { id: 'products', group: 'content', label: t.tabs.products, icon: Layers, tone: 'gold', count: products.length },
+    { id: 'projects', group: 'content', label: t.tabs.projects, icon: Briefcase, tone: 'violet', count: projects.length },
+    { id: 'blog', group: 'content', label: t.tabs.blog, icon: FileText, tone: 'blue', count: blogPosts.length },
+    { id: 'pages', group: 'content', label: t.tabs.pages || 'Səhifələr', icon: Globe, tone: 'teal' },
+    { id: 'inquiries', group: 'customers', label: t.tabs.inquiries, icon: Mail, tone: 'emerald', count: inquiries.length, badge: newInquiriesCount },
+    { id: 'ai', group: 'customers', label: 'AI söhbətlər', icon: MessageSquare, tone: 'pink' },
+    ...(userRole === 'admin' ? ([
+      { id: 'ai_settings', group: 'system', label: 'AI Assistent', icon: Settings, tone: 'amber' },
+      { id: 'users', group: 'system', label: t.tabs.users, icon: Users, tone: 'sky' },
+      { id: 'import_export', group: 'system', label: t.tabs.import_export, icon: UploadCloud, tone: 'orange' },
+      { id: 'database', group: 'system', label: t.tabs.database, icon: Database, tone: 'slate' },
+    ] as SectionDef[]) : []),
+  ];
+  const currentSection = sections.find(s => s.id === activeTab);
+  const tx = adminText(currentLang);
+  const newProductLabel = currentLang === 'ru' ? 'Новый товар' : currentLang === 'en' ? 'New product' : 'Yeni məhsul';
+
   return (
-    <div className="min-h-screen bg-[#08090A] text-white pt-20 pb-24">
+    <div className="relative min-h-screen bg-[#08090A] text-white pt-20 pb-24 overflow-x-clip">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[440px] bg-[radial-gradient(60%_100%_at_50%_0%,rgba(255,210,26,0.07),transparent)]" aria-hidden="true" />
       {/* TOAST NOTIFICATION */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-[#16181F] border border-[#FFD21A] text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 duration-200">
@@ -471,280 +492,104 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         </div>
       )}
 
-      {/* TOP BAR / ADMIN HEADER */}
-      <div className="border-b border-white/10 bg-[#0E0F14] sticky top-16 z-30 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#FFD21A]/10 border border-[#FFD21A]/30 flex items-center justify-center text-[#FFD21A]">
-              <Database className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold uppercase tracking-wide">{t.header.title}</h1>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  {t.header.supabaseLive}
-                </span>
-              </div>
-              <p className="text-xs text-gray-400">{t.header.subtitle}</p>
-            </div>
-          </div>
+      <AdminTopBar
+        title={t.header.title}
+        liveLabel={t.header.supabaseLive}
+        lang={currentLang}
+        onLang={handleLangSelect}
+        role={userRole}
+        loading={isLoading}
+        refreshLabel={t.header.refresh}
+        siteLabel={t.header.goToSite}
+        logoutLabel={t.header.logout}
+        onRefresh={() => refreshData()}
+        onSite={() => onNavigate('home')}
+        onLogout={handleLogout}
+      />
 
-          {/* Quick Actions, Language Switcher & Logout */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Language Switcher */}
-            <div className="flex items-center gap-1 bg-[#16181F] border border-white/10 p-1 rounded-xl text-xs font-mono">
-              <Globe className="w-3.5 h-3.5 text-[#FFD21A] ml-1 mr-0.5" />
-              {(['az', 'en', 'ru'] as Language[]).map((lang) => (
-                <button
-                  key={lang}
-                  type="button"
-                  onClick={() => handleLangSelect(lang)}
-                  className={`px-2.5 py-1 rounded-lg uppercase transition-all font-bold ${
-                    currentLang === lang 
-                      ? 'bg-[#FFD21A] text-black' 
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  {lang}
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={() => refreshData()}
-              disabled={isLoading}
-              className="flex items-center gap-1.5 text-xs bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-2 rounded-lg font-mono transition-colors text-gray-300"
-              title={t.header.refresh}
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-              <span>{t.header.refresh}</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('home')}
-              className="flex items-center gap-1.5 text-xs bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-2 rounded-lg text-gray-300 transition-colors"
-            >
-              <Eye className="w-3.5 h-3.5" />
-              <span>{t.header.goToSite}</span>
-            </button>
-
-            <div className="flex items-center gap-1.5 text-xs bg-white/5 border border-white/10 px-3 py-2 rounded-lg text-gray-300 font-mono uppercase">
-              <span className={userRole === 'admin' ? 'text-[#FFD21A]' : 'text-blue-400'}>
-                {userRole}
-              </span>
-            </div>
-
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-3 py-2 rounded-lg transition-colors font-medium"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>{t.header.logout}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* NAVIGATION TABS */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-white/5 pt-3 pb-3">
-          <div className="flex overflow-x-auto no-scrollbar gap-1.5 pb-1">
-            {[
-              { id: 'overview', label: t.tabs.overview, icon: Sparkles },
-              { id: 'pages', label: t.tabs.pages || 'Səhifələr', icon: Globe },
-              { id: 'products', label: t.tabs.products, count: products.length, icon: Layers },
-              { id: 'blog', label: t.tabs.blog, count: blogPosts.length, icon: FileText },
-              { id: 'projects', label: t.tabs.projects, count: projects.length, icon: Briefcase },
-              { 
-                id: 'inquiries', 
-                label: t.tabs.inquiries, 
-                count: inquiries.length, 
-                highlightCount: newInquiriesCount, 
-                icon: Mail 
-              },
-              { id: 'ai', label: 'AI söhbətlər', icon: Sparkles },
-              ...(userRole === 'admin' ? [
-                { id: 'ai_settings', label: 'AI Assistent', icon: Settings },
-                { id: 'users', label: t.tabs.users, icon: Users },
-                { id: 'import_export', label: t.tabs.import_export, icon: UploadCloud },
-                { id: 'database', label: t.tabs.database, icon: Database }
-              ] : [])
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`group flex items-center gap-2 px-3.5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all whitespace-nowrap flex-shrink-0 border ${
-                    isActive
-                      ? 'bg-[#FFD21A] text-black border-[#FFD21A] shadow-[0_0_20px_rgba(255,210,26,0.15)]'
-                      : 'bg-[#12131A] text-gray-400 border-white/5 hover:border-white/10 hover:text-white hover:bg-[#1A1C23]'
-                  }`}
-                >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-black/80' : 'text-gray-500 group-hover:text-gray-400 transition-colors'}`} />
-                  <span>{tab.label}</span>
-                  {tab.count !== undefined && (
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono leading-none flex items-center justify-center min-w-[20px] ${
-                      tab.highlightCount && tab.highlightCount > 0
-                        ? 'bg-amber-400 text-black font-bold animate-pulse shadow-[0_0_10px_rgba(251,191,36,0.5)]'
-                        : isActive ? 'bg-black/20 text-black' : 'bg-white/5 text-gray-500 group-hover:bg-white/10 group-hover:text-gray-400'
-                    }`}>
-                      {tab.highlightCount && tab.highlightCount > 0 ? `+${tab.highlightCount}` : tab.count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+        {activeTab !== 'overview' && currentSection && (
+          <SectionHeader section={currentSection} sections={sections} lang={currentLang} onBack={() => setActiveTab('overview')} onSwitch={id => setActiveTab(id)} />
+        )}
         {/* ========================================================================= */}
-        {/* TAB 0: OVERVIEW & STATS */}
+        {/* DASHBOARD: greeting, attention, section cards, latest activity */}
         {/* ========================================================================= */}
         {activeTab === 'overview' && (
-          <div className="space-y-8">
-            {/* Quick Metrics */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div 
-                onClick={() => setActiveTab('products')}
-                className="bg-[#12141A] border border-white/10 hover:border-[#FFD21A]/50 p-6 rounded-2xl cursor-pointer transition-all hover:scale-[1.01]"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono text-gray-400 uppercase">{t.overview.totalProducts}</span>
-                  <div className="w-8 h-8 rounded-lg bg-[#FFD21A]/10 text-[#FFD21A] flex items-center justify-center">
-                    <Layers className="w-4 h-4" />
-                  </div>
-                </div>
-                <div className="text-3xl font-extrabold mt-3 text-white">{products.length}</div>
-                <div className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                  <span>{t.overview.manageProducts}</span>
-                  <ChevronRight className="w-3 h-3 text-[#FFD21A]" />
-                </div>
+          <div className="space-y-10">
+            <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">{tx.hello}</h2>
+                <p className="text-sm text-gray-400 mt-1.5">{tx.helloSub}</p>
               </div>
-
-              <div 
-                onClick={() => setActiveTab('blog')}
-                className="bg-[#12141A] border border-white/10 hover:border-[#FFD21A]/50 p-6 rounded-2xl cursor-pointer transition-all hover:scale-[1.01]"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono text-gray-400 uppercase">{t.overview.totalArticles}</span>
-                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
-                    <FileText className="w-4 h-4" />
-                  </div>
-                </div>
-                <div className="text-3xl font-extrabold mt-3 text-white">{blogPosts.length}</div>
-                <div className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                  <span>{t.overview.manageArticles}</span>
-                  <ChevronRight className="w-3 h-3 text-blue-400" />
-                </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => { setEditingProduct(null); setIsProductModalOpen(true); }}
+                  className="h-10 px-4 rounded-xl bg-[#FFD21A] hover:bg-[#ffe050] text-black text-sm font-semibold flex items-center gap-2 transition-colors shadow-[0_6px_24px_rgba(255,210,26,0.18)]"
+                >
+                  <Plus className="w-4 h-4" /> {newProductLabel}
+                </button>
               </div>
+            </div>
 
-              <div 
-                onClick={() => setActiveTab('projects')}
-                className="bg-[#12141A] border border-white/10 hover:border-[#FFD21A]/50 p-6 rounded-2xl cursor-pointer transition-all hover:scale-[1.01]"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono text-gray-400 uppercase">{t.overview.totalProjects}</span>
-                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
-                    <Briefcase className="w-4 h-4" />
-                  </div>
-                </div>
-                <div className="text-3xl font-extrabold mt-3 text-white">{projects.length}</div>
-                <div className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                  <span>{t.overview.manageProjects}</span>
-                  <ChevronRight className="w-3 h-3 text-purple-400" />
-                </div>
-              </div>
-
-              <div 
+            {newInquiriesCount > 0 && (
+              <button
                 onClick={() => setActiveTab('inquiries')}
-                className="bg-[#12141A] border border-white/10 hover:border-[#FFD21A]/50 p-6 rounded-2xl cursor-pointer transition-all hover:scale-[1.01]"
+                className="w-full flex items-center justify-between gap-4 rounded-2xl border border-amber-400/30 bg-gradient-to-r from-amber-400/10 via-amber-400/[0.03] to-transparent px-5 py-4 text-left hover:border-amber-400/55 transition-colors"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono text-gray-400 uppercase">{t.overview.totalInquiries}</span>
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-                    <Mail className="w-4 h-4" />
-                  </div>
-                </div>
-                <div className="text-3xl font-extrabold mt-3 text-white">{inquiries.length}</div>
-                <div className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                  <span>{t.overview.customerInquiries}</span>
-                  <ChevronRight className="w-3 h-3 text-emerald-400" />
-                </div>
-              </div>
-            </div>
+                <span className="flex items-center gap-3 text-sm font-medium text-amber-100">
+                  <span className="relative flex w-2.5 h-2.5"><span className="absolute inset-0 rounded-full bg-amber-400 animate-ping opacity-60" /><span className="relative w-2.5 h-2.5 rounded-full bg-amber-400" /></span>
+                  {tx.newInq(newInquiriesCount)}
+                </span>
+                <span className="text-xs font-semibold text-amber-300 flex items-center gap-1">{tx.review} <ChevronRight className="w-4 h-4" /></span>
+              </button>
+            )}
 
-            {/* Supabase Status Banner */}
-            <div className="bg-gradient-to-r from-[#12151E] via-[#101217] to-[#161320] border border-[#FFD21A]/30 rounded-2xl p-6 sm:p-8">
-              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-                <div className="space-y-2 max-w-2xl">
-                  <div className="inline-flex items-center gap-2 bg-[#FFD21A]/10 text-[#FFD21A] px-2.5 py-1 rounded text-xs font-mono font-bold uppercase">
-                    <Database className="w-3.5 h-3.5" />
-                    <span>{t.overview.supabaseBannerTitle}</span>
-                  </div>
-                  <h3 className="text-xl font-bold text-white">
-                    {t.overview.supabaseBannerHeading}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
-                    {t.overview.supabaseBannerText}
-                  </p>
-                </div>
+            <AdminHub sections={sections} lang={currentLang} onOpen={id => setActiveTab(id)} />
 
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={handleSeedData}
-                    disabled={isSyncing}
-                    className="flex items-center gap-2 bg-[#FFD21A] text-black font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-xl hover:bg-[#F0C413] transition-all shadow-[0_0_15px_rgba(255,210,26,0.3)] disabled:opacity-50"
-                  >
-                    <UploadCloud className={`w-4 h-4 ${isSyncing ? 'animate-bounce' : ''}`} />
-                    <span>{isSyncing ? t.overview.syncing : t.overview.seedBtn}</span>
-                  </button>
-
-                  <button
-                    onClick={handleCopySql}
-                    className="flex items-center gap-2 bg-white/10 hover:bg-white/15 text-white border border-white/20 font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-xl transition-all"
-                  >
-                    <Copy className="w-4 h-4 text-[#FFD21A]" />
-                    <span>{copiedSql ? t.overview.copied : t.overview.sqlScriptBtn}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Products & Inquiries Preview */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Recent Products */}
-              <div className="bg-[#101115] border border-white/10 rounded-2xl p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* latest inquiries */}
+              <div className="rounded-2xl border border-white/[0.08] bg-[#101218] p-5 sm:p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-sm font-bold uppercase tracking-wider text-gray-200">{t.overview.recentProducts}</h4>
-                  <button onClick={() => setActiveTab('products')} className="text-xs text-[#FFD21A] hover:underline font-mono">
-                    {t.overview.viewAll} →
-                  </button>
+                  <h3 className="text-sm font-semibold text-white">{t.overview.recentInquiries}</h3>
+                  <button onClick={() => setActiveTab('inquiries')} className="text-xs text-[#FFD21A] hover:underline">{t.overview.viewAll} →</button>
                 </div>
-                <div className="space-y-3">
+                {inquiries.length === 0 ? (
+                  <div className="text-center py-8 text-xs text-gray-500">{t.overview.noInquiries}</div>
+                ) : (
+                  <div className="space-y-2">
+                    {inquiries.slice(0, 4).map((inq) => (
+                      <button key={inq.id} onClick={() => setActiveTab('inquiries')} className="w-full text-left flex items-center justify-between gap-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.05] px-3.5 py-3 transition-colors">
+                        <span className="min-w-0">
+                          <span className="block text-[13px] font-medium text-white truncate">{inq.name} <span className="text-gray-500 font-normal">· {inq.phone}</span></span>
+                          <span className="block text-[11.5px] text-gray-400 truncate mt-0.5">{inq.message}</span>
+                        </span>
+                        <span className={`shrink-0 text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${inq.status === 'new' ? 'bg-amber-400/15 text-amber-300' : 'bg-white/10 text-gray-300'}`}>{inq.status}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* latest products */}
+              <div className="rounded-2xl border border-white/[0.08] bg-[#101218] p-5 sm:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-white">{t.overview.recentProducts}</h3>
+                  <button onClick={() => setActiveTab('products')} className="text-xs text-[#FFD21A] hover:underline">{t.overview.viewAll} →</button>
+                </div>
+                <div className="space-y-2">
                   {products.slice(0, 4).map((p) => (
-                    <div key={p.id} className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
-                      <div className="flex items-center gap-3">
-                        <img src={p.image} alt={p.name} className="w-10 h-10 rounded-lg object-cover bg-black" />
-                        <div>
-                          <div className="text-xs font-bold text-white">{p.name}</div>
-                          <div className="text-[10px] font-mono text-gray-400">
-                            {p.code} • {
-                              (Array.isArray(p.categories) && p.categories.length > 1)
-                                ? `${p.categories.length} kateqoriya: ${p.categories.join(', ')}`
-                                : p.category
-                            }
-                          </div>
+                    <div key={p.id} className="flex items-center justify-between gap-3 rounded-xl bg-white/[0.03] border border-white/[0.05] px-3 py-2.5">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img src={p.image} alt="" className="w-10 h-10 rounded-lg object-cover bg-black shrink-0" />
+                        <div className="min-w-0">
+                          <div className="text-[13px] font-medium text-white truncate">{p.name}</div>
+                          <div className="text-[11px] text-gray-500 truncate">{p.code} · {(Array.isArray(p.categories) && p.categories.length > 1) ? p.categories.join(', ') : p.category}</div>
                         </div>
                       </div>
                       <button
-                        onClick={() => {
-                          setEditingProduct(p);
-                          setIsProductModalOpen(true);
-                        }}
-                        className="text-xs text-gray-400 hover:text-white p-1.5 rounded bg-white/5 hover:bg-white/10"
+                        onClick={() => { setEditingProduct(p); setIsProductModalOpen(true); }}
+                        className="shrink-0 w-8 h-8 grid place-items-center rounded-lg bg-white/[0.05] hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                        aria-label="Edit"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
                       </button>
@@ -752,34 +597,27 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   ))}
                 </div>
               </div>
-
-              {/* Recent Inquiries */}
-              <div className="bg-[#101115] border border-white/10 rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-sm font-bold uppercase tracking-wider text-gray-200">{t.overview.recentInquiries}</h4>
-                  <button onClick={() => setActiveTab('inquiries')} className="text-xs text-[#FFD21A] hover:underline font-mono">
-                    {t.overview.viewAll} →
-                  </button>
-                </div>
-                {inquiries.length === 0 ? (
-                  <div className="text-center py-8 text-xs text-gray-500">{t.overview.noInquiries}</div>
-                ) : (
-                  <div className="space-y-3">
-                    {inquiries.slice(0, 4).map((inq) => (
-                      <div key={inq.id} className="bg-white/5 p-3 rounded-xl border border-white/5 flex items-center justify-between">
-                        <div>
-                          <div className="text-xs font-bold text-white">{inq.name} ({inq.phone})</div>
-                          <div className="text-[10px] text-gray-400 truncate max-w-xs">{inq.message}</div>
-                        </div>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#FFD21A]/10 text-[#FFD21A]">
-                          {inq.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
+
+            {userRole === 'admin' && (
+              <details className="group rounded-2xl border border-white/[0.08] bg-[#101218]">
+                <summary className="cursor-pointer list-none px-5 sm:px-6 py-4 flex items-center justify-between gap-3">
+                  <span className="flex items-center gap-2.5 text-sm font-semibold text-white"><Database className="w-4 h-4 text-[#FFD21A]" /> {t.overview.supabaseBannerHeading}</span>
+                  <ChevronRight className="w-4 h-4 text-gray-500 transition-transform group-open:rotate-90" />
+                </summary>
+                <div className="px-5 sm:px-6 pb-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-t border-white/[0.06] pt-4">
+                  <p className="text-[13px] text-gray-400 leading-relaxed max-w-2xl">{t.overview.supabaseBannerText}</p>
+                  <div className="flex flex-wrap gap-2.5">
+                    <button onClick={handleSeedData} disabled={isSyncing} className="h-10 px-4 rounded-xl bg-[#FFD21A] hover:bg-[#ffe050] text-black text-xs font-semibold flex items-center gap-2 disabled:opacity-50 transition-colors">
+                      <UploadCloud className={`w-4 h-4 ${isSyncing ? 'animate-bounce' : ''}`} /> {isSyncing ? t.overview.syncing : t.overview.seedBtn}
+                    </button>
+                    <button onClick={handleCopySql} className="h-10 px-4 rounded-xl bg-white/[0.06] hover:bg-white/10 border border-white/10 text-white text-xs font-semibold flex items-center gap-2 transition-colors">
+                      <Copy className="w-4 h-4 text-[#FFD21A]" /> {copiedSql ? t.overview.copied : t.overview.sqlScriptBtn}
+                    </button>
+                  </div>
+                </div>
+              </details>
+            )}
           </div>
         )}
 
