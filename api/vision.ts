@@ -43,18 +43,21 @@ export default async function handler(req: any, res: any) {
       body: JSON.stringify({
         model: env('VISION_MODEL'),
         temperature: 0.2,
-        max_tokens: 300,
+        max_tokens: 1200, // reasoning models spend part of the budget thinking before the visible answer
         messages: [{ role: 'user', content: [{ type: 'text', text: PROMPT }, { type: 'image_url', image_url: { url: image } }] }],
       }),
-      signal: AbortSignal.timeout(25000),
+      signal: AbortSignal.timeout(50000),
     });
     if (!r.ok) {
-      console.error('[vision] provider status', r.status);
-      return res.status(502).json({ error: 'unavailable' });
+      console.error('[vision] provider status', r.status, (await r.text().catch(() => '')).slice(0, 200));
+      return res.status(502).json({ error: 'unavailable', provider_status: r.status });
     }
     const j: any = await r.json();
     const text = String(j.choices?.[0]?.message?.content || '').replace(/<think>[\s\S]*?<\/think>/g, '').replace(/\s+/g, ' ').trim();
-    if (!text) return res.status(502).json({ error: 'unavailable' });
+    if (!text) {
+      console.error('[vision] empty answer', JSON.stringify(j).slice(0, 300));
+      return res.status(502).json({ error: 'unavailable', reason: 'empty_answer', finish: j.choices?.[0]?.finish_reason || null });
+    }
     if (/NOT_A_ROOM/i.test(text)) return res.status(422).json({ error: 'not_room' });
     return res.status(200).json({ summary: text.slice(0, 900) });
   } catch (e: any) {
