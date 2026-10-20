@@ -1,6 +1,9 @@
 import { env, rateLimit, clientIp, checkHuman } from './_lib/core.js';
 import { logSession } from './_lib/log.js';
-import { calcReply, directCalc, photoIntent, runChat, shortlistIntent, shouldOfferForm, type ChatMsg, type PageCtx, type PromptExtra } from './_lib/ai.js';
+import { getAiRuntime, roleTargets } from './_lib/aiconfig.js';
+
+const visionAvailable = async () => roleTargets(await getAiRuntime(), 'vision').length > 0;
+import { aiAvailable, calcReply, directCalc, photoIntent, runChat, shortlistIntent, shouldOfferForm, type ChatMsg, type PageCtx, type PromptExtra } from './_lib/ai.js';
 
 // First answers to the one-tap page questions ("canned" chips) do not depend on the visitor, so they are computed once and replayed:
 // popular pages then cost no model call at all.
@@ -98,7 +101,7 @@ export default async function handler(req: any, res: any) {
     send(ok ? { type: 'done', model: 'calc' } : { type: 'error', code: 'unavailable' });
     return finishAndLog();
   }
-  if (!body.calc && photoIntent(history, lang, send, !!(env('VISION_API_KEY') && env('VISION_MODEL')) && !extra.vision)) {
+  if (!body.calc && photoIntent(history, lang, send, (await visionAvailable()) && !extra.vision)) {
     send({ type: 'done', model: 'calc' });
     return finishAndLog();
   }
@@ -110,7 +113,7 @@ export default async function handler(req: any, res: any) {
     send({ type: 'done', model: 'calc' });
     return finishAndLog();
   }
-  if (!env('AI_API_KEY') && !env('GROQ_API_KEY') && !env('CLEAN_API_KEY') && !(env('CLEAN_CHAT') && env('VISION_API_KEY'))) {
+  if (!(await aiAvailable())) {
     send({ type: 'error', code: 'not_configured' });
     return res.end();
   }

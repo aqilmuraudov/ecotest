@@ -1,5 +1,6 @@
 import { env, bakuNow, loadCatalog, loadProjects, searchCatalog, publicItem, type CatalogItem } from './core.js';
 import { knowledgeFor, SITEMAP, type KnowledgeCard } from './knowledge.js';
+import { getAiRuntime, roleTargets, type AiTarget } from './aiconfig.js';
 import { ROOMS, parseRoomRequest, planPrompt, planText, roomPlan, type RoomPlan } from './calc.js';
 
 export type ChatMsg = { role: 'user' | 'assistant'; content: string };
@@ -300,9 +301,7 @@ function makeTextSink(lang: 'az' | 'ru', emit: Emit) {
 interface StreamResult { text: string; toolCalls: { id: string; name: string; args: string }[] }
 
 /** One concrete place to send a request to: provider endpoint + key + model + reasoning effort. */
-export interface Target { label: string; base: string; key: string; model: string; effort?: string; firstByteMs: number }
-
-const trimSlash = (s: string) => s.replace(/\/+$/, '');
+export type Target = AiTarget;
 
 function isComplex(history: ChatMsg[]): boolean {
   const users = history.filter(m => m.role === 'user');
@@ -310,48 +309,21 @@ function isComplex(history: ChatMsg[]): boolean {
   return users.length >= 4 || last.length > 280 || (/\d+\s?(m2|m²|kv|кв|w|вт)\b/i.test(last) && users.length >= 2);
 }
 
-/** Ordered fallback chain. Groq (very fast) goes first when GROQ_API_KEY is set; Gonka models are the safety net. */
-function targets(history: ChatMsg[]): Target[] {
-  const complex = isComplex(history);
-  const gBase = trimSlash(env('AI_BASE_URL', 'https://api.gonkarouter.io/v1'));
-  const gKey = env('AI_API_KEY');
-  const gonka = (model: string, effort: string): Target => ({ label: 'gonka', base: gBase, key: gKey, model, effort, firstByteMs: 22000 });
-  const light = gonka(env('AI_MODEL_LIGHT', 'zai-org/GLM-5.3-Flash'), env('AI_EFFORT_LIGHT', 'low'));
-  const think = gonka(env('AI_MODEL_THINK', 'MiniMaxAI/MiniMax-M2.7'), env('AI_EFFORT_THINK', 'medium'));
-  const backup = gonka(env('AI_MODEL_FALLBACK', 'deepseek-ai/DeepSeek-V4-Flash-0731'), env('AI_EFFORT_LIGHT', 'low'));
+/**
+ * The models to try for this request, in order. They come from the admin panel (Supabase) or, until something is saved there, from the
+ * environment: complex conversations try the "thinking" models first, then the fast ones, then the safety net.
+ */
+async function targets(history: ChatMsg[]): Promise<Target[]> {
+  const rt = await getAiRuntime();
+  const fast = roleTargets(rt, 'fast');
+  const thinking = roleTargets(rt, 'thinking');
+  const fallback = roleTargets(rt, 'fallback');
+  return isComplex(history) && thinking.length ? [...thinking, ...fast, ...fallback] : [...fast, ...fallback];
+}
 
-  const groq: Target[] = [];
-  const groqKey = env('GROQ_API_KEY');
-  if (groqKey) {
-    // measured on the live site: qwen3.8-27b answers in 0.3-0.9 s with the best Azerbaijani/Russian; gpt-oss-120b is the second Groq option
-    const models = [env('GROQ_MODEL', 'qwen/qwen3.8-27b'), env('GROQ_MODEL_2', 'openai/gpt-oss-120b')].filter((m, i, a) => m && a.indexOf(m) === i);
-    for (const model of models) {
-      groq.push({
-        label: 'groq',
-        base: trimSlash(env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1')),
-        key: groqKey,
-        model,
-        // gpt-oss: low/medium/high; Qwen3 on Groq: none/default
-        effort: /qwen/i.test(model) ? 'none' : complex ? 'medium' : 'low',
-        firstByteMs: 10000,
-      });
-    }
-  }
-
-  // Optional gateway (cleanapis.com, OpenAI compatible). CLEAN_CHAT=on: second choice after Groq; CLEAN_CHAT=first: tried before Groq (for testing); unset: not used.
-  // Measured from Vercel: gpt-5.6-luna and glm-5.3 with reasoning_effort=minimal answer in 2-4.5 s with tools and good Azerbaijani/Russian.
-  const mode = env('CLEAN_CHAT').toLowerCase();
-  const clean: Target[] = [];
-  const cleanKey = env('CLEAN_API_KEY') || env('VISION_API_KEY');
-  if ((mode === 'on' || mode === 'first') && cleanKey) {
-    const base = trimSlash(env('CLEAN_BASE_URL') || env('VISION_BASE_URL', 'https://cleanapis.com/v1'));
-    for (const model of [env('CLEAN_CHAT_MODEL', 'gpt-5.6-luna'), env('CLEAN_CHAT_MODEL_2', 'glm-5.3')].filter((m, i, a) => m && a.indexOf(m) === i)) {
-      clean.push({ label: 'clean', base, key: cleanKey, model, effort: env('CLEAN_CHAT_EFFORT', 'minimal'), firstByteMs: 15000 });
-    }
-  }
-  const safety = gKey ? (complex ? [think, light, backup] : [light, backup, think]) : [];
-  // Groq answers first (fast, stable); the Gonka models are only a safety net when everything else fails or is rate limited
-  return mode === 'first' ? [...clean, ...groq, ...safety] : [...groq, ...clean, ...safety];
+/** Is at least one model usable right now (provider enabled and a key available)? */
+export async function aiAvailable(): Promise<boolean> {
+  return (await targets([])).length > 0;
 }
 
 async function streamOnce(target: Target, messages: any[], useTools: boolean, sink: ReturnType<typeof makeTextSink>): Promise<StreamResult> {
@@ -361,7 +333,7 @@ async function streamOnce(target: Target, messages: any[], useTools: boolean, si
     method: 'POST',
     signal: ctl.signal,
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${target.key}` },
-    body: JSON.stringify({ model: target.model, messages, stream: true, temperature: 0.5, max_tokens: 500, ...(target.effort ? { reasoning_effort: target.effort } : {}), ...(useTools ? { tools: TOOLS, tool_choice: 'auto' } : {}) }),
+    body: JSON.stringify({ model: target.model, messages, stream: true, temperature: 0.5, max_tokens: 500, ...(target.effort ? { reasoning_effort: target.effort } : {}), ...(target.extra || {}), ...(useTools ? { tools: TOOLS, tool_choice: 'auto' } : {}) }),
   });
   clearTimeout(timer);
   if (!res.ok || !res.body) throw new Error(`${target.label}:${target.model} HTTP ${res.status}`);
@@ -412,7 +384,7 @@ export async function runChat(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit,
   let lastError = '';
   let rateLimited = false;
 
-  const chain = override ?? targets(history);
+  const chain = override ?? (await targets(history));
   if (chain.length === 0) throw new Error('no AI provider configured');
   for (const target of chain) {
     const model = `${target.label}:${target.model}`;
@@ -484,7 +456,8 @@ export async function summarize(history: ChatMsg[]): Promise<string> {
     .join(' | ');
   const transcript = history.map(m => `${m.role === 'user' ? 'Müştəri' : 'AISeller'}: ${m.content}`).join('\n').slice(0, 5000);
   const prompt = `Aşağıdakı söhbətdən satış məsləhətçisi üçün 3-4 sətirlik qısa xülasə yaz (Azərbaycan dilində): müştərinin ehtiyacı, məkan/sahə, seçilmiş və ya maraqlandığı məhsullar, vaxt. Qiymət uydurma. Yalnız xülasəni yaz.\n\n${transcript}`;
-  const target = targets([])[0];
+  const rtm = await getAiRuntime();
+  const target = roleTargets(rtm, 'summary')[0] || (await targets([]))[0];
   if (target) {
     try {
       const ctl = new AbortController();
@@ -493,7 +466,7 @@ export async function summarize(history: ChatMsg[]): Promise<string> {
         method: 'POST',
         signal: ctl.signal,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${target.key}` },
-        body: JSON.stringify({ model: target.model, messages: [{ role: 'user', content: prompt }], max_tokens: 350, temperature: 0.2, ...(target.effort ? { reasoning_effort: target.effort } : {}) }),
+        body: JSON.stringify({ model: target.model, messages: [{ role: 'user', content: prompt }], max_tokens: 350, temperature: 0.2, ...(target.effort ? { reasoning_effort: target.effort } : {}), ...(target.extra || {}) }),
       });
       clearTimeout(timer);
       if (res.ok) {

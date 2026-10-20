@@ -19,6 +19,7 @@ import { ProjectFormModal } from '../components/admin/ProjectFormModal';
 import { InquiryViewModal } from '../components/admin/InquiryViewModal';
 import { UsersTab } from '../components/admin/UsersTab';
 import { ChatLogsTab } from '../components/admin/ChatLogsTab';
+import { AiSettingsTab } from '../components/admin/AiSettingsTab';
 import { PagesEditorTab } from '../components/admin/PagesEditorTab';
 import { adminTranslations } from '../data/adminTranslations';
 import { 
@@ -51,7 +52,8 @@ import {
   Phone,
   MessageSquare,
   Flame,
-  Filter
+  Filter,
+  Settings
 } from 'lucide-react';
 
 interface AdminPageProps {
@@ -118,7 +120,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   }, [isAuthenticated]);
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'overview' | 'pages' | 'products' | 'blog' | 'projects' | 'inquiries' | 'ai' | 'users' | 'import_export' | 'database'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'pages' | 'products' | 'blog' | 'projects' | 'inquiries' | 'ai' | 'ai_settings' | 'users' | 'import_export' | 'database'>('overview');
 
   // Inquiries Search & Filter
   const [inquirySearch, setInquirySearch] = useState<string>('');
@@ -561,6 +563,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               },
               { id: 'ai', label: 'AI söhbətlər', icon: Sparkles },
               ...(userRole === 'admin' ? [
+                { id: 'ai_settings', label: 'AI Assistent', icon: Settings },
                 { id: 'users', label: t.tabs.users, icon: Users },
                 { id: 'import_export', label: t.tabs.import_export, icon: UploadCloud },
                 { id: 'database', label: t.tabs.database, icon: Database }
@@ -1378,6 +1381,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         {/* TAB 5.5: USERS */}
         {/* ========================================================================= */}
         {activeTab === 'ai' && <ChatLogsTab canDelete={userRole === 'admin'} />}
+
+        {activeTab === 'ai_settings' && userRole === 'admin' && <AiSettingsTab />}
 
         {activeTab === 'users' && userRole === 'admin' && (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
