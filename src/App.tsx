@@ -70,6 +70,21 @@ export default function App() {
     return undefined;
   });
 
+  // The admin panel is designed for the dark palette only: while it is open the page is always dark, whatever theme the
+  // visitor chose (their choice is kept and comes back when they leave the panel).
+  useEffect(() => {
+    if (activePage !== 'admin') return;
+    const root = document.documentElement;
+    root.classList.add('dark');
+    root.classList.remove('light');
+    root.setAttribute('data-theme', 'dark');
+    return () => {
+      root.classList.toggle('light', theme === 'light');
+      root.classList.toggle('dark', theme !== 'light');
+      root.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
+    };
+  }, [activePage, theme]);
+
   // The page the visitor is on, in the terms the chat understands (same product-vs-category rule as the router below)
   const chatPage = useMemo<{ type: string; id?: string }>(() => {
     if (activePage === 'catalog') {
