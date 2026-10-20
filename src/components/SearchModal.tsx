@@ -59,7 +59,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4 bg-[var(--ed-scrim)] backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-[80] flex items-start justify-center pt-24 px-4 bg-[var(--ed-scrim)] backdrop-blur-md animate-fadeIn">
       <div
         id="ecolife-global-search-modal"
         className="relative w-full max-w-2xl bg-[var(--ed-modal)] border border-[var(--ed-line)] rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.45)] overflow-hidden text-[var(--ed-ivory)]"

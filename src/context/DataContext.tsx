@@ -954,6 +954,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.ok && data.ok) return { success: true };
       // a refused human check or a rate limit must not be bypassed by the direct database fallback below
       if (res.status === 403 || res.status === 429) return { success: false, error: res.status === 403 ? 'captcha' : 'rate_limit' };
+      if (res.status === 400 && data?.error) return { success: false, error: String(data.error) }; // name / phone refused by the server
     } catch (e) {
       console.warn('Lead pipeline unavailable, falling back to direct insert', e);
     }
@@ -962,7 +963,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const dbRow = {
         name: inqData.name,
-        email: inqData.email,
+        email: inqData.email || '-',
         phone: inqData.phone,
         company: inqData.company || null,
         subject: inqData.subject || null,

@@ -45,7 +45,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ currentLang }) => {
     email: '',
     phone: '',
     company: '',
-    projectType: 'commercial',
+    projectType: '',
     message: ''
   });
 
@@ -69,23 +69,18 @@ export const ContactPage: React.FC<ContactPageProps> = ({ currentLang }) => {
       return;
     }
 
-    const cleanEmail = sanitizeEmail(formData.email);
     const cleanPhone = sanitizePhone(formData.phone);
     const cleanFirstName = sanitizeText(formData.firstName, 80);
     const cleanLastName = sanitizeText(formData.lastName, 80);
-    const cleanCompany = sanitizeText(formData.company, 120);
     const cleanMessage = sanitizeText(formData.message, 5000);
+    const ru = currentLang === 'ru';
 
-    if (!cleanEmail) {
-      setValidationError(currentLang === 'az' ? 'Düzgün email ünvanı daxil edin.' : currentLang === 'ru' ? 'Введите корректный email.' : 'Please enter a valid email address.');
+    if (cleanFirstName.length < 2) {
+      setValidationError(ru ? 'Укажите имя.' : 'Adınızı yazın.');
       return;
     }
-    if (!cleanPhone || cleanPhone.length < 7) {
-      setValidationError(currentLang === 'az' ? 'Düzgün telefon nömrəsi daxil edin.' : currentLang === 'ru' ? 'Введите корректный номер телефона.' : 'Please enter a valid phone number.');
-      return;
-    }
-    if (cleanMessage.length < 5) {
-      setValidationError(currentLang === 'az' ? 'Mesaj ən azı 5 simvol olmalıdır.' : currentLang === 'ru' ? 'Сообщение должно содержать не менее 5 символов.' : 'Message must be at least 5 characters.');
+    if (cleanPhone.replace(/\D/g, '').length < 9) {
+      setValidationError(ru ? 'Укажите корректный номер телефона.' : 'Telefon nömrəsini düzgün yazın.');
       return;
     }
 
@@ -94,11 +89,11 @@ export const ContactPage: React.FC<ContactPageProps> = ({ currentLang }) => {
       const fingerprint = getClientFingerprint();
       const result = await addInquiry({
         name: `${cleanFirstName} ${cleanLastName}`.trim() || 'Adsız Müştəri',
-        email: cleanEmail,
+        email: '',
         phone: cleanPhone,
-        company: cleanCompany,
-        projectType: formData.projectType,
-        message: cleanMessage,
+        company: '',
+        projectType: formData.projectType || undefined,
+        message: cleanMessage || (ru ? 'Клиент отправил заявку' : 'Müştəri sorğu göndərdi'),
         source: 'contact-page',
         ipHash: fingerprint,
       } as any);
@@ -211,7 +206,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ currentLang }) => {
                       variant="ghost"
                       onClick={() => {
                         setIsSubmitted(false);
-                        setFormData({ firstName: '', lastName: '', email: '', phone: '', company: '', projectType: 'commercial', message: '' });
+                        setFormData({ firstName: '', lastName: '', email: '', phone: '', company: '', projectType: '', message: '' });
                       }}
                     >
                       {currentLang === 'az' ? 'Yeni müraciət' : currentLang === 'ru' ? 'Новый запрос' : 'New inquiry'}
@@ -250,62 +245,46 @@ export const ContactPage: React.FC<ContactPageProps> = ({ currentLang }) => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div>
-                      <label className={inputLabel}>{t.contact.form.email} *</label>
-                      <input
-                        type="email"
-                        required
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        placeholder="email@example.com"
-                        className="ed-input"
-                      />
-                    </div>
-                    <div>
-                      <label className={inputLabel}>{t.contact.form.phone} *</label>
-                      <input
-                        type="tel"
-                        required
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        placeholder="+994 50 000 00 00"
-                        className="ed-input"
-                      />
-                    </div>
+                  <div>
+                    <label className={inputLabel}>{t.contact.form.phone} *</label>
+                    <input
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="+994 50 000 00 00"
+                      className="ed-input"
+                    />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div>
-                      <label className={inputLabel}>{t.contact.form.company}</label>
-                      <input
-                        type="text"
-                        value={formData.company}
-                        onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                        placeholder={currentLang === 'az' ? 'Şirkət / Dizayn Studiyası' : currentLang === 'ru' ? 'Компания / Студия' : 'Company / Studio'}
-                        className="ed-input"
-                      />
-                    </div>
-                    <div>
-                      <label className={inputLabel}>{t.contact.form.projectType}</label>
-                      <select
-                        value={formData.projectType}
-                        onChange={(e) => setFormData({ ...formData, projectType: e.target.value })}
-                        className="ed-input"
-                      >
-                        <option value="commercial">{currentLang === 'az' ? 'Ticarət & Retail' : currentLang === 'ru' ? 'Торговля' : 'Commercial & Retail'}</option>
-                        <option value="office">{currentLang === 'az' ? 'Ofis & Biznes Mərkəzi' : currentLang === 'ru' ? 'Офис' : 'Office & Corporate'}</option>
-                        <option value="hospitality">{currentLang === 'az' ? 'Otel & Restoran' : currentLang === 'ru' ? 'Отели и рестораны' : 'Hospitality'}</option>
-                        <option value="residential">{currentLang === 'az' ? 'Fərdi Yaşayış / Villa' : currentLang === 'ru' ? 'Жилье' : 'Residential'}</option>
-                      </select>
+                  <div>
+                    <span className={inputLabel}>{currentLang === 'ru' ? 'Где нужно освещение? · по желанию' : 'İşıqlandırma harada lazımdır? · istəyə bağlı'}</span>
+                    <div className="flex flex-wrap gap-2">
+                      {(currentLang === 'ru'
+                        ? ['Квартира / дом', 'Офис', 'Магазин', 'Ресторан / кафе', 'Отель', 'Другое']
+                        : ['Mənzil / ev', 'Ofis', 'Mağaza', 'Restoran / kafe', 'Otel', 'Digər']
+                      ).map(p => {
+                        const on = formData.projectType === p;
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() => setFormData({ ...formData, projectType: on ? '' : p })}
+                            className={`px-3.5 py-2 rounded-full border text-xs transition-colors ${on ? 'bg-[var(--ed-amber)] border-[var(--ed-amber)] text-[#1d1d1b] font-semibold' : 'border-[var(--ed-line)] text-soft hover:border-[var(--ed-amber)] hover:text-ivory'}`}
+                          >
+                            {p}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
                   <div>
-                    <label className={inputLabel}>{t.contact.form.message} *</label>
+                    <label className={inputLabel}>{currentLang === 'ru' ? 'Комментарий (по желанию)' : 'Qeyd (istəyə bağlı)'}</label>
                     <textarea
-                      rows={5}
-                      required
+                      rows={3}
                       value={formData.message}
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                       placeholder={currentLang === 'az' ? 'Layihənizin tələbləri, metraj və digər qeydlər...' : currentLang === 'ru' ? 'Требования проекта, метраж и примечания...' : 'Project requirements, area and other notes...'}

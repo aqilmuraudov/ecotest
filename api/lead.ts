@@ -151,7 +151,7 @@ export default async function handler(req: any, res: any) {
   ];
   if (email !== '-') lines.push(`E-poçt: ${escapeHtml(email)}`);
   if (company) lines.push(`Şirkət: ${escapeHtml(company)}`);
-  if (projectType) lines.push(`Layihə: ${escapeHtml(projectType)}`);
+  if (projectType) lines.push(`Məkan: ${escapeHtml(projectType)}`);
   if (callbackLabel) lines.push(`Zəng vaxtı: <b>${escapeHtml(callbackLabel)}</b>`);
   if (sourceRef) lines.push(escapeHtml(sourceRef));
   if (pagePath) lines.push(`Səhifə: <a href="${SITE_URL()}${pagePath}">${escapeHtml(pagePath)}</a>`);

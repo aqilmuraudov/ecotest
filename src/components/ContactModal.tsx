@@ -1,16 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Language, Product } from '../types';
 import { translations } from '../data/translations';
 import { useData } from '../context/DataContext';
 import { getLocalizedText } from '../utils/lang';
-import {
-  sanitizeEmail,
-  sanitizePhone,
-  sanitizeText,
-  checkRateLimit,
-  getClientFingerprint,
-} from '../utils/sanitize';
-import { X, CheckCircle, Send, Phone, Layers, ShieldCheck, Box, Sliders } from 'lucide-react';
+import { sanitizePhone, sanitizeText, checkRateLimit, getClientFingerprint } from '../utils/sanitize';
+import { X, CheckCircle, Send, Phone, Sliders } from 'lucide-react';
 
 interface ContactModalProps {
   isOpen: boolean;
@@ -23,6 +17,52 @@ interface ContactModalProps {
   contextParam?: string;
 }
 
+// Short, plain wording. English is switched off on the site for now, so it falls back to Azerbaijani.
+const TEXT = {
+  az: {
+    place: 'İşıqlandırma harada lazımdır?',
+    placeHint: 'istəyə bağlı',
+    places: ['Mənzil / ev', 'Ofis', 'Mağaza', 'Restoran / kafe', 'Otel', 'Digər'],
+    note: 'Qeyd (istəyə bağlı)',
+    notePlaceholder: 'Məsələn: sahə, istədiyiniz məhsul, çatdırılma vaxtı…',
+    namePh: 'Adınız',
+    surnamePh: 'Soyadınız',
+    phoneHint: 'Sizinlə əlaqə saxlayacağıq',
+    errName: 'Adınızı yazın.',
+    errPhone: 'Telefon nömrəsini düzgün yazın.',
+    errRate: 'Çoxlu sorğu göndərdiniz. Bir neçə dəqiqə sonra yenidən cəhd edin.',
+    errSend: 'Göndərilmədi. Bir az sonra yenidən cəhd edin.',
+    consent: 'Göndərməklə məlumatlarınızın sorğunun işlənməsi üçün istifadəsinə razılıq verirsiniz.',
+    doneTitle: 'Sorğunuz qəbul edildi!',
+    close: 'Bağla',
+    config: 'Xüsusi konfiqurasiya',
+    productMsg: (n: string, c: string) => `Salam, "${n}" (${c}) məhsulu haqqında texniki məlumat və qiymət təklifi almaq istəyirəm.`,
+    configMsg: (s: string) => `Salam, aşağıdakı xüsusi konfiqurasiya üçün qiymət təklifi və istehsal müddətini öyrənmək istəyirəm:\n${s}`,
+    generalMsg: 'Müştəri sorğu göndərdi',
+  },
+  ru: {
+    place: 'Где нужно освещение?',
+    placeHint: 'по желанию',
+    places: ['Квартира / дом', 'Офис', 'Магазин', 'Ресторан / кафе', 'Отель', 'Другое'],
+    note: 'Комментарий (по желанию)',
+    notePlaceholder: 'Например: площадь, нужный товар, сроки…',
+    namePh: 'Ваше имя',
+    surnamePh: 'Фамилия',
+    phoneHint: 'Мы свяжемся с вами',
+    errName: 'Укажите имя.',
+    errPhone: 'Укажите корректный номер телефона.',
+    errRate: 'Слишком много заявок. Повторите через несколько минут.',
+    errSend: 'Не удалось отправить. Повторите позже.',
+    consent: 'Отправляя заявку, вы соглашаетесь на обработку данных для её рассмотрения.',
+    doneTitle: 'Заявка принята!',
+    close: 'Закрыть',
+    config: 'Индивидуальная конфигурация',
+    productMsg: (n: string, c: string) => `Здравствуйте, хочу запросить коммерческое предложение и техническую информацию для продукта "${n}" (${c}).`,
+    configMsg: (s: string) => `Здравствуйте, хочу узнать стоимость и сроки производства для следующей конфигурации:\n${s}`,
+    generalMsg: 'Клиент отправил заявку',
+  },
+};
+
 export const ContactModal: React.FC<ContactModalProps> = ({
   isOpen,
   onClose,
@@ -32,89 +72,63 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   contextPage,
   contextParam
 }) => {
-  const t = translations[currentLang];
+  const lang: 'az' | 'ru' = currentLang === 'ru' ? 'ru' : 'az';
+  const t = translations[lang];
+  const x = TEXT[lang];
   const { addInquiry } = useData();
 
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    company: '',
-    projectType: 'commercial',
-    message: ''
-  });
-
+  const [form, setForm] = useState({ firstName: '', lastName: '', phone: '', place: '', note: '' });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const firstRef = useRef<HTMLInputElement>(null);
 
-  // Sync default message and state when modal opens or prefilled item changes
-  React.useEffect(() => {
-    if (isOpen) {
-      setIsSubmitted(false);
-      let defaultMsg = '';
-      if (prefilledProduct) {
-        defaultMsg = currentLang === 'az'
-          ? `Salam, "${prefilledProduct.name}" (${prefilledProduct.code}) məhsulu haqqında texniki məlumat və qiymət təklifi almaq istəyirəm.`
-          : currentLang === 'ru'
-            ? `Здравствуйте, хочу запросить коммерческое предложение и техническую информацию для продукта "${prefilledProduct.name}" (${prefilledProduct.code}).`
-            : `Hello, I would like to request technical details and a price quote for product "${prefilledProduct.name}" (${prefilledProduct.code}).`;
-      } else if (configSummary) {
-        defaultMsg = currentLang === 'az'
-          ? `Salam, aşağıdakı xüsusi konfiqurasiya üçün qiymət təklifi və istehsal müddətini öyrənmək istəyirəm:\n${configSummary}`
-          : currentLang === 'ru'
-            ? `Здравствуйте, хочу узнать стоимость и сроки производства для следующей конфигурации:\n${configSummary}`
-            : `Hello, I would like to inquire about pricing and lead time for the following custom configuration:\n${configSummary}`;
-      }
-      setFormData(prev => ({
-        ...prev,
-        message: defaultMsg
-      }));
-    }
-  }, [isOpen, prefilledProduct, configSummary, currentLang]);
+  // a fresh form state every time the window opens (the typed name and phone stay: a second request should not retype them)
+  useEffect(() => {
+    if (!isOpen) return;
+    setIsSubmitted(false);
+    setError('');
+    setForm(f => ({ ...f, place: '', note: '' }));
+    const id = window.setTimeout(() => firstRef.current?.focus(), 60);
+    return () => window.clearTimeout(id);
+  }, [isOpen, prefilledProduct, configSummary]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
 
-    // Rate limit: eyni istifadəçidən 5 dəqiqə ərzində maksimum 3 sorğu
-    if (!checkRateLimit('contact_inquiry', 3, 5 * 60 * 1000)) {
-      alert('Çoxlu sorğu göndərdiniz. 5 dəqiqə sonra yenidən sınayın.');
-      return;
-    }
+    if (!checkRateLimit('contact_inquiry', 3, 5 * 60 * 1000)) { setError(x.errRate); return; }
 
-    // Input sanitization
-    const cleanEmail = sanitizeEmail(formData.email);
-    const cleanPhone = sanitizePhone(formData.phone);
-    const cleanFirstName = sanitizeText(formData.firstName, 80);
-    const cleanLastName = sanitizeText(formData.lastName, 80);
-    const cleanCompany = sanitizeText(formData.company, 120);
-    const cleanMessage = sanitizeText(formData.message, 5000);
+    const firstName = sanitizeText(form.firstName, 80);
+    const lastName = sanitizeText(form.lastName, 80);
+    const phone = sanitizePhone(form.phone);
+    const note = sanitizeText(form.note, 1500);
+    if (firstName.length < 2) { setError(x.errName); return; }
+    if (phone.replace(/\D/g, '').length < 9) { setError(x.errPhone); return; }
 
-    if (!cleanEmail) {
-      alert('Düzgün email daxil edin.');
-      return;
-    }
-    if (!cleanPhone || cleanPhone.length < 7) {
-      alert('Düzgün telefon nömrəsi daxil edin.');
-      return;
-    }
-    if (cleanMessage.length < 5) {
-      alert('Mesaj çox qısadır.');
-      return;
-    }
+    // what the sales team reads: the customer's own note, otherwise the standard sentence for what they were looking at
+    const defaultMsg = prefilledProduct
+      ? x.productMsg(prefilledProduct.name, prefilledProduct.code)
+      : configSummary ? x.configMsg(configSummary) : x.generalMsg;
 
     setIsSubmitting(true);
     try {
-      const fingerprint = getClientFingerprint();
       const result = await addInquiry({
-        name: `${cleanFirstName} ${cleanLastName}`.trim() || 'Adsız Müştəri',
-        email: cleanEmail,
-        phone: cleanPhone,
-        company: cleanCompany,
-        projectType: formData.projectType,
-        message: cleanMessage,
+        name: `${firstName} ${lastName}`.trim(),
+        email: '',
+        phone,
+        company: '',
+        projectType: form.place || undefined,
+        message: sanitizeText(note ? `${note}\n\n${defaultMsg}` : defaultMsg, 5000),
         productName: prefilledProduct ? sanitizeText(prefilledProduct.name, 200) : undefined,
         productCode: prefilledProduct?.code,
         productImage: prefilledProduct?.image,
@@ -124,291 +138,187 @@ export const ContactModal: React.FC<ContactModalProps> = ({
         // product quote, configurator, or a project request (from a project / solution page or the general form)
         source: prefilledProduct ? 'product' : configSummary ? 'configurator' : 'project',
         sourceRef: !prefilledProduct && !configSummary && (contextPage === 'projects' || contextPage === 'solutions') && contextParam ? `${contextPage === 'projects' ? 'Layihə' : 'Həll'}: ${sanitizeText(contextParam, 120)}` : undefined,
-        ipHash: fingerprint,
+        ipHash: getClientFingerprint(),
       } as any);
-      if (result.success) {
-        setIsSubmitted(true);
-      } else {
-        alert(currentLang === 'az' ? 'Mesaj göndərilmədi. Zəhmət olmasa bir az sonra yenidən cəhd edin.' : currentLang === 'ru' ? 'Не удалось отправить сообщение. Попробуйте позже.' : 'Your message could not be sent. Please try again shortly.');
-      }
+      if (result.success) setIsSubmitted(true);
+      else setError(result.error === 'rate_limit' ? x.errRate : result.error === 'phone' ? x.errPhone : result.error === 'name' ? x.errName : x.errSend);
     } catch (err) {
       console.error('Failed to submit inquiry:', err);
-      alert(currentLang === 'az' ? 'Mesaj göndərilmədi. Zəhmət olmasa bir az sonra yenidən cəhd edin.' : currentLang === 'ru' ? 'Не удалось отправить сообщение. Попробуйте позже.' : 'Your message could not be sent. Please try again shortly.');
+      setError(x.errSend);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleReset = () => {
-    setIsSubmitted(false);
-    onClose();
-  };
+  const title = prefilledProduct ? t.productDetail.requestQuote : configSummary ? t.configurator.sendInquiry : t.contact.title;
+  const label = 'block font-micro text-[9px] text-mute mb-1.5';
+  const hasContext = !!prefilledProduct || !!configSummary;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[var(--ed-scrim)] backdrop-blur-md animate-fadeIn">
-      <div 
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-6 bg-[var(--ed-scrim)] backdrop-blur-md animate-fadeIn"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
         id="ecolife-inquiry-modal"
-        className="relative w-full max-w-2xl bg-[var(--ed-modal)] border border-[var(--ed-line)] rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.45)] p-6 sm:p-8 max-h-[92vh] overflow-y-auto text-[var(--ed-ivory)] transition-all"
+        role="dialog"
+        aria-modal="true"
+        className="relative w-full max-w-3xl bg-[var(--ed-modal)] border border-[var(--ed-line)] rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.45)] max-h-[94vh] overflow-y-auto text-[var(--ed-ivory)]"
       >
         {/* Top subtle linear LED light accent */}
         <div className="absolute top-0 left-12 right-12 h-[2px] bg-gradient-to-r from-transparent via-[#FFD21A]/60 to-transparent pointer-events-none" />
 
-        {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-[var(--ed-mute)] hover:text-amber-warm p-2 rounded-full hover:bg-[var(--ed-line-soft)] transition-colors z-20"
-          aria-label="Close"
+          className="absolute top-3 right-3 text-[var(--ed-mute)] hover:text-amber-warm p-2 rounded-full hover:bg-[var(--ed-line-soft)] transition-colors z-20"
+          aria-label={x.close}
         >
           <X className="w-5 h-5" />
         </button>
 
         {isSubmitted ? (
-          <div className="py-12 text-center space-y-5">
-            <div className="w-16 h-16 bg-[rgba(245,166,35,0.1)] border border-[var(--ed-amber)] text-amber-warm rounded-full flex items-center justify-center mx-auto">
-              <CheckCircle className="w-8 h-8" />
+          <div className="py-10 px-6 text-center space-y-4">
+            <div className="w-14 h-14 bg-[rgba(245,166,35,0.1)] border border-[var(--ed-amber)] text-amber-warm rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle className="w-7 h-7" />
             </div>
-            <h3 className="ed-display-sm font-display text-ivory">
-              {currentLang === 'az' ? 'Sorğunuz Uğurla Qəbul Edildi!' : currentLang === 'ru' ? 'Запрос успешно отправлен!' : 'Inquiry Successfully Received!'}
-            </h3>
-            <p className="text-sm text-soft max-w-md mx-auto">
-              {t.contact.form.success}
-            </p>
-            {prefilledProduct && (
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--ed-line-soft)] border border-[var(--ed-line)] text-xs text-amber-warm font-mono-tech">
-                <span>{prefilledProduct.name} [{prefilledProduct.code}]</span>
-              </div>
-            )}
-            <div className="pt-4">
-              <button
-                onClick={handleReset}
-                className="ed-btn-primary"
-              >
-                {currentLang === 'az' ? 'Pəncərəni Bağla' : currentLang === 'ru' ? 'Закрыть' : 'Close Window'}
-              </button>
-            </div>
+            <h3 className="ed-display-sm font-display text-ivory">{x.doneTitle}</h3>
+            <p className="text-sm text-soft max-w-md mx-auto">{t.contact.form.success}</p>
+            <button onClick={onClose} className="ed-btn-primary">{x.close}</button>
           </div>
         ) : (
-          <div>
-            {/* Header */}
-            <div className="space-y-2 pb-5 border-b border-[var(--ed-line)]">
-              <div className="flex items-center gap-2">
+          <div className="grid md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+            {/* LEFT: what this request is about */}
+            <div className="p-6 md:p-7 md:border-r border-[var(--ed-line)] bg-[var(--ed-bg-2)]/60 flex flex-col gap-4">
+              <div className="space-y-2 pr-8 md:pr-0">
                 <span className="font-micro text-[9px] text-amber-warm flex items-center gap-1.5">
                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--ed-amber)]" />
                   {t.nav.writeUs}
                 </span>
-                {prefilledProduct && (
-                  <span className="text-[11px] text-mute font-mono-tech">
-                    [{prefilledProduct.code}]
-                  </span>
-                )}
+                <h2 className="font-display text-ivory tracking-tight text-[1.6rem] sm:text-[1.9rem] leading-[1.08]">{title}</h2>
+                {!hasContext && <p className="text-xs text-mute font-light leading-relaxed">{t.contact.subtitle}</p>}
               </div>
-              <h2 className="ed-display-sm font-display text-ivory tracking-tight">
-                {prefilledProduct 
-                  ? `${prefilledProduct.name} - ${t.productDetail.requestQuote}`
-                  : configSummary 
-                    ? t.configurator.sendInquiry 
-                    : t.contact.title}
-              </h2>
-              <p className="text-xs text-mute font-light">
-                {t.contact.subtitle}
-              </p>
+
+              {prefilledProduct && (
+                <div className="p-3 bg-[var(--ed-bg-2)] border border-[var(--ed-line)] rounded-xl flex items-center gap-3">
+                  <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-[var(--ed-cream)] border border-[var(--ed-line)] flex-shrink-0">
+                    <img
+                      src={prefilledProduct.image || (prefilledProduct.gallery && prefilledProduct.gallery[0]) || ''}
+                      alt={prefilledProduct.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-[13px] font-bold text-ivory uppercase tracking-tight leading-tight line-clamp-2">{prefilledProduct.name}</h3>
+                    <p className="text-[11px] text-mute font-mono-tech mt-1">{prefilledProduct.code}</p>
+                    <p className="text-[11px] text-soft truncate">{getLocalizedText(prefilledProduct.categoryName, lang)}</p>
+                  </div>
+                </div>
+              )}
+
+              {!prefilledProduct && configSummary && (
+                <div className="p-3 bg-[var(--ed-bg-2)] border border-emerald-500/30 rounded-xl space-y-1">
+                  <div className="text-[11px] font-bold text-ok uppercase tracking-wider flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5" />
+                    <span>{x.config}</span>
+                  </div>
+                  <div className="text-[11px] font-mono text-soft whitespace-pre-line leading-relaxed max-h-36 overflow-y-auto">{configSummary}</div>
+                </div>
+              )}
+
+              <a
+                href="tel:+994504507007"
+                className="mt-auto text-xs text-mute hover:text-amber-warm flex items-center gap-2 transition-colors"
+              >
+                <Phone className="w-3.5 h-3.5 text-amber-warm" />
+                <span className="font-mono-tech">+994 50 450 70 07</span>
+              </a>
             </div>
 
-            {/* REAL SELECTED PRODUCT CARD PREVIEW */}
-            {prefilledProduct && (
-              <div className="mt-4 p-4 bg-[var(--ed-bg-2)] border border-[var(--ed-line)] rounded-xl flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all">
-                {/* Product Thumbnail */}
-                <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-[var(--ed-cream)] border border-[var(--ed-line)] flex-shrink-0 flex items-center justify-center">
-                  <img
-                    src={prefilledProduct.image || (prefilledProduct.gallery && prefilledProduct.gallery[0]) || 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=300&q=80'}
-                    alt={prefilledProduct.name}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-1 left-1 ed-dark-scope bg-black/80 px-1.5 py-0.5 rounded text-[9px] font-mono-tech text-[#FFD21A] font-bold">
-                    {prefilledProduct.code}
-                  </div>
-                </div>
-
-                {/* Product Meta & Key Specs */}
-                <div className="flex-1 space-y-1.5 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-bold text-ivory uppercase tracking-tight truncate">
-                      {prefilledProduct.name}
-                    </h3>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-[var(--ed-line)] text-soft">
-                      {getLocalizedText(prefilledProduct.categoryName, currentLang)}
-                    </span>
-                  </div>
-
-                  <p className="text-[11px] text-soft line-clamp-1">
-                    {getLocalizedText(prefilledProduct.subtitle, currentLang)}
-                  </p>
-
-                  {/* Spec badges */}
-                  <div className="flex flex-wrap gap-1.5 pt-1 text-[10px] font-mono text-soft">
-                    {prefilledProduct.specs.dimensions && (
-                      <span className="px-2 py-0.5 rounded bg-[var(--ed-bg)] border border-[var(--ed-line)] text-amber-warm">
-                        {prefilledProduct.specs.dimensions}
-                      </span>
-                    )}
-                    {prefilledProduct.specs.mounting && (
-                      <span className="px-2 py-0.5 rounded bg-[var(--ed-bg)] border border-[var(--ed-line)] text-soft">
-                        {prefilledProduct.specs.mounting}
-                      </span>
-                    )}
-                    {prefilledProduct.specs.ipRating && (
-                      <span className="px-2 py-0.5 rounded bg-[var(--ed-bg)] border border-[var(--ed-line)] text-soft">
-                        {prefilledProduct.specs.ipRating}
-                      </span>
-                    )}
-                    {prefilledProduct.specs.power && (
-                      <span className="px-2 py-0.5 rounded bg-[var(--ed-bg)] border border-[var(--ed-line)] text-ok">
-                        {prefilledProduct.specs.power}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Custom Configuration Summary Banner if from Configurator */}
-            {!prefilledProduct && configSummary && (
-              <div className="mt-4 p-3.5 bg-[var(--ed-bg-2)] border border-emerald-500/30 rounded-xl space-y-1">
-                <div className="text-[11px] font-bold text-ok uppercase tracking-wider flex items-center gap-1.5">
-                  <Sliders className="w-3.5 h-3.5" />
-                  <span>Xüsusi Konfiqurasiya</span>
-                </div>
-                <div className="text-xs font-mono text-soft whitespace-pre-line leading-relaxed">
-                  {configSummary}
-                </div>
-              </div>
-            )}
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {/* RIGHT: the form (name, surname, phone: that is all that is required) */}
+            <form onSubmit={handleSubmit} className="p-6 md:p-7 space-y-3.5" noValidate>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-micro text-[9px] text-mute mb-2">
-                    {t.contact.form.firstName} *
-                  </label>
+                  <label className={label} htmlFor="cm-first">{t.contact.form.firstName} *</label>
                   <input
+                    id="cm-first"
+                    ref={firstRef}
                     type="text"
-                    required
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    placeholder="Adınız"
+                    autoComplete="given-name"
+                    value={form.firstName}
+                    onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                    placeholder={x.namePh}
                     className="ed-input"
                   />
                 </div>
                 <div>
-                  <label className="block font-micro text-[9px] text-mute mb-2">
-                    {t.contact.form.lastName}
-                  </label>
+                  <label className={label} htmlFor="cm-last">{t.contact.form.lastName}</label>
                   <input
+                    id="cm-last"
                     type="text"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    placeholder="Soyadınız"
+                    autoComplete="family-name"
+                    value={form.lastName}
+                    onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+                    placeholder={x.surnamePh}
                     className="ed-input"
                   />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div>
-                  <label className="block font-micro text-[9px] text-mute mb-2">
-                    {t.contact.form.email} *
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="example@mail.com"
-                    className="ed-input"
-                  />
-                </div>
-                <div>
-                  <label className="block font-micro text-[9px] text-mute mb-2">
-                    {t.contact.form.phone} *
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="+994 50 000 00 00"
-                    className="ed-input"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div>
-                  <label className="block font-micro text-[9px] text-mute mb-2">
-                    {t.contact.form.company}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.company}
-                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                    placeholder="Memarlıq Bürosu / Şirkət"
-                    className="ed-input"
-                  />
-                </div>
-                <div>
-                  <label className="block font-micro text-[9px] text-mute mb-2">
-                    {t.contact.form.projectType}
-                  </label>
-                  <select
-                    value={formData.projectType}
-                    onChange={(e) => setFormData({ ...formData, projectType: e.target.value })}
-                    className="ed-input"
-                  >
-                    <option value="commercial">Ticarət & Retail</option>
-                    <option value="office">Ofis & Biznes Mərkəzi</option>
-                    <option value="hospitality">Otel & Restoran</option>
-                    <option value="residential">Fərdi Mənzil / Villa</option>
-                    <option value="other">Digər Layihə</option>
-                  </select>
                 </div>
               </div>
 
               <div>
-                <label className="block font-micro text-[9px] text-mute mb-2">
-                  {t.contact.form.message} *
-                </label>
+                <label className={label} htmlFor="cm-phone">{t.contact.form.phone} *</label>
+                <input
+                  id="cm-phone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  placeholder="+994 50 000 00 00"
+                  className="ed-input"
+                />
+                <p className="text-[10.5px] text-mute mt-1">{x.phoneHint}</p>
+              </div>
+
+              {/* a plain question with one-tap answers instead of the old "project type" list */}
+              <div>
+                <span className={label}>{x.place} <span className="normal-case tracking-normal opacity-70">· {x.placeHint}</span></span>
+                <div className="flex flex-wrap gap-1.5">
+                  {x.places.map(p => {
+                    const on = form.place === p;
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => setForm({ ...form, place: on ? '' : p })}
+                        className={`px-3 py-1.5 rounded-full border text-xs transition-colors ${on ? 'bg-[var(--ed-amber)] border-[var(--ed-amber)] text-[#1d1d1b] font-semibold' : 'border-[var(--ed-line)] text-soft hover:border-[var(--ed-amber)] hover:text-ivory'}`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className={label} htmlFor="cm-note">{x.note}</label>
                 <textarea
-                  rows={3}
-                  required
-                  value={formData.message}
-                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  placeholder="Layihənizin detallarını, tələb olunan metrajı və ya xüsusi qeydlərinizi daxil edin..."
+                  id="cm-note"
+                  rows={2}
+                  value={form.note}
+                  onChange={(e) => setForm({ ...form, note: e.target.value })}
+                  placeholder={x.notePlaceholder}
                   className="ed-input resize-none"
                 />
               </div>
 
-              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <a 
-                  href="tel:+994504507007"
-                  className="text-xs text-mute hover:text-amber-warm flex items-center gap-2 transition-colors"
-                >
-                  <Phone className="w-3.5 h-3.5 text-amber-warm" />
-                  <span className="font-mono-tech">+994 50 450 70 07</span>
-                </a>
+              {error && <p role="alert" className="text-xs text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">{error}</p>}
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="ed-btn-primary w-full sm:w-auto justify-center disabled:opacity-50 cursor-pointer"
-                >
-                  <Send className="w-4 h-4" />
-                  <span>{isSubmitting ? t.contact.form.submitting : t.contact.form.submit}</span>
-                </button>
-              </div>
-              <p className="text-[11px] leading-snug text-mute pt-1">
-                {currentLang === 'az' ? 'Sorğunu göndərməklə məlumatlarınızın sorğunun işlənməsi üçün istifadəsinə razılıq verirsiniz.' : currentLang === 'ru' ? 'Отправляя заявку, вы соглашаетесь на обработку данных для её рассмотрения.' : 'By sending this request you agree to your data being used to process it.'}
-              </p>
+              <button type="submit" disabled={isSubmitting} className="ed-btn-primary w-full justify-center disabled:opacity-50 cursor-pointer">
+                <Send className="w-4 h-4" />
+                <span>{isSubmitting ? t.contact.form.submitting : t.contact.form.submit}</span>
+              </button>
+              <p className="text-[10.5px] leading-snug text-mute">{x.consent}</p>
             </form>
           </div>
         )}
