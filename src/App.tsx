@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { Language, Theme, Product } from './types';
 import { parseUrlToRoute, buildRoutePath } from './utils/router';
 import { Header } from './components/Header';
@@ -69,6 +69,18 @@ export default function App() {
     }
     return undefined;
   });
+
+  // The page the visitor is on, in the terms the chat understands (same product-vs-category rule as the router below)
+  const chatPage = useMemo<{ type: string; id?: string }>(() => {
+    if (activePage === 'catalog') {
+      if (!pageParam || pageParam === 'all') return { type: 'catalog' };
+      const knownCategory = categories.some(c => c.id === pageParam) || productCategoriesList.some(c => c.id === pageParam);
+      const isProduct = products.some(p => p.slug === pageParam || p.id === pageParam) || !knownCategory;
+      return { type: isProduct ? 'product' : 'category', id: pageParam };
+    }
+    if (activePage === 'projects') return pageParam ? { type: 'project', id: pageParam } : { type: 'projects' };
+    return { type: activePage };
+  }, [activePage, pageParam, products, categories]);
 
   // Listen to Browser Back / Forward buttons (popstate)
   useEffect(() => {
@@ -301,7 +313,7 @@ export default function App() {
       {/* AI digital seller (not shown in the admin panel; set VITE_AI_CHAT=off in Vercel and redeploy to hide it) */}
       {activePage !== 'admin' && import.meta.env.VITE_AI_CHAT !== 'off' && (
         <Suspense fallback={null}>
-          <ChatWidget currentLang={currentLang} onNavigate={handleNavigate} />
+          <ChatWidget currentLang={currentLang} onNavigate={handleNavigate} page={chatPage} />
         </Suspense>
       )}
 

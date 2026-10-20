@@ -3,6 +3,8 @@ import { AnimatePresence, motion } from 'motion/react';
 import { ArrowUp, Check, Lightbulb, MessageCircle, X } from 'lucide-react';
 import { Language } from '../../types';
 import { clearPass, getTurnstileToken, readPass, storePass, turnstileEnabled } from '../../lib/turnstile';
+import { useData } from '../../context/DataContext';
+import { MAX_NUDGES, NUDGE_GAP_MS, nudgeFor, readNudgeState, writeNudgeState, type ChatPage, type Nudge } from './nudges';
 
 /**
  * AISeller: the digital sales consultant. Streams answers from /api/chat, shows real catalogue
@@ -44,6 +46,7 @@ const STR = {
     placeholder: 'Mesajınızı yazın…',
     send: 'Göndər',
     open: 'Məsləhətçi ilə yazışın',
+    cta: 'Soruşun',
     close: 'Bağla',
     chips: ['Ev üçün işıq axtarıram', 'Ofis və ya mağaza üçün', 'Layihəm var', 'Məhsul barədə soruşmaq istəyirəm'],
     details: 'Ətraflı',
@@ -74,6 +77,7 @@ const STR = {
     placeholder: 'Напишите сообщение…',
     send: 'Отправить',
     open: 'Написать консультанту',
+    cta: 'Спросить',
     close: 'Закрыть',
     chips: ['Ищу свет для дома', 'Для офиса или магазина', 'У меня проект', 'Хочу узнать о продукте'],
     details: 'Подробнее',
@@ -104,6 +108,7 @@ const STR = {
     placeholder: 'Type your message…',
     send: 'Send',
     open: 'Chat with a consultant',
+    cta: 'Ask us',
     close: 'Close',
     chips: ['Lighting for my home', 'For an office or shop', 'I have a project', 'I have a product question'],
     details: 'Details',
@@ -142,14 +147,16 @@ const tidy = (s: string) => s.replace(/[ \t]{2,}/g, ' ').trim();
 interface ChatWidgetProps {
   currentLang: Language;
   onNavigate: (page: string, param?: string) => void;
+  page: ChatPage;
 }
 
-export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate }) => {
+export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate, page }) => {
   const t = STR[currentLang] || STR.az;
   const apiLang = currentLang === 'ru' ? 'ru' : 'az';
 
   const [open, setOpen] = useState(false);
-  const [teaser, setTeaser] = useState(false);
+  const [teaser, setTeaser] = useState<Nudge | null>(null);
+  const { products, categories, projects } = useData();
   const [busy, setBusy] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
@@ -181,19 +188,51 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate 
     try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-40))); } catch { /* ignore */ }
   }, [messages]);
 
-  // gentle proactive hello, once per session, never over an open chat
-  useEffect(() => {
-    let seen = false;
-    try { seen = sessionStorage.getItem('ecolife-chat-teaser') === '1'; } catch { /* ignore */ }
-    if (seen) return;
-    const id = window.setTimeout(() => {
-      setTeaser(true);
-      try { sessionStorage.setItem('ecolife-chat-teaser', '1'); } catch { /* ignore */ }
-    }, 7000);
-    return () => window.clearTimeout(id);
-  }, []);
+  // what the visitor is looking at (names come from the already loaded site data)
+  const pageLabel = useMemo(() => {
+    if (page.type === 'product') return products.find(p => p.slug === page.id || p.id === page.id)?.name || '';
+    if (page.type === 'category') {
+      const c = categories.find(x => x.id === page.id);
+      return c ? (currentLang === 'ru' ? c.nameRu : currentLang === 'en' ? c.nameEn : c.nameAz) : '';
+    }
+    if (page.type === 'project') return projects.find(p => p.slug === page.id)?.title || '';
+    return '';
+  }, [page.type, page.id, products, categories, projects, currentLang]);
+  const pageNudge = useMemo(() => nudgeFor(page, currentLang, pageLabel), [page, currentLang, pageLabel]);
 
-  useEffect(() => { if (open) setTeaser(false); }, [open]);
+  const labelRef = useRef(pageLabel);
+  labelRef.current = pageLabel;
+  const chattedRef = useRef(false);
+  chattedRef.current = messages.filter(m => m.role === 'user').length >= 2;
+  const needsLabel = page.type === 'product' || page.type === 'category' || page.type === 'project';
+  const nudgeReady = !needsLabel || !!pageLabel;
+
+  // contextual hello: a short, static line per page (a few per session, never twice on one page, silent once dismissed)
+  useEffect(() => {
+    if (open || !nudgeReady) return;
+    const nudge = nudgeFor(page, currentLang, labelRef.current);
+    if (!nudge) return;
+    const st0 = readNudgeState();
+    if (st0.dismissed || st0.count >= MAX_NUDGES || st0.keys.includes(nudge.key)) return;
+    const wait = Math.max(nudge.delayMs, st0.last ? NUDGE_GAP_MS - (Date.now() - st0.last) : 0);
+    let hide = 0;
+    const id = window.setTimeout(() => {
+      const st = readNudgeState();
+      if (st.dismissed || chattedRef.current) return;
+      setTeaser(nudge);
+      writeNudgeState({ ...st, count: st.count + 1, keys: [...st.keys, nudge.key], last: Date.now() });
+      hide = window.setTimeout(() => setTeaser(null), 18000);
+    }, wait);
+    return () => { window.clearTimeout(id); window.clearTimeout(hide); setTeaser(null); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page.type, page.id, nudgeReady, currentLang, open]);
+
+  const dismissNudges = () => {
+    setTeaser(null);
+    writeNudgeState({ ...readNudgeState(), dismissed: true });
+  };
+
+  useEffect(() => { if (open) setTeaser(null); }, [open]);
 
   useEffect(() => {
     const el = scroller.current;
@@ -218,9 +257,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate 
     });
   }, []);
 
-  const send = useCallback(async (raw: string) => {
+  const send = useCallback(async (raw: string, canned?: string) => {
     const text = raw.trim().slice(0, 1000);
     if (!text || busy) return;
+    const first = !messages.some(m => m.role === 'user');
     const history = [...messages, { id: uid(), role: 'user' as const, content: text }];
     setMessages([...history, { id: uid(), role: 'assistant', content: '' }]);
     setInput('');
@@ -228,22 +268,22 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate 
 
     const ctl = new AbortController();
     abortRef.current = ctl;
-    try {
+    // greeting and error notices are UI-only; cards the customer saw are described to the model so "the first one" makes sense
+    const payload = history
+      .filter(m => !m.error && !m.local && m.content)
+      .slice(-30)
+      .map(m => ({ role: m.role, content: m.content, ...(m.products?.length ? { shown: m.products.map(p => ({ code: p.code, name: p.name })) } : {}) }));
+
+    const attempt = async () => {
       // human check (Cloudflare Turnstile): solved once, then a signed pass covers the rest of the chat
-      let pass = readPass();
+      const pass = readPass();
       let cfToken = '';
       if (turnstileEnabled && !pass) cfToken = (await getTurnstileToken()) || '';
       const res = await fetch('/api/chat', {
         method: 'POST',
         signal: ctl.signal,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lang: apiLang,
-          pass,
-          cfToken,
-          // greeting and error notices are UI-only; the server keeps only the recent turns anyway
-          messages: history.filter(m => !m.error && !m.local && m.content).slice(-30).map(m => ({ role: m.role, content: m.content })),
-        }),
+        body: JSON.stringify({ lang: apiLang, pass, cfToken, page, canned: first ? canned : undefined, messages: payload }),
       });
       if (res.status === 403) { clearPass(); throw new Error('captcha'); }
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
@@ -273,16 +313,33 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate 
       // the stream finished but nothing visible came out: never leave the customer with a silent, empty bubble
       if (!got) throw new Error('empty');
       patchLast(m => ({ ...m, content: tidy(m.content) }));
-    } catch (e: any) {
-      if (e?.name === 'AbortError') return;
-      const msg = String(e?.message || '');
-      const text = msg === 'busy' ? t.busy : msg === 'HTTP 429' ? t.rate : msg === 'captcha' ? t.captcha : t.err;
-      patchLast(m => ({ ...m, content: text, error: true, products: undefined, consultation: undefined }));
+    };
+
+    try {
+      for (let tryNo = 0; ; tryNo++) {
+        try {
+          await attempt();
+          break;
+        } catch (e: any) {
+          if (e?.name === 'AbortError') return;
+          const msg = String(e?.message || '');
+          const hard = msg === 'captcha' || msg === 'HTTP 429' || msg === 'busy';
+          if (!hard && tryNo < 1) {
+            // one silent retry before the customer ever sees a problem
+            patchLast(m => ({ ...m, content: '', status: undefined, products: undefined, consultation: undefined }));
+            await new Promise(r => setTimeout(r, 900));
+            continue;
+          }
+          const shown = msg === 'busy' ? t.busy : msg === 'HTTP 429' ? t.rate : msg === 'captcha' ? t.captcha : t.err;
+          patchLast(m => ({ ...m, content: shown, error: true, products: undefined, consultation: undefined }));
+          break;
+        }
+      }
     } finally {
       setBusy(false);
       abortRef.current = null;
     }
-  }, [apiLang, busy, messages, patchLast, t.err, t.busy, t.rate, t.captcha]);
+  }, [apiLang, busy, messages, page, patchLast, t.err, t.busy, t.rate, t.captcha]);
 
   const submitLead = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -332,40 +389,67 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate 
 
   return (
     <>
-      {/* launcher + proactive hello */}
+      {/* launcher + contextual hello */}
       <div className="fixed z-[70] right-4 bottom-4 sm:right-6 sm:bottom-6 flex flex-col items-end gap-3 pointer-events-none">
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
           {teaser && !open && (
-            <motion.button
-              type="button"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
+            <motion.div
+              key={teaser.key}
+              initial={{ opacity: 0, y: 10, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              onClick={() => setOpen(true)}
-              className="pointer-events-auto relative max-w-[240px] text-left bg-[#202228] text-[#f2ede3] text-[13px] leading-snug rounded-2xl rounded-br-md px-4 py-3 border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.5)]"
+              className="pointer-events-auto relative w-[min(280px,calc(100vw-2rem))] bg-[#202228] text-[#f2ede3] rounded-2xl rounded-br-md px-4 py-3.5 border border-[var(--ed-amber)]/35 shadow-[0_14px_44px_rgba(0,0,0,0.55)]"
             >
-              {t.teaser}
-              <span
-                role="button"
+              <button type="button" onClick={() => setOpen(true)} className="block w-full text-left text-[13.5px] leading-snug">
+                {teaser.text}
+              </button>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {teaser.chips.map(c => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => { setOpen(true); void send(c.q, c.id); }}
+                    className="min-h-[36px] rounded-full border border-[var(--ed-amber)]/50 text-[var(--ed-amber)] hover:bg-[var(--ed-amber)] hover:text-[#1d1d1b] px-3.5 text-[12.5px] transition-colors"
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
                 aria-label={t.close}
-                onClick={(e) => { e.stopPropagation(); setTeaser(false); }}
-                className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-[#2c2e35] border border-white/10 grid place-items-center text-[#9a9a9f] hover:text-white"
+                onClick={dismissNudges}
+                className="absolute -top-2.5 -left-2.5 w-7 h-7 rounded-full bg-[#2c2e35] border border-white/10 grid place-items-center text-[#9a9a9f] hover:text-white"
               >
-                <X className="w-3 h-3" />
-              </span>
-            </motion.button>
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </motion.div>
           )}
         </AnimatePresence>
         {!open && (
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            aria-label={t.open}
-            className="pointer-events-auto w-14 h-14 rounded-full bg-[var(--ed-amber)] text-[#1d1d1b] grid place-items-center shadow-[0_10px_36px_rgba(245,185,55,0.35)] hover:scale-105 active:scale-95 transition-transform duration-300"
-          >
-            <Lightbulb className="w-6 h-6" />
-          </button>
+          <div className="pointer-events-auto flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              tabIndex={-1}
+              aria-hidden="true"
+              className="ed-launcher-label hidden sm:block rounded-full bg-[#202228]/90 backdrop-blur border border-[var(--ed-amber)]/40 text-[var(--ed-amber)] text-[13px] font-medium px-4 py-2 shadow-[0_8px_28px_rgba(0,0,0,0.45)]"
+            >
+              {t.name} · {t.cta}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              aria-label={t.open}
+              className="ed-launcher relative w-[68px] h-[68px] rounded-full bg-[var(--ed-amber)] text-[#1d1d1b] grid place-items-center shadow-[0_10px_40px_rgba(245,185,55,0.55)] hover:scale-105 active:scale-95 transition-transform duration-300"
+            >
+              <span className="ed-launcher-ring" aria-hidden="true" />
+              <span className="ed-launcher-ring ed-launcher-ring-2" aria-hidden="true" />
+              <Lightbulb className="relative w-8 h-8" />
+              <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-emerald-400 border-2 border-[var(--ed-amber)]" aria-hidden="true" />
+            </button>
+          </div>
         )}
       </div>
 
@@ -554,16 +638,30 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate 
 
                 {!userStarted && (
                   <div className="flex flex-wrap gap-2 pt-1">
-                    {t.chips.map(c => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => send(c)}
-                        className="min-h-[40px] rounded-full border border-white/15 hover:border-[var(--ed-amber)] hover:text-[var(--ed-amber)] px-4 text-[13px] text-[#d9d9dc] transition-colors"
-                      >
-                        {c}
-                      </button>
-                    ))}
+                    {pageNudge
+                      ? [
+                          ...pageNudge.chips.map(c => ({ key: c.id, label: c.label, go: () => send(c.q, c.id) })),
+                          { key: 'generic-last', label: t.chips[3], go: () => send(t.chips[3]) },
+                        ].map(c => (
+                          <button
+                            key={c.key}
+                            type="button"
+                            onClick={c.go}
+                            className="min-h-[40px] rounded-full border border-white/15 hover:border-[var(--ed-amber)] hover:text-[var(--ed-amber)] px-4 text-[13px] text-[#d9d9dc] transition-colors"
+                          >
+                            {c.label}
+                          </button>
+                        ))
+                      : t.chips.map(c => (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => send(c)}
+                            className="min-h-[40px] rounded-full border border-white/15 hover:border-[var(--ed-amber)] hover:text-[var(--ed-amber)] px-4 text-[13px] text-[#d9d9dc] transition-colors"
+                          >
+                            {c}
+                          </button>
+                        ))}
                   </div>
                 )}
               </div>

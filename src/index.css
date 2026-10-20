@@ -456,3 +456,28 @@ html.light .ed-hero-bottom-fade {
   }
   .group:hover img { transform: none !important; }
 }
+
+/* AISeller launcher: expanding rings to draw the eye. Small single element, so it stays on for reduced-motion visitors too (the wiggle does not). */
+.ed-launcher { animation: ed-launcher-wiggle 7s ease-in-out 3s infinite; }
+.ed-launcher-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid rgba(245, 185, 55, 0.75);
+  pointer-events: none;
+  animation: ed-launcher-ring 2.6s ease-out infinite;
+}
+.ed-launcher-ring-2 { animation-delay: 1.3s; }
+@keyframes ed-launcher-ring { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(1.8); opacity: 0; } }
+@keyframes ed-launcher-wiggle {
+  0%, 86%, 100% { transform: rotate(0deg); }
+  89% { transform: rotate(-10deg); }
+  92% { transform: rotate(8deg); }
+  95% { transform: rotate(-4deg); }
+}
+.ed-launcher-label { animation: ed-launcher-label-in 0.7s ease-out 1.2s both; }
+@keyframes ed-launcher-label-in { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .ed-launcher-ring { animation-duration: 2.6s !important; animation-iteration-count: infinite !important; }
+  .ed-launcher-label { animation-duration: 0.7s !important; }
+}

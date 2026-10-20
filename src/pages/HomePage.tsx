@@ -188,7 +188,7 @@ const FX_PITCH = 24;
 const NOISE =
   "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.55 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>\")";
 
-const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({ on, progress }) => {
+const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number>; onToggle: () => void; lang: Language }> = ({ on, progress, onToggle, lang }) => {
   const boxRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.5);
   const [wire, setWire] = useState(150); // wire length in design units
@@ -273,10 +273,12 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
   // phones/tablets look at the bar from below its own height so the lit underside is visible
   const camY = mode === 'desktop' ? 0 : wire + body / 2 + 140;
 
+  const placement = 'absolute top-0 pointer-events-none left-1/2 -translate-x-[54%] w-[min(90vw,620px)] sm:w-[min(92vw,860px)] lg:w-[min(1380px,88vw)]';
   return (
+    <>
     <div
       ref={boxRef}
-      className="absolute top-0 z-0 pointer-events-none left-1/2 -translate-x-[54%] w-[min(90vw,620px)] sm:w-[min(92vw,860px)] lg:w-[min(1380px,88vw)]"
+      className={`${placement} z-0`}
       style={{ height: (bodyBottom + 40) * scale }}
     >
       <div style={{ width: FX_W, height: bodyBottom + 40, transform: `scale(${scale})`, transformOrigin: '0 0', perspective: 1500, perspectiveOrigin: `50% ${camY}px` }} className="relative">
@@ -404,12 +406,17 @@ const LinearLight: React.FC<{ on: boolean; progress: MotionValue<number> }> = ({
         </div>
       </div>
     </div>
+    {/* the power switch belongs to the luminaire: same frame, pinned under its near (right) end, above the headline layer */}
+    <div className={`${placement} z-20`} style={{ height: (bodyBottom + 40) * scale }}>
+      <LampSwitch on={on} onToggle={onToggle} lang={lang} anchored />
+    </div>
+    </>
   );
 };
 
 const LAMP_PREF_KEY = 'ecolife-lamp';
 
-const LampSwitch: React.FC<{ on: boolean; onToggle: () => void; lang: Language }> = ({ on, onToggle, lang }) => {
+const LampSwitch: React.FC<{ on: boolean; onToggle: () => void; lang: Language; anchored?: boolean }> = ({ on, onToggle, lang, anchored }) => {
   const label = on
     ? (lang === 'az' ? 'Söndür' : lang === 'ru' ? 'Выключить' : 'Switch off')
     : (lang === 'az' ? 'Yandır' : lang === 'ru' ? 'Включить' : 'Switch on');
@@ -418,7 +425,11 @@ const LampSwitch: React.FC<{ on: boolean; onToggle: () => void; lang: Language }
       type="button"
       onClick={onToggle}
       aria-pressed={on}
-      className="ed-pill absolute z-10 right-[84px] sm:right-[104px] lg:right-[120px] bottom-8 sm:bottom-10 lg:bottom-16 backdrop-blur-sm bg-[var(--ed-bg)]/40"
+      className={`ed-pill pointer-events-auto absolute backdrop-blur-sm bg-[var(--ed-bg)]/40 ${
+        anchored
+          ? 'right-[2%] top-full mt-2 sm:mt-3 z-20'
+          : 'z-10 right-[84px] sm:right-[104px] lg:right-[120px] bottom-8 sm:bottom-10 lg:bottom-16'
+      }`}
     >
       {on ? <Lightbulb className="w-4 h-4 text-amber-warm" /> : <LightbulbOff className="w-4 h-4" />}
       <span>{label}</span>
@@ -611,7 +622,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
 
         {heroVariant === 'linear' ? (
-          <LinearLight on={lampOn} progress={scrollYProgress} />
+          <LinearLight on={lampOn} progress={scrollYProgress} onToggle={toggleLamp} lang={currentLang} />
         ) : (
           <>
           {/* MOBILE Pendant Lamp (centered between logo & search) */}
@@ -660,7 +671,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           </>
         )}
 
-        <LampSwitch on={lampOn} onToggle={toggleLamp} lang={currentLang} />
+        {heroVariant !== 'linear' && <LampSwitch on={lampOn} onToggle={toggleLamp} lang={currentLang} />}
 
         {/* Fade the warm hero glow into the next section—no hard line in either theme. */}
         <div

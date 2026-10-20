@@ -167,28 +167,104 @@ export async function loadCatalog(): Promise<CatalogItem[]> {
   return items;
 }
 
+// Words customers use for each catalogue category (Azerbaijani, Russian, English). The category decides what is offered:
+// someone asking for "linear" must never be shown tracklights, even though some linear items carry "Tracklight" in their name.
+const CAT_HINTS: [string, string][] = [
+  ['linear', 'x[əe]tti|linear|линейн|lineer'],
+  ['track-lights', 'trek|track|трек'],
+  ['magnetic-systems', 'maqnit|magnet|магнит'],
+  ['downlights', 'downlight|даунлайт|gömmə|gomme|встраив|spot'],
+  ['panels', 'panel|панел'],
+  ['led-lent', 'lent|strip|лент'],
+  ['bulbs', 'lampa|lamp|лампа|лампоч|bulb|gu10|e27'],
+  ['outdoor', 'xarici|küçə|kuce|outdoor|floodlight|projektor|прожектор|уличн|наружн'],
+  ['drivers', 'drayver|driver|драйвер|transformator|трансформатор|блок питан'],
+  ['accessories', 'aksesuar|accessor|аксессуар|connector|birləşdirici|коннектор'],
+  ['pcb-modules', 'pcb|modul|модул'],
+];
+export function detectCategories(text: string): string[] {
+  const s = text.toLowerCase();
+  return CAT_HINTS.filter(([, stems]) => new RegExp(`(?:^|[^\\p{L}])(?:${stems})`, 'u').test(s)).map(([id]) => id);
+}
+
+const STOP = new Set([
+  'üçün', 'hansı', 'hansılar', 'məhsul', 'məhsullar', 'məhsulu', 'layihə', 'layihədə', 'bizim', 'lazım', 'lazımdır', 'axtarıram', 'istəyirəm', 'mənə', 'mənim',
+  'göstərin', 'haqqında', 'olan', 'olunub', 'istifadə', 'varmı', 'necə', 'nədir', 'zəhmət', 'olmasa', 'kömək', 'edin', 'salam', 'bunu', 'bəli',
+  'что', 'для', 'как', 'нужен', 'нужно', 'хочу', 'какие', 'покажите', 'этот', 'этого', 'мне', 'есть', 'ищу',
+  'the', 'for', 'and', 'with', 'what', 'which', 'show', 'need', 'want', 'this', 'that', 'have', 'you', 'are',
+]);
+
 export async function searchCatalog(args: { query?: string; category?: string; limit?: number }): Promise<CatalogItem[]> {
   const items = await loadCatalog();
   const limit = Math.min(Math.max(args.limit || 6, 1), 8);
   let pool = items;
-  if (args.category) pool = pool.filter(i => i.category === args.category);
+  const cats = args.category ? [args.category] : detectCategories(args.query || '');
+  const inCats = cats.length ? items.filter(i => cats.includes(i.category)) : [];
+  if (inCats.length) pool = inCats;
   const tokens = (args.query || '')
     .toLowerCase()
-    .split(/[\s,;]+/)
-    .filter(t => t.length > 1);
-  if (tokens.length === 0) return pool.slice(0, limit);
+    .split(/[\s,;.?!:()]+/)
+    // short words ("bu", "и") match inside unrelated names ("bulb"); keep real keywords and spec tokens (7w, 24v, 3000k)
+    .filter(t => (t.length >= 3 || /\d/.test(t)) && !STOP.has(t));
+  // a question made only of filler words matches nothing (never return arbitrary items)
+  if (tokens.length === 0) return (args.query || '').trim() && !inCats.length ? [] : pool.slice(0, limit);
   const scored = pool
     // word forms: "lentiniz" must still find "lentlər"/"LED Strip" categories, so long words also match by their first 4 letters
     .map(i => ({ i, s: tokens.reduce((n, t) => n + (i.haystack.includes(t) ? 1 : t.length >= 5 && i.haystack.includes(t.slice(0, 4)) ? 0.5 : 0), 0) }))
     .filter(x => x.s > 0)
     .sort((a, b) => b.s - a.s);
+  if (scored.length === 0 && inCats.length) return inCats.slice(0, limit);
   return scored.slice(0, limit).map(x => x.i);
 }
 
 export const publicItem = (i: CatalogItem) => ({
   code: i.code,
   name: i.name,
-  category: i.categoryName.en || i.category,
+  category: `${i.categoryName.en || i.category} (${i.category})`,
   specs: i.specs,
   url: i.url,
 });
+
+// ---------- projects (public read, cached for 5 minutes): used to talk about the project page the customer is looking at
+export interface ProjectInfo {
+  slug: string;
+  title: string;
+  category: string;
+  location: string;
+  year: string;
+  desc: { az: string; ru: string };
+  solution: { az: string; ru: string };
+  products: string[];
+}
+let projectCache: { at: number; items: ProjectInfo[] } | null = null;
+
+const tr = (v: any, l: 'az' | 'ru'): string => (typeof v === 'string' ? v : String(v?.[l] || v?.az || ''));
+
+export async function loadProjects(): Promise<ProjectInfo[]> {
+  if (projectCache && Date.now() - projectCache.at < 5 * 60 * 1000) return projectCache.items;
+  const url = env('VITE_SUPABASE_URL');
+  const key = env('VITE_SUPABASE_ANON_KEY');
+  if (!url || !key) return projectCache?.items || [];
+  try {
+    const res = await fetch(
+      `${url}/rest/v1/projects?select=slug,title,category,location,year,short_description,lighting_solution,products_used&limit=200`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(6000) }
+    );
+    if (!res.ok) return projectCache?.items || [];
+    const rows: any[] = await res.json();
+    const items = rows.map(r => ({
+      slug: String(r.slug || ''),
+      title: String(r.title || ''),
+      category: String(r.category || ''),
+      location: String(r.location || ''),
+      year: String(r.year || ''),
+      desc: { az: tr(r.short_description, 'az'), ru: tr(r.short_description, 'ru') },
+      solution: { az: tr(r.lighting_solution, 'az'), ru: tr(r.lighting_solution, 'ru') },
+      products: Array.isArray(r.products_used) ? r.products_used.map(String) : [],
+    }));
+    projectCache = { at: Date.now(), items };
+    return items;
+  } catch {
+    return projectCache?.items || [];
+  }
+}
