@@ -9,6 +9,7 @@
 
 import { supabase } from '../lib/supabase';
 import { checkRateLimit } from './sanitize';
+import { getTurnstileToken } from '../lib/turnstile';
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOGIN_WINDOW_MS = 5 * 60 * 1000; // 5 dəqiqə
@@ -49,9 +50,13 @@ export async function signInWithEmail(
   }
 
   try {
+    // Supabase "Captcha protection" (Attack Protection) refuses a login without a Cloudflare Turnstile token.
+    // The token comes from the same invisible check the chat uses; when no site key is configured nothing is sent.
+    const captchaToken = (await getTurnstileToken()) || undefined;
     const { data, error } = await supabase.auth.signInWithPassword({
       email: cleanMail,
       password,
+      ...(captchaToken ? { options: { captchaToken } } : {}),
     });
 
     if (error) {
