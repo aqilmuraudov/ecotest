@@ -238,7 +238,7 @@ export const LeadDoneView: React.FC<{ t: Strings; short: string; whatsappUrl: st
 );
 
 // ------------------------------------------------------------------ photo downscaling (the model needs ~1024 px, not a 12 MP original)
-export async function resizeImage(file: File, max = 1024, quality = 0.8): Promise<string> {
+export async function resizeImage(file: File, max = 896, quality = 0.78): Promise<string> {
   const bmp = await createImageBitmap(file);
   const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
   const canvas = document.createElement('canvas');

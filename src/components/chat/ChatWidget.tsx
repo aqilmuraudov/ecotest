@@ -88,13 +88,16 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
   const [listening, setListening] = useState(false);
   const [visionOn, setVisionOn] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoHint, setPhotoHint] = useState(false);
 
   const scroller = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const recRef = useRef<any>(null);
-  const visionRef = useRef<string>('');
+  // what the vision model saw in the customer's photo: kept for the whole chat so questions about the room keep working
+  const visionRef = useRef<string>((() => { try { return sessionStorage.getItem('ecolife-chat-vision') || ''; } catch { return ''; } })());
+  const photoTimes = useRef<number[]>([]);
   const openSrc = useRef<'launcher' | 'nudge'>('launcher');
 
   // keep the greeting in the visitor's language until they start talking
@@ -205,20 +208,8 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
     });
   }, []);
 
-  const send = useCallback(async (raw: string, canned?: string, calc?: CalcInput, image?: string) => {
-    const text = raw.trim().slice(0, 1000);
-    if (!text || busy) return;
-    const first = !messages.some(m => m.role === 'user');
-    if (first) track('first_message', page.type, { canned: canned || null });
-    const history = [...messages, { id: uid(), role: 'user' as const, content: text, ...(image ? { image } : {}) }];
-    setMessages([...history, { id: uid(), role: 'assistant', content: '' }]);
-    setInput('');
-    setCalcOpen(false);
-    // what the vision model saw is sent once, with the message that follows the photo; the answer carries it from there
-    const visionNow = visionRef.current;
-    visionRef.current = '';
-    setBusy(true);
-
+  // one request to /api/chat for an already prepared conversation (the user's message and an empty assistant bubble are in `history`)
+  const runRequest = useCallback(async (history: ChatMessage[], o: { canned?: string; calc?: CalcInput; first: boolean; visionNew?: boolean }) => {
     const ctl = new AbortController();
     abortRef.current = ctl;
     // greeting and error notices are UI-only; cards the customer saw are described to the model so "the first one" makes sense
@@ -243,10 +234,11 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
           page,
           sid: getSid(),
           variant,
-          canned: first ? canned : undefined,
-          calc: calc ? { room: calc.room, area: calc.area, height: calc.height, cct: calc.cct } : undefined,
+          canned: o.first ? o.canned : undefined,
+          calc: o.calc ? { room: o.calc.room, area: o.calc.area, height: o.calc.height, cct: o.calc.cct } : undefined,
           shortlist: shortlist.slice(0, 8).map(p => ({ code: p.code, name: p.name })),
-          vision: visionNow || undefined,
+          vision: visionRef.current || undefined,
+          visionNew: o.visionNew || undefined,
           messages: payload,
         }),
       });
@@ -268,6 +260,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
           try { evt = JSON.parse(part.slice(5)); } catch { continue; }
           if (evt.type === 'text') { if (String(evt.delta || '').trim()) got = true; patchLast(m => ({ ...m, content: m.content + evt.delta, status: undefined })); }
           else if (evt.type === 'pass') { if (typeof evt.token === 'string') storePass(evt.token); }
+          else if (evt.type === 'hint') { setPhotoHint(true); window.setTimeout(() => setPhotoHint(false), 9000); }
           else if (evt.type === 'status') patchLast(m => ({ ...m, status: String(evt.text || '') }));
           else if (evt.type === 'products') { got = true; patchLast(m => ({ ...m, products: evt.items })); }
           else if (evt.type === 'projects') { got = true; patchLast(m => ({ ...m, projects: evt.items })); }
@@ -305,7 +298,20 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
       setBusy(false);
       abortRef.current = null;
     }
-  }, [apiLang, busy, messages, page, patchLast, shortlist, t.err, t.busy, t.rate, t.captcha, variant]);
+  }, [apiLang, page, patchLast, shortlist, t.err, t.busy, t.rate, t.captcha, variant]);
+
+  const send = useCallback(async (raw: string, canned?: string, calc?: CalcInput) => {
+    const text = raw.trim().slice(0, 1000);
+    if (!text || busy) return;
+    const first = !messages.some(m => m.role === 'user');
+    if (first) track('first_message', page.type, { canned: canned || null });
+    const history = [...messages, { id: uid(), role: 'user' as const, content: text }];
+    setMessages([...history, { id: uid(), role: 'assistant', content: '' }]);
+    setInput('');
+    setCalcOpen(false);
+    setBusy(true);
+    await runRequest(history, { canned, calc, first });
+  }, [busy, messages, page, runRequest]);
 
   const runCalc = (c: CalcInput) => {
     track('calc_used', page.type, { room: c.room });
@@ -349,6 +355,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
           lang: apiLang,
           source: 'ai-chat',
           callback: lead.callback,
+          vision: visionRef.current || undefined,
           sid: getSid(),
           shortlist: shortlist.length ? shortlist.map(p => p.code) : chosenCodes,
           products: lastShownCodes,
@@ -385,12 +392,35 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
     } catch { setListening(false); }
   };
 
-  // ---- room photo: downscaled in the browser, analysed by the vision model on the server, never stored
+  // ---- room photo: checked and downscaled in the browser, analysed (and screened) by the vision model on the server, never stored
+  const notice = (text: string) => setMessages(prev => [...prev, { id: uid(), role: 'assistant', content: text, local: true }]);
+
   const onPhoto = async (file: File | undefined) => {
     if (!file || busy || photoBusy) return;
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return notice(t.photoType);
+    if (file.size > 2 * 1024 * 1024) return notice(t.photoBig);
+    const now = Date.now();
+    photoTimes.current = photoTimes.current.filter(x => now - x < 60000);
+    if (photoTimes.current.length >= 2) return notice(t.photoRate);
+    photoTimes.current.push(now);
+
     setPhotoBusy(true);
+    setBusy(true);
+    let image = '';
+    try { image = await resizeImage(file); } catch { setPhotoBusy(false); setBusy(false); return notice(t.photoErr); }
+
+    // the customer sees their picture at once, with "analysing" under it
+    const first = !messages.some(m => m.role === 'user');
+    const userMsg: ChatMessage = { id: uid(), role: 'user', content: t.photoMsg, image };
+    const placeholder: ChatMessage = { id: uid(), role: 'assistant', content: '', status: t.photoBusy };
+    const history = [...messages, userMsg];
+    setMessages([...history, placeholder]);
+    const drop = (text: string) => {
+      setMessages(prev => [...prev.filter(m => m.id !== userMsg.id && m.id !== placeholder.id), { id: uid(), role: 'assistant', content: text, local: true }]);
+      setPhotoBusy(false);
+      setBusy(false);
+    };
     try {
-      const image = await resizeImage(file);
       const pass = readPass();
       const cfToken = pass ? '' : (await getTurnstileToken()) || '';
       const res = await fetch('/api/vision', {
@@ -400,14 +430,17 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
       });
       if (res.status === 403) clearPass();
       const j = await res.json().catch(() => ({}));
-      if (!res.ok || !j.summary) throw new Error('vision');
+      if (res.status === 422 && j.error === 'rejected') return drop(j.banned ? t.photoBanned : t.photoRejected);
+      if (res.status === 403 && j.error === 'banned') return drop(t.photoBanned);
+      if (res.status === 429) return drop(t.photoRate);
+      if (!res.ok || !j.summary) return drop(t.photoErr);
       visionRef.current = String(j.summary).slice(0, 900);
+      try { sessionStorage.setItem('ecolife-chat-vision', visionRef.current); } catch { /* ignore */ }
       track('photo_used', page.type);
       setPhotoBusy(false);
-      await send(t.photoMsg, undefined, undefined, image);
+      await runRequest(history, { first, visionNew: true });
     } catch {
-      setPhotoBusy(false);
-      setMessages(prev => [...prev, { id: uid(), role: 'assistant', content: t.photoErr, local: true }]);
+      drop(t.photoErr);
     }
   };
 
@@ -697,7 +730,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
                         disabled={photoBusy || busy}
                         aria-label={t.photo}
                         title={`${t.photo}. ${t.photoNote}`}
-                        className="w-10 h-10 shrink-0 grid place-items-center rounded-full text-[#9a9a9f] hover:text-[var(--ed-amber)] hover:bg-white/5 disabled:opacity-40"
+                        className={`w-10 h-10 shrink-0 grid place-items-center rounded-full hover:text-[var(--ed-amber)] hover:bg-white/5 disabled:opacity-40 ${photoHint ? 'text-[var(--ed-amber)] ring-2 ring-[var(--ed-amber)] animate-pulse' : 'text-[#9a9a9f]'}`}
                       >
                         <ImagePlus className="w-[18px] h-[18px]" />
                       </button>

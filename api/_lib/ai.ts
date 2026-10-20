@@ -7,7 +7,7 @@ export type Emit = (evt: Record<string, unknown>) => void;
 /** The page the customer is looking at (sent by the site; resolved against the real catalogue/projects on the server). */
 export type PageCtx = { type: string; id?: string };
 /** Extra per-request context: what the customer has shortlisted and, when they sent a room photo, what the vision model saw. */
-export type PromptExtra = { shortlist?: { code: string; name: string }[]; vision?: string };
+export type PromptExtra = { shortlist?: { code: string; name: string }[]; vision?: string; visionNew?: boolean };
 
 // ---------------------------------------------------------------- prompt
 const trim = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
@@ -77,7 +77,7 @@ export async function buildPrompt(history: ChatMsg[] = [], memory = '', lang: 'a
   // "20 m2 living room": the numbers are computed here, the model only explains them
   const req = parseRoomRequest(`${userMsgs.slice(-3).map(m => m.content).join(' ')} ${extra.vision || ''}`);
   const plan = req ? roomPlan(req.room, req.area, items, req.height, req.cct) : null;
-  const planFresh = !!parseRoomRequest(`${lastUser} ${extra.vision || ''}`);
+  const planFresh = !!parseRoomRequest(`${lastUser} ${extra.visionNew ? extra.vision || '' : ''}`);
 
   const cands: CatalogItem[] = [];
   for (const i of [...(plan ? plan.options.map(o => o.item) : []), ...found, ...pg.cands]) if (!cands.some(x => x.code === i.code)) cands.push(i);
@@ -96,6 +96,7 @@ LANGUAGE
 - Your Russian must be equally natural and grammatically correct. Never mix two languages inside one sentence. Quietly re-read your answer before sending and fix any mistake.
 
 YOUR JOB
+- If the customer asks whether they can send a photo of their room, say yes: they tap the picture icon next to the message box, you analyse it and give suggestions. Never send them to a consultant for that.
 - Greet only in the very first reply of a conversation; never start a later reply with a greeting.
 - First answer exactly what the customer asked. Questions about our projects, solutions, articles, the company, contacts, working hours, how the site works are normal: answer them directly and concretely from the KNOWLEDGE and SITE sections. Do not turn every answer into a product pitch and do not steer back to products when the customer asks about something else; at most add one short, relevant follow-up question or suggestion at the end.
 - When the customer is looking for lighting, keep them engaged by asking ONE focused question per message. Discover, in a natural order: type of space (home, office, shop, restaurant, hotel...), size/area, ceiling height, desired mood or colour temperature, new build or renovation, whether a track/magnetic/recessed installation already exists, timeline.
@@ -128,7 +129,7 @@ SITE
 ${catList}
 
 CONTEXT
-${pg.text ? `- PAGE: ${pg.text}\n` : ''}${memory ? `- Earlier in this conversation the customer said (older messages, already answered; do not ask for these again):\n${memory}\n` : ''}${extra.shortlist?.length ? `- The customer has shortlisted: ${extra.shortlist.slice(0, 8).map(s => `${s.name} [${s.code}]`).join('; ')}. Treat these as their favourites when advising.\n` : ''}${extra.vision ? `- The customer sent a photo of their room. What the vision model saw: ${extra.vision}\n` : ''}${kn.text ? `KNOWLEDGE:\n${kn.text}\n` : ''}${plan ? `${planPrompt(plan, planFresh)}\n` : ''}- Catalogue items that match the customer's latest messages, the page or the calculation (prefer these; recommend ONLY codes that appear here or in tool results):
+${pg.text ? `- PAGE: ${pg.text}\n` : ''}${memory ? `- Earlier in this conversation the customer said (older messages, already answered; do not ask for these again):\n${memory}\n` : ''}${extra.shortlist?.length ? `- The customer has shortlisted: ${extra.shortlist.slice(0, 8).map(s => `${s.name} [${s.code}]`).join('; ')}. Treat these as their favourites when advising.\n` : ''}${extra.vision ? `- The customer sent a photo of their space${extra.visionNew ? ' just now' : ' earlier in this conversation'}. What the vision model saw: ${extra.vision}\nAnswer questions about the photo and the space from this description, keep the conversation about their space, and never claim to see more than it says.\n` : ''}${kn.text ? `KNOWLEDGE:\n${kn.text}\n` : ''}${plan ? `${planPrompt(plan, planFresh)}\n` : ''}- Catalogue items that match the customer's latest messages, the page or the calculation (prefer these; recommend ONLY codes that appear here or in tool results):
 ${candList}
 - Current time: ${hours.label}. Consultants work Monday-Saturday 09:00-18:00. If outside these hours and the customer wants a consultant, say they will answer on the next working day.`;
   return { system, cands: top, projectCards: kn.projectCards, plan, planFresh };
@@ -184,8 +185,8 @@ const TOOLS = [
 ];
 
 const HUMAN = 'danış|m[əe]sl[əe]h[əe]tçi|menecer|operator|satış (?:şöb|komand)|поговор|говорить|менеджер|консультант|оператор|живым|talk to|speak (?:to|with)|human|manager|agent';
-const INTENT_RE = new RegExp('(qiym[əe]t|manat|neç[əe]y[əe]|sifari[şs]|t[əe]klif|[əe]laq[əe]|z[əe]ng|nömr[əe]|цен|стоимост|сколько|заказ|предложен|оформ|свяж|позвон|order|quote|price|contact|call me|' + HUMAN + ')', 'i');
-const ORDER_RE = new RegExp('(sifari[şs]|t[əe]klif(?!\\s+(?:edi|edə|et))|[əe]laq[əe]|z[əe]ng|nömr[əe]|заказ|предложен|оформ|свяж|позвон|order|quote|call me|' + HUMAN + ')', 'i');
+const INTENT_RE = new RegExp('(qiym[əe]t|manat|neç[əe]y[əe]|sifari[şs]|t[əe]klif(?:i|ini)?\\s+(?:hazırla|ver\\b|göndər|istəyirəm|lazım)|[əe]laq[əe]|z[əe]ng|nömr[əe]|цен|стоимост|сколько|заказ|предложен|оформ|свяж|позвон|order|quote|price|contact|call me|' + HUMAN + ')', 'i');
+const ORDER_RE = new RegExp('(sifari[şs]|t[əe]klif(?:i|ini)?\\s+(?:hazırla|ver\\b|göndər|istəyirəm|lazım)|(?:kommersiya|qiym[əe]t)\\s+t[əe]klif|[əe]laq[əe]|z[əe]ng|nömr[əe]|заказ|коммерческ|оформ|свяж|позвон|order|quote|call me|' + HUMAN + ')', 'i');
 const PRICE_ASK_RE = /(qiym[əe]t|manat|neç[əe]y[əe]|цен|стоимост|сколько|price)/i;
 
 /** Deterministic backup for the sales hand-off: the customer asked for an order/offer/contact (or pressed on price after a real talk). */
@@ -534,5 +535,19 @@ export async function shortlistIntent(history: ChatMsg[], extra: PromptExtra, la
   }
   emit({ type: 'text', delta: lang === 'ru' ? `Выбранные вами товары (${list.length}) будут переданы консультанту. Укажите, пожалуйста, имя и номер в форме ниже.` : `Seçdiyiniz ${list.length} məhsul məsləhətçiyə göndəriləcək. Zəhmət olmasa, aşağıdakı formada adınızı və nömrənizi yazın.` });
   emit({ type: 'consultation', summary: list.map(s => s.name).join(', ').slice(0, 400), codes: list.map(s => s.code) });
+  return true;
+}
+
+const PHOTO_WORD = /(şəkil|şəkl|foto|фото|снимк|photo|picture|image)/;
+const SEND_WORD = /(göndər|yolla|atım|atım|at\b|yüklə|отправ|скин|загруз|send|upload|share|kömək|analiz|əsasında|üzrə)/;
+
+/** "Can I send a photo of my room?": answered at once (no model), pointing at the picture icon. */
+export function photoIntent(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit, enabled: boolean): boolean {
+  const last = (history[history.length - 1]?.content || '').toLowerCase().replace(/\u0307/g, '');
+  if (!enabled || last.length > 200 || !PHOTO_WORD.test(last) || !SEND_WORD.test(last) || !/\?|olar|bilər|mümkün|можно|могу|can i|may i|istəyir|хочу|göndər|отправ|yolla/.test(last)) return false;
+  emit({ type: 'text', delta: lang === 'ru'
+    ? 'Да, конечно. Нажмите на значок картинки рядом с полем ввода и отправьте фото помещения: я проанализирую его и предложу подходящее освещение. После этого можно задавать любые вопросы о вашем помещении.'
+    : 'Bəli, əlbəttə. Mesaj xəttinin yanındakı şəkil ikonuna basıb otağınızın şəklini göndərin: mən onu analiz edib sizə uyğun işıq təkliflərimi verəcəm. Şəkildən sonra otağınız barədə istənilən sualı verə bilərsiniz.' });
+  emit({ type: 'hint', name: 'photo' });
   return true;
 }

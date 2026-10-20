@@ -101,3 +101,49 @@ export async function logEvents(list: EventLog[]): Promise<void> {
     console.error('[log] events failed', e);
   }
 }
+
+// ---------- photo upload abuse: 3 rejected pictures within 24 h block the address from uploading for 24 h.
+// Addresses are stored only as a salted hash. Falls back to memory when the database is not reachable.
+const DAY = 24 * 60 * 60 * 1000;
+const memBans = new Map<string, { strikes: number; last: number; until: number }>();
+
+export async function checkBan(hash: string): Promise<boolean> {
+  const mem = memBans.get(hash);
+  if (mem && mem.until > Date.now()) return true;
+  if (!loggingEnabled()) return false;
+  try {
+    const rows: any = await timeout(fetch(`${url()}/rest/v1/chat_bans?ip_hash=eq.${hash}&select=banned_until`, { headers: headers() }).then(r => r.json()), 1500);
+    const until = Array.isArray(rows) && rows[0]?.banned_until ? Date.parse(rows[0].banned_until) : 0;
+    return until > Date.now();
+  } catch {
+    return false;
+  }
+}
+
+/** Records one rejected upload; returns true when this strike started a ban. */
+export async function addStrike(hash: string): Promise<boolean> {
+  const now = Date.now();
+  const prev = memBans.get(hash);
+  let strikes = prev && now - prev.last < DAY ? prev.strikes + 1 : 1;
+  try {
+    if (loggingEnabled()) {
+      const rows: any = await timeout(fetch(`${url()}/rest/v1/chat_bans?ip_hash=eq.${hash}&select=strikes,last_strike`, { headers: headers() }).then(r => r.json()), 1500);
+      const row = Array.isArray(rows) ? rows[0] : null;
+      if (row && now - Date.parse(row.last_strike) < DAY) strikes = Math.max(strikes, Number(row.strikes) + 1);
+      const banned = strikes >= 3;
+      await timeout(
+        fetch(`${url()}/rest/v1/chat_bans`, {
+          method: 'POST',
+          headers: headers({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
+          body: JSON.stringify({ ip_hash: hash, strikes, last_strike: new Date(now).toISOString(), banned_until: banned ? new Date(now + DAY).toISOString() : null }),
+        }),
+        1500
+      );
+    }
+  } catch (e) {
+    console.error('[log] strike failed', e);
+  }
+  const banned = strikes >= 3;
+  memBans.set(hash, { strikes, last: now, until: banned ? now + DAY : 0 });
+  return banned;
+}

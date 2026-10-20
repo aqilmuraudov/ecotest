@@ -88,6 +88,7 @@ export default async function handler(req: any, res: any) {
 
   const userMessage = String(body.message || '').trim().slice(0, 1500);
   const callbackLabel = CALLBACK[String(body.callback)] || '';
+  const visionNote = String(body.vision || '').replace(/\s+/g, ' ').trim().slice(0, 600);
   const sid = String(body.sid || '').replace(/[^\w\-.]/g, '').slice(0, 40);
   const summary = history.length ? await summarize(history) : '';
 
@@ -149,6 +150,7 @@ export default async function handler(req: any, res: any) {
     lines.push('', starred.length ? `<b>Müştərinin seçdikləri (${products.length}):</b>` : '<b>Məhsullar:</b>', ...products.map(p => `• <a href="${p.url}">${escapeHtml(p.code)}</a> ${escapeHtml(p.name)}`));
   }
   if (configSummary) lines.push('', '<b>Konfiqurasiya:</b>', escapeHtml(configSummary.slice(0, 700)));
+  if (visionNote) lines.push('', '<b>Otaq şəklinin təhlili (AI):</b>', escapeHtml(visionNote));
   if (summary) lines.push('', '<b>Xülasə:</b>', escapeHtml(summary));
   else if (userMessage) lines.push('', '<b>Mesaj:</b>', escapeHtml(userMessage));
   const notified = await sendTelegram(lines.join('\n'), [
