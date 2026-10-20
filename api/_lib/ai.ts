@@ -57,7 +57,7 @@ async function pageContext(page: PageCtx | undefined, lang: 'az' | 'ru'): Promis
   return { text: labels[page.type] ? `The customer is on ${labels[page.type]}.` : '', cands: [] };
 }
 
-export interface BuiltPrompt { system: string; cands: CatalogItem[]; projectCards: KnowledgeCard[]; plan: RoomPlan | null }
+export interface BuiltPrompt { system: string; cands: CatalogItem[]; projectCards: KnowledgeCard[]; plan: RoomPlan | null; planFresh: boolean }
 
 export async function buildPrompt(history: ChatMsg[] = [], memory = '', lang: 'az' | 'ru' = 'az', page?: PageCtx, extra: PromptExtra = {}): Promise<BuiltPrompt> {
   const items = await loadCatalog();
@@ -75,8 +75,9 @@ export async function buildPrompt(history: ChatMsg[] = [], memory = '', lang: 'a
   const kn = await knowledgeFor(userMsgs.slice(-2).map(m => m.content).join(' '), lang, page);
 
   // "20 m2 living room": the numbers are computed here, the model only explains them
-  const req = parseRoomRequest(userMsgs.slice(-3).map(m => m.content).join(' '));
+  const req = parseRoomRequest(`${userMsgs.slice(-3).map(m => m.content).join(' ')} ${extra.vision || ''}`);
   const plan = req ? roomPlan(req.room, req.area, items, req.height, req.cct) : null;
+  const planFresh = !!parseRoomRequest(`${lastUser} ${extra.vision || ''}`);
 
   const cands: CatalogItem[] = [];
   for (const i of [...(plan ? plan.options.map(o => o.item) : []), ...found, ...pg.cands]) if (!cands.some(x => x.code === i.code)) cands.push(i);
@@ -105,6 +106,8 @@ YOUR JOB
 - The category of a candidate is authoritative. If the customer asks for a category (for example linear / xətti, track / trek, magnetic / maqnit, strip / lent), recommend ONLY items of that category, even when an item's name contains another word (some linear items are named "Magnetic Tracklight Line"). Never swap a category for a similar one without saying so.
 - If the customer refers to an earlier card ("the first one", "1-ci", "bunu"), the assistant messages carry a note "Product cards shown" with numbered items: re-show that exact product with recommend_products(code) and add one short sentence. If they ask for a link, tell them the card above opens the product page.
 - If the customer's first message is a short page question (for example "Bu məhsul barədə", "Why this category?"), answer from the PAGE context in 2-3 short sentences and finish with one engaging question.
+- If the customer says which products they want, or how many of each, confirm it in one short sentence and call request_consultation with product_codes (the codes they chose, copied exactly) and a project_summary that includes the quantities. Do NOT show the product cards again at that point.
+- Product codes must be copied exactly from the lists or notes: one changed digit is a different product (30W 3000K and 30W 4000K are different codes). Never say the customer selected or starred something unless it is in the shortlist line or they said it themselves.
 - If the customer wants to talk to a person, the sales consultant or the team, call request_consultation right away (no extra questions first).
 - Call request_consultation ONLY when the customer asks for a price, an offer, an order, a call or a contact, or after you have recommended products and the needs are clear. Never on the first answer.
 - Never give up and never send the customer away. If you made a mistake, acknowledge it in half a sentence and immediately give the correct answer or the right products. Do not apologise at length and do not hand over to an operator because of a mistake. Keep helping until the customer closes the chat; the consultant is an addition to your help, never a replacement for it.
@@ -125,10 +128,10 @@ SITE
 ${catList}
 
 CONTEXT
-${pg.text ? `- PAGE: ${pg.text}\n` : ''}${memory ? `- Earlier in this conversation the customer said (older messages, already answered; do not ask for these again):\n${memory}\n` : ''}${extra.shortlist?.length ? `- The customer has shortlisted: ${extra.shortlist.slice(0, 8).map(s => `${s.name} [${s.code}]`).join('; ')}. Treat these as their favourites when advising.\n` : ''}${extra.vision ? `- The customer sent a photo of their room. What the vision model saw: ${extra.vision}\n` : ''}${kn.text ? `KNOWLEDGE:\n${kn.text}\n` : ''}${plan ? `${planPrompt(plan)}\n` : ''}- Catalogue items that match the customer's latest messages, the page or the calculation (prefer these; recommend ONLY codes that appear here or in tool results):
+${pg.text ? `- PAGE: ${pg.text}\n` : ''}${memory ? `- Earlier in this conversation the customer said (older messages, already answered; do not ask for these again):\n${memory}\n` : ''}${extra.shortlist?.length ? `- The customer has shortlisted: ${extra.shortlist.slice(0, 8).map(s => `${s.name} [${s.code}]`).join('; ')}. Treat these as their favourites when advising.\n` : ''}${extra.vision ? `- The customer sent a photo of their room. What the vision model saw: ${extra.vision}\n` : ''}${kn.text ? `KNOWLEDGE:\n${kn.text}\n` : ''}${plan ? `${planPrompt(plan, planFresh)}\n` : ''}- Catalogue items that match the customer's latest messages, the page or the calculation (prefer these; recommend ONLY codes that appear here or in tool results):
 ${candList}
 - Current time: ${hours.label}. Consultants work Monday-Saturday 09:00-18:00. If outside these hours and the customer wants a consultant, say they will answer on the next working day.`;
-  return { system, cands: top, projectCards: kn.projectCards, plan };
+  return { system, cands: top, projectCards: kn.projectCards, plan, planFresh };
 }
 
 // ---------------------------------------------------------------- tools
@@ -170,7 +173,10 @@ const TOOLS = [
       description: 'Open the secure contact form so a sales consultant can prepare the exact offer. Call when the customer asks for price/offer/order or the needs are clear.',
       parameters: {
         type: 'object',
-        properties: { project_summary: { type: 'string', description: 'One or two sentences in Azerbaijani: the customer need and chosen products.' } },
+        properties: {
+          project_summary: { type: 'string', description: 'One or two sentences in Azerbaijani: the customer need, the chosen products and the quantities they asked for.' },
+          product_codes: { type: 'array', items: { type: 'string' }, maxItems: 6, description: 'Codes of the products the customer chose or asked about, copied exactly from the lists. Omit if none.' },
+        },
         required: ['project_summary'],
       },
     },
@@ -189,10 +195,11 @@ export function shouldOfferForm(history: ChatMsg[]): boolean {
   return ORDER_RE.test(last) || (PRICE_ASK_RE.test(last) && users.length >= 2);
 }
 
-async function runTool(name: string, args: any, emit: Emit, ctx: { userTurns: number; lastUser: string; cands: CatalogItem[] }): Promise<string> {
+async function runTool(name: string, args: any, emit: Emit, ctx: { userTurns: number; lastUser: string; cands: CatalogItem[]; allowed?: Set<string> }): Promise<string> {
   try {
     if (name === 'search_products') {
       const found = await searchCatalog({ query: String(args?.query || ''), category: args?.category ? String(args.category) : undefined });
+      found.forEach(i => ctx.allowed?.add(i.code));
       return JSON.stringify(found.length ? found.map(publicItem) : { results: [], note: 'No match. Try other keywords or a different category.' });
     }
     if (name === 'get_product') {
@@ -203,12 +210,17 @@ async function runTool(name: string, args: any, emit: Emit, ctx: { userTurns: nu
     if (name === 'recommend_products') {
       const all = await loadCatalog();
       const codes: string[] = Array.isArray(args?.codes) ? args.codes.map(String) : [];
-      let picked = codes
-        .map(c => all.find(i => i.code.toLowerCase() === c.toLowerCase()))
-        .filter(Boolean)
-        .slice(0, 3) as Awaited<ReturnType<typeof loadCatalog>>;
-      // the model sometimes sends empty or unknown codes: show the best matches for what the customer asked instead of nothing
-      if (picked.length === 0) picked = ctx.cands.slice(0, 3);
+      const existing = codes.map(c => all.find(i => i.code.toLowerCase() === c.toLowerCase())).filter(Boolean) as Awaited<ReturnType<typeof loadCatalog>>;
+      let picked: Awaited<ReturnType<typeof loadCatalog>>;
+      if (existing.length === 0) {
+        // empty or unknown codes (the model sometimes does this): show the best matches for what the customer asked instead of nothing
+        picked = ctx.cands.slice(0, 3);
+      } else {
+        // only products that really are in front of the model (candidates, shortlist, cards already shown, search results):
+        // a code with a changed digit (3000K vs 4000K) must never put a different product in front of the customer
+        picked = existing.filter(i => !ctx.allowed || ctx.allowed.has(i.code)).slice(0, 3);
+        if (picked.length === 0) return JSON.stringify({ note: 'Those codes are not in your lists, so nothing was shown. Copy codes exactly from the lists.' });
+      }
       if (picked.length === 0) return JSON.stringify({ error: 'None of the codes exist. Use codes from the tool results.' });
       emit({ type: 'products', items: picked.map(i => ({ code: i.code, slug: i.slug, name: i.name, image: i.image, url: i.url, category: i.categoryName, specs: i.specs })) });
       return JSON.stringify({ shown: picked.map(i => i.code) });
@@ -218,7 +230,8 @@ async function runTool(name: string, args: any, emit: Emit, ctx: { userTurns: nu
       if (ctx.userTurns < 3 && !INTENT_RE.test(ctx.lastUser)) {
         return JSON.stringify({ error: 'Too early. Keep discovering the need (one question) and recommend products first; offer the consultation later.' });
       }
-      emit({ type: 'consultation', summary: String(args?.project_summary || '').slice(0, 600) });
+      const chosen = (Array.isArray(args?.product_codes) ? args.product_codes.map(String) : []).filter((c: string) => !ctx.allowed || ctx.allowed.has(c)).slice(0, 6);
+      emit({ type: 'consultation', summary: String(args?.project_summary || '').slice(0, 600), codes: chosen });
       return JSON.stringify({ shown: 'contact form', next: 'Tell the customer in one short sentence that the consultant will prepare the exact price and ask them to fill in the form.' });
     }
   } catch (e: any) {
@@ -375,7 +388,13 @@ async function streamOnce(target: Target, messages: any[], useTools: boolean, si
 
 // ---------------------------------------------------------------- public API
 export async function runChat(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit, override?: Target[], memory = '', page?: PageCtx, extra: PromptExtra = {}): Promise<{ model: string; text: string }> {
-  const { system, cands, projectCards, plan } = await buildPrompt(history, memory, lang, page, extra);
+  const { system, cands, projectCards, plan, planFresh } = await buildPrompt(history, memory, lang, page, extra);
+  // codes the model may put on cards: candidates, the shortlist, cards already shown (noted in the history) and search results
+  const allowed = new Set<string>([
+    ...cands.map(c => c.code),
+    ...(extra.shortlist || []).map(s => s.code),
+    ...history.flatMap(m => [...m.content.matchAll(/\((A\d{6,})\)/g)].map(x => x[1])),
+  ]);
   const convo: any[] = [{ role: 'system', content: system }, ...history];
   let lastError = '';
   let rateLimited = false;
@@ -397,8 +416,8 @@ export async function runChat(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit,
       const text = sink.finish();
       // cards the system knows are right (projects asked about, products of a calculation) never depend on the model remembering to call a tool
       if (projectCards.length) attemptEmit({ type: 'projects', items: projectCards });
-      if (plan && !cardsShown && plan.options.length) {
-        await runTool('recommend_products', { codes: plan.options.map(o => o.item.code) }, attemptEmit, { userTurns: 0, lastUser: '', cands });
+      if (plan && planFresh && !cardsShown && plan.options.length) {
+        await runTool('recommend_products', { codes: plan.options.map(o => o.item.code) }, attemptEmit, { userTurns: 0, lastUser: '', cands, allowed });
       }
       if (!text && !produced) throw new Error(`${model} returned an empty answer`);
       return { model, text };
@@ -412,7 +431,7 @@ export async function runChat(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit,
           const leaked = /\{\s*"codes"\s*:\s*\[([^\]]*)\]\s*\}/.exec(r.text);
           if (leaked && !cardsShown) {
             const codes = (leaked[1].match(/"([^"]+)"/g) || []).map(s => s.replace(/"/g, ''));
-            await runTool('recommend_products', { codes }, attemptEmit, { userTurns: history.filter(m => m.role === 'user').length, lastUser: '', cands });
+            await runTool('recommend_products', { codes }, attemptEmit, { userTurns: history.filter(m => m.role === 'user').length, lastUser: '', cands, allowed });
           }
           return await finish();
         }
@@ -426,7 +445,7 @@ export async function runChat(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit,
         for (const c of r.toolCalls) {
           let args: any = {};
           try { args = JSON.parse(c.args || '{}'); } catch { /* ignore malformed args */ }
-          const out = await runTool(c.name, args, attemptEmit, { userTurns: history.filter(m => m.role === 'user').length, lastUser: history.filter(m => m.role === 'user').pop()?.content || '', cands });
+          const out = await runTool(c.name, args, attemptEmit, { userTurns: history.filter(m => m.role === 'user').length, lastUser: history.filter(m => m.role === 'user').pop()?.content || '', cands, allowed });
           messages.push({ role: 'tool', tool_call_id: c.id || `call_${step}_${c.name}`, content: out });
         }
         // cards/forms are rendered by the client; if the model already wrote its words we are done (saves a full round trip)
@@ -499,5 +518,21 @@ export async function directCalc(history: ChatMsg[], lang: 'az' | 'ru', emit: Em
     ? (req.cct ? '' : lang === 'ru' ? 'Какой свет вы предпочитаете: тёплый (3000K) или нейтральный (4000K)?' : 'Hansı işığı üstün tutursunuz: isti (3000K), yoxsa neytral (4000K)?')
     : (lang === 'ru' ? 'Какая высота потолка и какой свет вы предпочитаете: тёплый (3000K) или нейтральный (4000K)?' : 'Tavanın hündürlüyü nə qədərdir və hansı işığı üstün tutursunuz: isti (3000K), yoxsa neytral (4000K)?');
   if (ask) emit({ type: 'text', delta: ' ' + ask });
+  return true;
+}
+
+const SHORTLIST_RE = /(işar[əe]l[əe]di|seçdiy|seçilmiş|ulduz|избран|отмеченн|выбранн|starred|shortlist)/;
+
+/** "I want the products I marked": answered from the shortlist itself, no model (nothing can be mixed up), then the contact form opens. */
+export async function shortlistIntent(history: ChatMsg[], extra: PromptExtra, lang: 'az' | 'ru', emit: Emit): Promise<boolean> {
+  const last = (history[history.length - 1]?.content || '').toLowerCase().replace(/\u0307/g, '');
+  if (last.length > 120 || !SHORTLIST_RE.test(last)) return false;
+  const list = extra.shortlist || [];
+  if (!list.length) {
+    emit({ type: 'text', delta: lang === 'ru' ? 'Вы пока ничего не выбрали. Нажмите на звезду в карточке товара, и он появится в избранном.' : 'Hələ heç nə seçməmisiniz. Məhsul kartındakı ulduza basın, seçilmişlərə əlavə olunacaq.' });
+    return true;
+  }
+  emit({ type: 'text', delta: lang === 'ru' ? `Выбранные вами товары (${list.length}) будут переданы консультанту. Укажите, пожалуйста, имя и номер в форме ниже.` : `Seçdiyiniz ${list.length} məhsul məsləhətçiyə göndəriləcək. Zəhmət olmasa, aşağıdakı formada adınızı və nömrənizi yazın.` });
+  emit({ type: 'consultation', summary: list.map(s => s.name).join(', ').slice(0, 400), codes: list.map(s => s.code) });
   return true;
 }

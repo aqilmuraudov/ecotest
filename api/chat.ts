@@ -1,6 +1,6 @@
 import { env, rateLimit, clientIp, checkHuman } from './_lib/core.js';
 import { logSession } from './_lib/log.js';
-import { calcReply, directCalc, runChat, shouldOfferForm, type ChatMsg, type PageCtx, type PromptExtra } from './_lib/ai.js';
+import { calcReply, directCalc, runChat, shortlistIntent, shouldOfferForm, type ChatMsg, type PageCtx, type PromptExtra } from './_lib/ai.js';
 
 // First answers to the one-tap page questions ("canned" chips) do not depend on the visitor, so they are computed once and replayed:
 // popular pages then cost no model call at all.
@@ -95,6 +95,10 @@ export default async function handler(req: any, res: any) {
   if (body.calc && typeof body.calc === 'object') {
     const ok = await calcReply({ room: safeId(body.calc.room, 20), area: Number(body.calc.area), height: Number(body.calc.height) || undefined, cct: Number(body.calc.cct) || undefined }, lang, send);
     send(ok ? { type: 'done', model: 'calc' } : { type: 'error', code: 'unavailable' });
+    return finishAndLog();
+  }
+  if (!body.calc && (await shortlistIntent(history, extra, lang, send))) {
+    send({ type: 'done', model: 'calc' });
     return finishAndLog();
   }
   if (!body.calc && (await directCalc(history, lang, send))) {

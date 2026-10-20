@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowUp, Calculator, Camera, Lightbulb, MessageCircle, Mic, Square, Star, X } from 'lucide-react';
+import { ArrowUp, Calculator, ImagePlus, Lightbulb, MessageCircle, Mic, Square, Star, X } from 'lucide-react';
 import { Language } from '../../types';
 import { clearPass, getTurnstileToken, readPass, storePass, turnstileEnabled } from '../../lib/turnstile';
 import { getSid, getVariant, track } from '../../lib/track';
@@ -24,6 +24,8 @@ interface ChatMessage {
   content: string;
   products?: ProductCard[];
   projects?: ProjectCard[];
+  image?: string; // the room photo the customer sent (kept in this tab only)
+  chosen?: string[]; // product codes the customer chose, as understood by the assistant
   consultation?: string; // the secure contact form is shown under this message
   status?: string; // short progress note while tools run
   local?: boolean; // greeting and system notices, never sent to the model
@@ -101,7 +103,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
   }, [t.greeting]);
 
   useEffect(() => {
-    try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-40))); } catch { /* ignore */ }
+    try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-40).map(({ image, ...m }) => m))); } catch { /* ignore */ }
   }, [messages]);
   useEffect(() => {
     try { sessionStorage.setItem(FAV_KEY, JSON.stringify(shortlist)); } catch { /* ignore */ }
@@ -182,7 +184,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
     return () => { window.removeEventListener('keydown', onKey); window.clearTimeout(f); };
   }, [open]);
 
-  const shownProducts = useMemo(() => messages.flatMap(m => m.products || []).map(p => p.code), [messages]);
+  // products of the latest cards the assistant showed, and the choice it recorded when it opened the form
+  const lastShownCodes = useMemo(() => [...messages].reverse().find(m => m.products?.length)?.products?.map(p => p.code) || [], [messages]);
+  const chosenCodes = useMemo(() => [...messages].reverse().find(m => m.chosen?.length)?.chosen || [], [messages]);
   const favCodes = useMemo(() => new Set(shortlist.map(p => p.code)), [shortlist]);
 
   const toggleFav = (p: ProductCard) => {
@@ -201,15 +205,18 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
     });
   }, []);
 
-  const send = useCallback(async (raw: string, canned?: string, calc?: CalcInput) => {
+  const send = useCallback(async (raw: string, canned?: string, calc?: CalcInput, image?: string) => {
     const text = raw.trim().slice(0, 1000);
     if (!text || busy) return;
     const first = !messages.some(m => m.role === 'user');
     if (first) track('first_message', page.type, { canned: canned || null });
-    const history = [...messages, { id: uid(), role: 'user' as const, content: text }];
+    const history = [...messages, { id: uid(), role: 'user' as const, content: text, ...(image ? { image } : {}) }];
     setMessages([...history, { id: uid(), role: 'assistant', content: '' }]);
     setInput('');
     setCalcOpen(false);
+    // what the vision model saw is sent once, with the message that follows the photo; the answer carries it from there
+    const visionNow = visionRef.current;
+    visionRef.current = '';
     setBusy(true);
 
     const ctl = new AbortController();
@@ -239,7 +246,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
           canned: first ? canned : undefined,
           calc: calc ? { room: calc.room, area: calc.area, height: calc.height, cct: calc.cct } : undefined,
           shortlist: shortlist.slice(0, 8).map(p => ({ code: p.code, name: p.name })),
-          vision: visionRef.current || undefined,
+          vision: visionNow || undefined,
           messages: payload,
         }),
       });
@@ -264,7 +271,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
           else if (evt.type === 'status') patchLast(m => ({ ...m, status: String(evt.text || '') }));
           else if (evt.type === 'products') { got = true; patchLast(m => ({ ...m, products: evt.items })); }
           else if (evt.type === 'projects') { got = true; patchLast(m => ({ ...m, projects: evt.items })); }
-          else if (evt.type === 'consultation') { got = true; patchLast(m => ({ ...m, consultation: evt.summary || '' })); }
+          else if (evt.type === 'consultation') { got = true; patchLast(m => ({ ...m, consultation: evt.summary || '', chosen: Array.isArray(evt.codes) && evt.codes.length ? evt.codes.map(String) : undefined })); }
           else if (evt.type === 'reset') { got = false; patchLast(m => ({ ...m, content: '', status: undefined, products: undefined, projects: undefined, consultation: undefined })); }
           else if (evt.type === 'error') throw new Error(evt.code || 'error');
         }
@@ -343,8 +350,8 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
           source: 'ai-chat',
           callback: lead.callback,
           sid: getSid(),
-          shortlist: shortlist.map(p => p.code),
-          products: Array.from(new Set(shownProducts)),
+          shortlist: shortlist.length ? shortlist.map(p => p.code) : chosenCodes,
+          products: lastShownCodes,
           transcript: messages.filter(m => !m.error && !m.local && m.content).map(m => ({ role: m.role, content: m.content })),
         }),
       });
@@ -397,7 +404,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
       visionRef.current = String(j.summary).slice(0, 900);
       track('photo_used', page.type);
       setPhotoBusy(false);
-      await send(t.photoMsg);
+      await send(t.photoMsg, undefined, undefined, image);
     } catch {
       setPhotoBusy(false);
       setMessages(prev => [...prev, { id: uid(), role: 'assistant', content: t.photoErr, local: true }]);
@@ -585,7 +592,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
                               {m.status && <span className="text-[12px] text-[#9a9a9f]">{m.status}</span>}
                             </span>
                           ) : isUser ? (
-                            m.content
+                            <>
+                              {m.image && <img src={m.image} alt="" className="rounded-xl mb-2 max-h-48 w-auto" />}
+                              {m.content}
+                            </>
                           ) : (
                             <LinkText text={m.content} onNav={navFromText} />
                           )}
@@ -680,7 +690,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
                   </button>
                   {visionOn && (
                     <>
-                      <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={e => { void onPhoto(e.target.files?.[0]); e.target.value = ''; }} />
+                      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/*" hidden onChange={e => { void onPhoto(e.target.files?.[0]); e.target.value = ''; }} />
                       <button
                         type="button"
                         onClick={() => fileRef.current?.click()}
@@ -689,7 +699,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
                         title={`${t.photo}. ${t.photoNote}`}
                         className="w-10 h-10 shrink-0 grid place-items-center rounded-full text-[#9a9a9f] hover:text-[var(--ed-amber)] hover:bg-white/5 disabled:opacity-40"
                       >
-                        <Camera className="w-[18px] h-[18px]" />
+                        <ImagePlus className="w-[18px] h-[18px]" />
                       </button>
                     </>
                   )}

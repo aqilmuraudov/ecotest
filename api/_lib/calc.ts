@@ -116,7 +116,7 @@ export function planText(p: RoomPlan, lang: 'az' | 'ru'): string {
 }
 
 /** Compact block for the model prompt. */
-export function planPrompt(p: RoomPlan): string {
+export function planPrompt(p: RoomPlan, fresh = true): string {
   const opts = p.options.map((o, i) => `  ${String.fromCharCode(65 + i)}) ${o.count} x ${o.item.name} (${o.perW} W each, about ${o.totalW} W total) [${o.item.code}]`).join('\n');
-  return `CALCULATION (lumen method, approximate; use these numbers, never invent others): ${p.room.key}, ${p.area} m2, ceiling ${p.height} m, target about ${p.lux} lux -> about ${p.lumens} lm -> about ${p.watts} W total at ${p.cct}K.\n${opts}\nExplain it in 2-3 short sentences (target light level, total power, how many fixtures of which kind), call recommend_products with the codes of the options, and say that the consultant will confirm the exact layout with Dialux.`;
+  return `CALCULATION (lumen method, approximate; use these numbers, never invent others): ${p.room.key}, ${p.area} m2, ceiling ${p.height} m, target about ${p.lux} lux -> about ${p.lumens} lm -> about ${p.watts} W total at ${p.cct}K.\n${opts}\n${fresh ? 'Explain it in 2-3 short sentences (target light level, total power, how many fixtures of which kind), call recommend_products with the codes of the options, and say that the consultant will confirm the exact layout with Dialux.' : 'These numbers and options were already presented earlier in the conversation: do NOT show these product cards again; use the numbers only if the customer asks about quantities or the calculation.'}`;
 }
