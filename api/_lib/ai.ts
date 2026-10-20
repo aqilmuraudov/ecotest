@@ -338,8 +338,20 @@ function targets(history: ChatMsg[]): Target[] {
     }
   }
 
-  // Groq answers first (fast, stable); the Gonka models are only a safety net when Groq fails or is rate limited
-  return [...groq, ...(gKey ? (complex ? [think, light, backup] : [light, backup, think]) : [])];
+  // Optional gateway (cleanapis.com, OpenAI compatible). CLEAN_CHAT=on: second choice after Groq; CLEAN_CHAT=first: tried before Groq (for testing); unset: not used.
+  // Measured from Vercel: gpt-5.6-luna and glm-5.3 with reasoning_effort=minimal answer in 2-4.5 s with tools and good Azerbaijani/Russian.
+  const mode = env('CLEAN_CHAT').toLowerCase();
+  const clean: Target[] = [];
+  const cleanKey = env('CLEAN_API_KEY') || env('VISION_API_KEY');
+  if ((mode === 'on' || mode === 'first') && cleanKey) {
+    const base = trimSlash(env('CLEAN_BASE_URL') || env('VISION_BASE_URL', 'https://cleanapis.com/v1'));
+    for (const model of [env('CLEAN_CHAT_MODEL', 'gpt-5.6-luna'), env('CLEAN_CHAT_MODEL_2', 'glm-5.3')].filter((m, i, a) => m && a.indexOf(m) === i)) {
+      clean.push({ label: 'clean', base, key: cleanKey, model, effort: env('CLEAN_CHAT_EFFORT', 'minimal'), firstByteMs: 15000 });
+    }
+  }
+  const safety = gKey ? (complex ? [think, light, backup] : [light, backup, think]) : [];
+  // Groq answers first (fast, stable); the Gonka models are only a safety net when everything else fails or is rate limited
+  return mode === 'first' ? [...clean, ...groq, ...safety] : [...groq, ...clean, ...safety];
 }
 
 async function streamOnce(target: Target, messages: any[], useTools: boolean, sink: ReturnType<typeof makeTextSink>): Promise<StreamResult> {

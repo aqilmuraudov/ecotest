@@ -110,7 +110,7 @@ export default async function handler(req: any, res: any) {
     send({ type: 'done', model: 'calc' });
     return finishAndLog();
   }
-  if (!env('AI_API_KEY') && !env('GROQ_API_KEY')) {
+  if (!env('AI_API_KEY') && !env('GROQ_API_KEY') && !env('CLEAN_API_KEY') && !(env('CLEAN_CHAT') && env('VISION_API_KEY'))) {
     send({ type: 'error', code: 'not_configured' });
     return res.end();
   }
