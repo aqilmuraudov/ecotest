@@ -19,6 +19,7 @@ import { ProjectFormModal } from '../components/admin/ProjectFormModal';
 import { InquiryViewModal } from '../components/admin/InquiryViewModal';
 import { UsersTab } from '../components/admin/UsersTab';
 import { ChatLogsTab } from '../components/admin/ChatLogsTab';
+import '../admin-light.css';
 import { AiSettingsTab } from '../components/admin/AiSettingsTab';
 import { AdminHub, AdminTopBar, SectionHeader, adminText, type SectionDef } from '../components/admin/AdminShell';
 import { PagesEditorTab } from '../components/admin/PagesEditorTab';
@@ -364,7 +365,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   // ==========================================
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#08090A] text-white pt-24 pb-16 flex items-center justify-center px-4">
+      <div className="admin-root min-h-screen bg-[#08090A] text-white pt-24 pb-16 flex items-center justify-center px-4">
         <div className="max-w-md w-full bg-[#101115] border border-white/10 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-48 h-48 bg-[#FFD21A]/10 rounded-full blur-3xl pointer-events-none" />
           
@@ -482,7 +483,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const newProductLabel = currentLang === 'ru' ? 'Новый товар' : currentLang === 'en' ? 'New product' : 'Yeni məhsul';
 
   return (
-    <div className="relative min-h-screen bg-[#08090A] text-white pt-20 pb-24 overflow-x-clip">
+    <div className="admin-root relative min-h-screen bg-[#08090A] text-white pt-20 pb-24 overflow-x-clip">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[440px] bg-[radial-gradient(60%_100%_at_50%_0%,rgba(255,210,26,0.07),transparent)]" aria-hidden="true" />
       {/* TOAST NOTIFICATION */}
       {toastMessage && (
