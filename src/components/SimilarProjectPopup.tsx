@@ -40,14 +40,18 @@ export const SimilarProjectPopup: React.FC<SimilarProjectPopupProps> = ({ title,
 
   useEffect(() => {
     if (dismissed) return;
+    // The page opens with the previous page's scroll offset while it scrolls up: only count scrolling
+    // that starts from the top of this project, otherwise the card flashes in during that transition.
+    let armed = false;
     const onScroll = () => {
+      if (window.scrollY < 150) armed = true;
       const max = document.documentElement.scrollHeight - window.innerHeight;
-      setScrolled(max > 0 && window.scrollY / max > SHOW_AT);
+      setScrolled(armed && max > 0 && window.scrollY / max > SHOW_AT);
     };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, [dismissed]);
+  }, [dismissed, projectKey]);
 
   const close = () => {
     setDismissed(true);
