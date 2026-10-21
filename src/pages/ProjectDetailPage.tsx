@@ -5,6 +5,7 @@ import { useData } from '../context/DataContext';
 import { FadeIn } from '../components/ui/FadeIn';
 import { EdButton, EdLink, EdHairline } from '../components/ed/EditorialUI';
 import { EdProductCard } from '../components/ed/EdProductCard';
+import { SimilarProjectPopup } from '../components/SimilarProjectPopup';
 import {
   ArrowLeft,
   MapPin,
@@ -312,6 +313,14 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
           </div>
         )}
       </div>
+
+      <SimilarProjectPopup
+        title={t.projects.similarProjectCta}
+        description={t.projects.similarProjectDesc}
+        cta={t.projects.contactEngineer}
+        suspended={!!lightboxImg}
+        onContact={onOpenContact}
+      />
 
       {/* Lightbox */}
       {lightboxImg && (

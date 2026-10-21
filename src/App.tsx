@@ -3,6 +3,7 @@ import { lazyRetry } from './utils/lazyRetry';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Language, Theme, Product } from './types';
 import { parseUrlToRoute, buildRoutePath } from './utils/router';
+import { CatalogView, getLastCatalogView, clearLastCatalogView, clearCatalogViews, setPendingCatalogView } from './utils/catalogView';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { ContactModal } from './components/ContactModal';
@@ -86,15 +87,27 @@ export default function App() {
 
   // Listen to Browser Back / Forward buttons (popstate)
   useEffect(() => {
-    const handlePopState = () => {
+    // the app positions the page itself (top, or the remembered catalogue spot); the browser must not fight it
+    const previous = window.history.scrollRestoration;
+    window.history.scrollRestoration = 'manual';
+
+    const handlePopState = (e: PopStateEvent) => {
       const route = parseUrlToRoute(window.location.pathname);
+      // returning to a catalogue entry: hand its saved view to CatalogPage, which also restores the scroll
+      const view: CatalogView | undefined = e.state?.catalogView;
+      const restore = route.page === 'catalog' && !!view && view.param === (route.param || 'all');
+      if (route.page !== 'catalog') clearCatalogViews();
+      setPendingCatalogView(restore ? view! : null);
       setActivePage(route.page);
       setPageParam(route.param);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (!restore) window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.history.scrollRestoration = previous;
+    };
   }, []);
 
   // Modals & Feedback
@@ -119,6 +132,20 @@ export default function App() {
   };
 
   const handleNavigate = useCallback((page: string, param?: string, replace: boolean = false) => {
+    // "Catalogue" links on a product page: go back to the remembered spot (same category, page, scroll)
+    let restore = false;
+    if (page !== 'catalog') {
+      clearCatalogViews();
+    } else if (!param || param === 'all') {
+      const view = getLastCatalogView();
+      if (view) {
+        restore = true;
+        param = view.param === 'all' ? undefined : view.param;
+        setPendingCatalogView(view);
+        clearLastCatalogView();
+      }
+    }
+
     setActivePage(page);
     setPageParam(param);
 
@@ -134,7 +161,7 @@ export default function App() {
       }
     }
 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (!restore) window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   const handleOpenContact = () => {

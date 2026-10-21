@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useLayoutEffect, useRef } from 'react';
+import { saveCatalogView, peekPendingCatalogView, setPendingCatalogView, clearLastCatalogView } from '../utils/catalogView';
 import { Language, ProductCategory, Product } from '../types';
 import { translations } from '../data/translations';
 import { productCategoriesList } from '../data/products';
@@ -43,18 +44,37 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
     return [allTab, ...categories.filter(c => used.has(c.id))];
   }, [categories, products]);
 
-  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'featured' | 'name' | 'code'>('featured');
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const routeParam = initialCategory || 'all';
+  // set when the visitor returns from a product page: category, search, sort, page and scroll are put back
+  const [restored] = useState(() => peekPendingCatalogView(routeParam));
 
+  const [selectedCategory, setSelectedCategory] = useState<string>(restored?.category ?? routeParam);
+  const [searchQuery, setSearchQuery] = useState(restored?.search ?? '');
+  const [sortBy, setSortBy] = useState<'featured' | 'name' | 'code'>(restored?.sort ?? 'featured');
+  const [currentPage, setCurrentPage] = useState<number>(restored?.page ?? 1);
+
+  useLayoutEffect(() => {
+    if (restored) window.scrollTo({ top: restored.scrollY, left: 0, behavior: 'instant' as ScrollBehavior });
+    // the view is used up: a later plain visit starts at the top again
+    setPendingCatalogView(null);
+    clearLastCatalogView();
+  }, [restored]);
+
+  // compare with the previous values instead of running on mount, so a restored page/filter is not reset
+  const prevRoute = useRef(initialCategory);
   useEffect(() => {
+    if (prevRoute.current === initialCategory) return;
+    prevRoute.current = initialCategory;
     setSelectedCategory(initialCategory || 'all');
     setCurrentPage(1);
   }, [initialCategory]);
 
   // Reset to page 1 whenever filters or sort change
+  const prevFilters = useRef({ selectedCategory, searchQuery, sortBy });
   useEffect(() => {
+    const p = prevFilters.current;
+    if (p.selectedCategory === selectedCategory && p.searchQuery === searchQuery && p.sortBy === sortBy) return;
+    prevFilters.current = { selectedCategory, searchQuery, sortBy };
     setCurrentPage(1);
   }, [selectedCategory, searchQuery, sortBy]);
 
@@ -222,7 +242,10 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
                     <EdProductCard
                       product={product}
                       currentLang={currentLang}
-                      onNavigate={onNavigate}
+                      onNavigate={(page, param) => {
+                        saveCatalogView({ param: routeParam, category: selectedCategory, search: searchQuery, sort: sortBy, page: safePage, scrollY: window.scrollY });
+                        onNavigate(page, param);
+                      }}
                       exploreLabel={currentLang === 'az' ? 'Ətraflı' : currentLang === 'ru' ? 'Подробнее' : 'Explore'}
                     />
                     {onRequestQuote && (
