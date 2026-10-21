@@ -3,7 +3,6 @@ import { Language } from '../types';
 import { translations } from '../data/translations';
 import { useData } from '../context/DataContext';
 import { FadeIn } from '../components/ui/FadeIn';
-import { EdButton, EdLink, EdHairline } from '../components/ed/EditorialUI';
 import { EdProductCard } from '../components/ed/EdProductCard';
 import { SimilarProjectPopup } from '../components/SimilarProjectPopup';
 import {
@@ -266,24 +265,6 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
                 </div>
               </FadeIn>
             )}
-
-            {/* CTA */}
-            <FadeIn delay={0.2}>
-              <div className="bg-[var(--ed-bg-2)] border border-[var(--ed-line)] p-6 lg:p-8">
-                <EdHairline amber />
-                <h3 className="ed-display-sm font-display text-ivory mt-6">
-                  {t.projects.similarProjectCta}
-                </h3>
-                <p className="text-xs text-mute mt-3 leading-relaxed">
-                  {t.projects.similarProjectDesc}
-                </p>
-                <div className="mt-6">
-                  <EdButton arrow onClick={onOpenContact}>
-                    {t.projects.contactEngineer}
-                  </EdButton>
-                </div>
-              </div>
-            </FadeIn>
           </div>
         </div>
 
