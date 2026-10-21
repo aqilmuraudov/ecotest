@@ -1,4 +1,4 @@
-import { env, bakuNow, loadCatalog, loadProjects, searchCatalog, publicItem, type CatalogItem } from './core.js';
+import { env, bakuNow, loadCatalog, loadProjects, searchCatalog, publicItem, type CatalogItem, type Lang } from './core.js';
 import { knowledgeFor, SITEMAP, type KnowledgeCard } from './knowledge.js';
 import { getAiRuntime, roleTargets, type AiTarget } from './aiconfig.js';
 import { ROOMS, parseRoomRequest, planPrompt, planText, roomPlan, type RoomPlan } from './calc.js';
@@ -12,9 +12,20 @@ export type PromptExtra = { shortlist?: { code: string; name: string }[]; vision
 
 // ---------------------------------------------------------------- prompt
 const trim = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+const pick = (lang: Lang, az: string, ru: string, en: string) => (lang === 'ru' ? ru : lang === 'en' ? en : az);
+const LANG_NAME: Record<Lang, string> = { az: 'Azerbaijani', ru: 'Russian', en: 'English' };
+// rough guess of the language a reply was written in (enough to notice that the visitor switched the site language)
+// the reminder on the latest turn is written in the target language itself: models follow that more reliably than an English note
+const REPLY_IN: Record<Lang, string> = { az: 'Cavabı yalnız Azərbaycan dilində yazın.', ru: 'Ответьте только на русском языке.', en: 'Reply in English only.' };
+const guessLang = (s: string): Lang => (/[а-яё]/i.test(s) ? 'ru' : /[əğıöüşç]/i.test(s) ? 'az' : 'en');
+// an English reply may name a local project ("Özsüt Ağ Şəhər"), so it is wrong only with three or more Azerbaijani words
+export const wrongLanguage = (s: string, lang: Lang): boolean =>
+  lang === 'ru' ? !/[а-яё]/i.test(s)
+    : lang === 'en' ? /[а-яё]/i.test(s) || (s.match(/\p{L}*[əğış]\p{L}*/giu) || []).length >= 3
+    : /[а-яё]/i.test(s) || !/[əğıöüşç]/i.test(s);
 
 /** What the customer is looking at right now, in a few lines, plus catalogue items that are relevant to that page. */
-async function pageContext(page: PageCtx | undefined, lang: 'az' | 'ru'): Promise<{ text: string; cands: CatalogItem[] }> {
+async function pageContext(page: PageCtx | undefined, lang: Lang): Promise<{ text: string; cands: CatalogItem[] }> {
   if (!page || !page.type) return { text: '', cands: [] };
   const items = await loadCatalog();
   const name = (i: CatalogItem) => i.categoryName[lang] || i.categoryName.az || i.category;
@@ -60,12 +71,14 @@ async function pageContext(page: PageCtx | undefined, lang: 'az' | 'ru'): Promis
 
 export interface BuiltPrompt { system: string; cands: CatalogItem[]; projectCards: KnowledgeCard[]; plan: RoomPlan | null; planFresh: boolean }
 
-export async function buildPrompt(history: ChatMsg[] = [], memory = '', lang: 'az' | 'ru' = 'az', page?: PageCtx, extra: PromptExtra = {}): Promise<BuiltPrompt> {
+export async function buildPrompt(history: ChatMsg[] = [], memory = '', lang: Lang = 'az', page?: PageCtx, extra: PromptExtra = {}): Promise<BuiltPrompt> {
   const items = await loadCatalog();
   const cats = new Map<string, string>();
   items.forEach(i => cats.set(i.category, `${i.categoryName.az} / ${i.categoryName.en} / ${i.categoryName.ru}`));
   const catList = [...cats.entries()].map(([id, n]) => `- ${id}: ${n}`).join('\n') || '(catalogue unavailable)';
   const hours = bakuNow();
+  const lastReply = [...history].reverse().find(m => m.role === 'assistant')?.content || '';
+  const switched = !!lastReply && guessLang(lastReply) !== lang;
 
   // retrieval before the model call: candidates for what the customer just talked about, then for the page they are on
   const userMsgs = history.filter(m => m.role === 'user');
@@ -91,10 +104,10 @@ export async function buildPrompt(history: ChatMsg[] = [], memory = '', lang: 'a
   const system = `You are "AISeller": the virtual consultant of Ecolife, an architectural LED lighting company in Baku, Azerbaijan. You are a lighting expert, a sales consultant and the guide to the whole Ecolife website (products, projects, solutions, articles, company, contacts).
 
 LANGUAGE
-- The website interface language is ${lang === 'ru' ? 'Russian' : 'Azerbaijani'}: answer in ${lang === 'ru' ? 'Russian' : 'Azerbaijani'} unless the customer clearly writes in another language (then follow the customer). Never switch language on your own.
-- Polite formal register (Azerbaijani "siz", Russian "вы"). Warm, confident, professional, never pushy.
+- The website interface language is ${LANG_NAME[lang]}: write every reply in ${LANG_NAME[lang]}. The customer can switch the site language in the middle of a conversation, so earlier messages (yours or theirs) may be in another language: ignore that and answer in ${LANG_NAME[lang]}. The customer may write in Azerbaijani, Russian or English: understand them and answer in ${LANG_NAME[lang]}, never ask them to write in another language. Never switch language on your own.
+- Polite formal register (Azerbaijani "siz", Russian "вы", polite English). Warm, confident, professional, never pushy.
 - Your Azerbaijani must be flawless, like a native copywriter from Baku: correct literary spelling with every special letter (ə, ı, İ, ö, ü, ç, ş, ğ), correct vowel harmony and case/possessive suffixes, natural word order (verb last), proper sentence punctuation. Use real, common Azerbaijani words only: never invent words, never translate word by word from Russian or English, and never mix Turkish forms into your sentences (write "var", "yoxdur", "lazımdır", "uyğundur", not Turkish equivalents). Prefer short, simple sentences. If you are unsure of a word choose a simpler, certain one. Industry terms keep their usual form (LED, downlight, trek, maqnit sistem, panel, lent, drayver) and measurements stay as digits (3 m, 4000K, 20 W).
-- Your Russian must be equally natural and grammatically correct. Never mix two languages inside one sentence. Quietly re-read your answer before sending and fix any mistake.
+- Your Russian and English must be equally natural and grammatically correct (English: simple, clear international English). Never mix two languages inside one sentence. Quietly re-read your answer before sending and fix any mistake.
 
 YOUR JOB
 - If the customer asks whether they can send a photo of their room, say yes: they tap the picture icon next to the message box, you analyse it and give suggestions. Never send them to a consultant for that.
@@ -133,7 +146,7 @@ CONTEXT
 ${pg.text ? `- PAGE: ${pg.text}\n` : ''}${memory ? `- Earlier in this conversation the customer said (older messages, already answered; do not ask for these again):\n${memory}\n` : ''}${extra.shortlist?.length ? `- The customer has shortlisted: ${extra.shortlist.slice(0, 8).map(s => `${s.name} [${s.code}]`).join('; ')}. Treat these as their favourites when advising.\n` : ''}${extra.vision ? `- The customer sent a photo of their space${extra.visionNew ? ' just now' : ' earlier in this conversation'}. What the vision model saw: ${extra.vision}\nAnswer questions about the photo and the space from this description, keep the conversation about their space, and never claim to see more than it says.\n` : ''}${kn.text ? `KNOWLEDGE:\n${kn.text}\n` : ''}${plan ? `${planPrompt(plan, planFresh)}\n` : ''}- Catalogue items that match the customer's latest messages, the page or the calculation (prefer these; recommend ONLY codes that appear here or in tool results):
 ${candList}
 - Chat tools the customer can use: a room calculator (calculator icon next to the message box)${extra.visionEnabled ? ' and a room photo upload (picture icon next to the message box)' : ''}. When the customer talks about their own space or asks what to choose, mention them ONCE per conversation in one short sentence (for example: "If you like, send a photo of your room with the picture icon and I will analyse it, or use the calculator icon to get the numbers"), and never repeat it or mention one they already used.
-- Current time: ${hours.label}. Consultants work Monday-Saturday 09:00-18:00. If outside these hours and the customer wants a consultant, say they will answer on the next working day.`;
+- Current time: ${hours.label}. Consultants work Monday-Saturday 09:00-18:00. If outside these hours and the customer wants a consultant, say they will answer on the next working day.${switched ? `\n- IMPORTANT: the customer has just switched the website to ${LANG_NAME[lang]}. Your earlier replies were in another language; from now on write ONLY in ${LANG_NAME[lang]}.` : ''}`;
   return { system, cands: top, projectCards: kn.projectCards, plan, planFresh };
 }
 
@@ -248,6 +261,7 @@ const PRICE_RE = /(\d[\d\s.,]*\s?(azn|manat|manatdan|₼|usd|\$|eur|€|руб|�
 const PRICE_REPLY = {
   az: 'Dəqiq qiyməti satış məsləhətçimiz layihənizə uyğun hazırlayır.',
   ru: 'Точную стоимость наш менеджер подготовит под ваш проект.',
+  en: 'Our sales consultant prepares the exact price for your project.',
 };
 
 // some models occasionally write a tool name into the visible text; never show internals to customers
@@ -258,7 +272,9 @@ const CODE_RE = /\s?\(?\bA\d{9,12}\b\)?/g;
 const LEAK_RE = /\(?\s*\{\s*"(?:codes|query|category|code|project_summary)"\s*:[^}]*\}\s*\)?|[(\[]\s*"?(?:codes|query|category|code|project_summary)"?\s*[:=]\s*(?:\[[^\]]*\]|"[^"]*")\s*[)\]]?/g;
 const TOOL_NAME_RE = /\b(request_consulta\w*|recommend_products|search_products|get_product)\b/g;
 
-function makeTextSink(lang: 'az' | 'ru', emit: Emit) {
+/** `strict`: a reply that starts in the wrong language throws, so the next model answers instead (off for the last model in the chain). */
+function makeTextSink(lang: Lang, emit: Emit, strict = false) {
+  let checked = !strict;
   let buf = '';
   let inThink = false;
   let total = '';
@@ -268,9 +284,13 @@ function makeTextSink(lang: 'az' | 'ru', emit: Emit) {
     for (let p of parts) {
       p = p.replace(LEAK_RE, '').replace(TOOL_NAME_RE, '').replace(CODE_RE, '');
       if (!p.trim()) continue;
+      if (!checked && (p.match(/\p{L}/gu) || []).length >= 30) {
+        checked = true;
+        if (wrongLanguage(p, lang)) throw new Error('wrong_language');
+      }
       const safe = PRICE_RE.test(p) ? PRICE_REPLY[lang] + (/\s$/.test(p) ? ' ' : '') : p;
       // some models glue sentences together ("...клиентов.Подскажите"); restore the space, never inside numbers like 1.5
-      const out = /[a-zа-яəıöüçşğ][.!?]$/i.test(total) && /^[A-ZА-ЯƏİÖÜÇŞĞ]/.test(safe) ? ' ' + safe
+      const out = /[a-zа-яəıöüçşğ*)][.!?]$/i.test(total) && /^[A-ZА-ЯƏİÖÜÇŞĞ]/.test(safe) ? ' ' + safe
         : total && !/\n$/.test(total) && /^[-•*]\s/.test(safe) ? '\n' + safe // glued list item ("...yayımı.- Next")
         : safe;
       total += out;
@@ -376,7 +396,7 @@ async function streamOnce(target: Target, messages: any[], useTools: boolean, si
 }
 
 // ---------------------------------------------------------------- public API
-export async function runChat(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit, override?: Target[], memory = '', page?: PageCtx, extra: PromptExtra = {}): Promise<{ model: string; text: string }> {
+export async function runChat(history: ChatMsg[], lang: Lang, emit: Emit, override?: Target[], memory = '', page?: PageCtx, extra: PromptExtra = {}): Promise<{ model: string; text: string }> {
   const { system, cands, projectCards, plan, planFresh } = await buildPrompt(history, memory, lang, page, extra);
   // codes the model may put on cards: candidates, the shortlist, cards already shown (noted in the history) and search results
   const allowed = new Set<string>([
@@ -384,13 +404,15 @@ export async function runChat(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit,
     ...(extra.shortlist || []).map(s => s.code),
     ...history.flatMap(m => [...m.content.matchAll(/\((A\d{6,})\)/g)].map(x => x[1])),
   ]);
-  const convo: any[] = [{ role: 'system', content: system }, ...history];
+  // the visitor may switch the site language mid-chat: the latest turn carries the language, so the older ones do not drag the reply back
+  const last = history.length - 1;
+  const convo: any[] = [{ role: 'system', content: system }, ...history.map((m, i) => (i === last && m.role === 'user' ? { ...m, content: `${m.content}\n\n[${REPLY_IN[lang]}]` } : m))];
   let lastError = '';
   let rateLimited = false;
 
   const chain = override ?? (await targets(history));
   if (chain.length === 0) throw new Error('no AI provider configured');
-  for (const target of chain) {
+  for (const [ti, target] of chain.entries()) {
     const model = `${target.label}:${target.model}`;
     // what this attempt actually showed the customer: an attempt that shows nothing counts as a failure
     let produced = false;
@@ -400,7 +422,7 @@ export async function runChat(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit,
       if (evt.type === 'text' || evt.type === 'products' || evt.type === 'projects' || evt.type === 'consultation') produced = true;
       emit(evt);
     };
-    const sink = makeTextSink(lang, attemptEmit);
+    const sink = makeTextSink(lang, attemptEmit, ti < chain.length - 1);
     const finish = async (): Promise<{ model: string; text: string }> => {
       const text = sink.finish();
       // cards the system knows are right (projects asked about, products of a calculation) never depend on the model remembering to call a tool
@@ -430,7 +452,7 @@ export async function runChat(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit,
           content: r.text || null,
           tool_calls: r.toolCalls.map(c => ({ id: c.id || `call_${step}_${c.name}`, type: 'function', function: { name: c.name, arguments: c.args || '{}' } })),
         });
-        attemptEmit({ type: 'status', text: lang === 'ru' ? 'Ищу в каталоге…' : 'Kataloqda axtarıram…' });
+        attemptEmit({ type: 'status', text: pick(lang, 'Kataloqda axtarıram…', 'Ищу в каталоге…', 'Searching the catalogue…') });
         for (const c of r.toolCalls) {
           let args: any = {};
           try { args = JSON.parse(c.args || '{}'); } catch { /* ignore malformed args */ }
@@ -484,7 +506,7 @@ export async function summarize(history: ChatMsg[]): Promise<string> {
 }
 
 /** The calculator form posts room + area: answered from the numbers alone, no language model involved (no tokens spent). */
-export async function calcReply(input: { room: string; area: number; height?: number; cct?: number }, lang: 'az' | 'ru', emit: Emit): Promise<boolean> {
+export async function calcReply(input: { room: string; area: number; height?: number; cct?: number }, lang: Lang, emit: Emit): Promise<boolean> {
   const room = ROOMS.find(r => r.key === input.room);
   const area = Number(input.area);
   if (!room || !(area >= 2 && area <= 3000)) return false;
@@ -497,7 +519,7 @@ export async function calcReply(input: { room: string; area: number; height?: nu
 }
 
 /** "20 m2 living room" and nothing else: answered from the numbers (no model call), then one useful follow-up question. */
-export async function directCalc(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit): Promise<boolean> {
+export async function directCalc(history: ChatMsg[], lang: Lang, emit: Emit): Promise<boolean> {
   const last = history[history.length - 1]?.content || '';
   if (last.length > 140 || INTENT_RE.test(last)) return false;
   const req = parseRoomRequest(last);
@@ -505,24 +527,24 @@ export async function directCalc(history: ChatMsg[], lang: 'az' | 'ru', emit: Em
   const ok = await calcReply({ room: req.room.key, area: req.area, height: req.height, cct: req.cct }, lang, emit);
   if (!ok) return false;
   const ask = req.height
-    ? (req.cct ? '' : lang === 'ru' ? 'Какой свет вы предпочитаете: тёплый (3000K) или нейтральный (4000K)?' : 'Hansı işığı üstün tutursunuz: isti (3000K), yoxsa neytral (4000K)?')
-    : (lang === 'ru' ? 'Какая высота потолка и какой свет вы предпочитаете: тёплый (3000K) или нейтральный (4000K)?' : 'Tavanın hündürlüyü nə qədərdir və hansı işığı üstün tutursunuz: isti (3000K), yoxsa neytral (4000K)?');
+    ? (req.cct ? '' : pick(lang, 'Hansı işığı üstün tutursunuz: isti (3000K), yoxsa neytral (4000K)?', 'Какой свет вы предпочитаете: тёплый (3000K) или нейтральный (4000K)?', 'Which light do you prefer: warm (3000K) or neutral (4000K)?'))
+    : pick(lang, 'Tavanın hündürlüyü nə qədərdir və hansı işığı üstün tutursunuz: isti (3000K), yoxsa neytral (4000K)?', 'Какая высота потолка и какой свет вы предпочитаете: тёплый (3000K) или нейтральный (4000K)?', 'How high is the ceiling, and which light do you prefer: warm (3000K) or neutral (4000K)?');
   if (ask) emit({ type: 'text', delta: ' ' + ask });
   return true;
 }
 
-const SHORTLIST_RE = /(işar[əe]l[əe]di|seçdiy|seçilmiş|ulduz|избран|отмеченн|выбранн|starred|shortlist)/;
+const SHORTLIST_RE = /(işar[əe]l[əe]di|seçdiy|seçilmiş|ulduz|избран|отмеченн|выбранн|starred|shortlist|favou?rites)/;
 
 /** "I want the products I marked": answered from the shortlist itself, no model (nothing can be mixed up), then the contact form opens. */
-export async function shortlistIntent(history: ChatMsg[], extra: PromptExtra, lang: 'az' | 'ru', emit: Emit): Promise<boolean> {
+export async function shortlistIntent(history: ChatMsg[], extra: PromptExtra, lang: Lang, emit: Emit): Promise<boolean> {
   const last = (history[history.length - 1]?.content || '').toLowerCase().replace(/\u0307/g, '');
   if (last.length > 120 || !SHORTLIST_RE.test(last)) return false;
   const list = extra.shortlist || [];
   if (!list.length) {
-    emit({ type: 'text', delta: lang === 'ru' ? 'Вы пока ничего не выбрали. Нажмите на звезду в карточке товара, и он появится в избранном.' : 'Hələ heç nə seçməmisiniz. Məhsul kartındakı ulduza basın, seçilmişlərə əlavə olunacaq.' });
+    emit({ type: 'text', delta: pick(lang, 'Hələ heç nə seçməmisiniz. Məhsul kartındakı ulduza basın, seçilmişlərə əlavə olunacaq.', 'Вы пока ничего не выбрали. Нажмите на звезду в карточке товара, и он появится в избранном.', 'You have not selected anything yet. Tap the star on a product card and it will be added to your shortlist.') });
     return true;
   }
-  emit({ type: 'text', delta: lang === 'ru' ? `Выбранные вами товары (${list.length}) будут переданы консультанту. Укажите, пожалуйста, имя и номер в форме ниже.` : `Seçdiyiniz ${list.length} məhsul məsləhətçiyə göndəriləcək. Zəhmət olmasa, aşağıdakı formada adınızı və nömrənizi yazın.` });
+  emit({ type: 'text', delta: pick(lang, `Seçdiyiniz ${list.length} məhsul məsləhətçiyə göndəriləcək. Zəhmət olmasa, aşağıdakı formada adınızı və nömrənizi yazın.`, `Выбранные вами товары (${list.length}) будут переданы консультанту. Укажите, пожалуйста, имя и номер в форме ниже.`, `Your ${list.length} selected product(s) will be sent to our consultant. Please enter your name and number in the form below.`) });
   emit({ type: 'consultation', summary: list.map(s => s.name).join(', ').slice(0, 400), codes: list.map(s => s.code) });
   return true;
 }
@@ -531,10 +553,12 @@ const PHOTO_WORD = /(şəkil|şəkl|foto|фото|снимк|photo|picture|image
 const SEND_WORD = /(göndər|yolla|atım|atım|at\b|yüklə|отправ|скин|загруз|send|upload|share|kömək|analiz|əsasında|üzrə)/;
 
 /** "Can I send a photo of my room?": answered at once (no model), pointing at the picture icon. */
-export function photoIntent(history: ChatMsg[], lang: 'az' | 'ru', emit: Emit, enabled: boolean): boolean {
+export function photoIntent(history: ChatMsg[], lang: Lang, emit: Emit, enabled: boolean): boolean {
   const last = (history[history.length - 1]?.content || '').toLowerCase().replace(/\u0307/g, '');
   if (!enabled || last.length > 200 || !PHOTO_WORD.test(last) || !SEND_WORD.test(last) || !/\?|olar|bilər|mümkün|можно|могу|can i|may i|istəyir|хочу|göndər|отправ|yolla/.test(last)) return false;
-  emit({ type: 'text', delta: lang === 'ru'
+  emit({ type: 'text', delta: lang === 'en'
+    ? 'Yes, of course. Tap the picture icon next to the message box and send a photo of your room: I will analyse it and suggest suitable lighting. After that you can ask anything about your space.'
+    : lang === 'ru'
     ? 'Да, конечно. Нажмите на значок картинки рядом с полем ввода и отправьте фото помещения: я проанализирую его и предложу подходящее освещение. После этого можно задавать любые вопросы о вашем помещении.'
     : 'Bəli, əlbəttə. Mesaj xəttinin yanındakı şəkil ikonuna basıb otağınızın şəklini göndərin: mən onu analiz edib sizə uyğun işıq təkliflərimi verəcəm. Şəkildən sonra otağınız barədə istənilən sualı verə bilərsiniz.' });
   emit({ type: 'hint', name: 'photo' });

@@ -372,7 +372,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           {/* Language Toggle in Login */}
           <div className="flex justify-end mb-4">
             <div className="flex items-center gap-1 bg-[#16181F] border border-white/10 p-1 rounded-xl text-xs font-mono">
-              {(['az', 'ru'] as Language[]).map((lang) => (
+              {(['az', 'ru', 'en'] as Language[]).map((lang) => (
                 <button
                   key={lang}
                   type="button"

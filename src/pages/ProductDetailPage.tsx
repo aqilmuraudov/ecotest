@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Language, Product, ProductFile } from '../types';
 import { translations } from '../data/translations';
 import { useData } from '../context/DataContext';
-import { getLocalizedText } from '../utils/lang';
+import { getLocalizedText, localizeValue } from '../utils/lang';
 import { cctLabel, getCctOptions, getFinishOptions, shouldShowWarrantyBadge, dedupeProductGallery } from '../utils/productOptions';
 import { downloadFileFromUrl, getDownloadableFiles } from '../utils/productFiles';
 import { FadeIn } from '../components/ui/FadeIn';
@@ -325,19 +325,19 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 {product.specs?.mounting && (
                   <div className="py-4 flex justify-between items-center border-b border-[var(--ed-line)]">
                     <span className="font-micro text-[9px] text-mute">{t.productDetail.mounting}</span>
-                    <span className="text-sm text-[var(--ed-ivory)]">{product.specs.mounting}</span>
+                    <span className="text-sm text-[var(--ed-ivory)]">{localizeValue(product.specs.mounting, currentLang)}</span>
                   </div>
                 )}
                 {product.specs?.material && (
                   <div className="py-4 flex justify-between items-center border-b border-[var(--ed-line)]">
                     <span className="font-micro text-[9px] text-mute">{t.productDetail.material}</span>
-                    <span className="text-sm text-[var(--ed-ivory)]">{product.specs.material}</span>
+                    <span className="text-sm text-[var(--ed-ivory)]">{localizeValue(product.specs.material, currentLang)}</span>
                   </div>
                 )}
                 {product.specs?.dimensions && (
                   <div className="py-4 flex justify-between items-center border-b border-[var(--ed-line)]">
                     <span className="font-micro text-[9px] text-mute">{t.productDetail.dimensions}</span>
-                    <span className="text-sm text-[var(--ed-ivory)]">{product.specs.dimensions}</span>
+                    <span className="text-sm text-[var(--ed-ivory)]">{localizeValue(product.specs.dimensions, currentLang)}</span>
                   </div>
                 )}
                 {!product.specs?.cct && !product.specs?.finish && !product.specs?.dimensions && (

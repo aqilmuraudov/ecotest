@@ -3,7 +3,7 @@ import { Language } from '../types';
 import { translations } from '../data/translations';
 import { useData } from '../context/DataContext';
 import { solutions } from '../data/solutions';
-import { getLocalizedText } from '../utils/lang';
+import { getLocalizedText, localizeValue } from '../utils/lang';
 import { Search, X, ArrowRight } from 'lucide-react';
 
 interface SearchModalProps {
@@ -96,7 +96,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                     : 'Enter a product name, code, or project title.'}
               </div>
               <div className="flex justify-center gap-2 pt-2">
-                {['Linear', 'Rail', 'Ofis'].map(term => (
+                {['Linear', 'Rail', currentLang === 'ru' ? 'Офис' : currentLang === 'en' ? 'Office' : 'Ofis'].map(term => (
                   <button
                     key={term}
                     onClick={() => setQuery(term)}
@@ -160,7 +160,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                           <div className="text-xs font-medium text-[var(--ed-ivory)] group-hover:text-amber-warm transition-colors">
                             {typeof pr.title === 'string' ? pr.title : getLocalizedText(pr.title, currentLang)}
                           </div>
-                          <div className="font-mono-tech text-[10px] text-mute">{pr.location}</div>
+                          <div className="font-mono-tech text-[10px] text-mute">{localizeValue(pr.location, currentLang)}</div>
                         </div>
                         <ArrowRight className="w-4 h-4 text-mute group-hover:text-amber-warm group-hover:translate-x-0.5 transition-all" />
                       </button>

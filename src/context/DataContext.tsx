@@ -946,7 +946,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           source: inqData.source || (inqData.configSummary ? 'configurator' : inqData.productCode ? 'product' : 'contact-form'),
           sourceRef: inqData.sourceRef,
           pageUrl: typeof window !== 'undefined' ? window.location.pathname : undefined,
-          lang: typeof document !== 'undefined' && document.documentElement.lang === 'ru' ? 'ru' : 'az',
+          lang: typeof document !== 'undefined' ? document.documentElement.lang : 'az', // the server accepts az / ru / en
           consent: true, // the forms state this next to the submit button
         }),
       });

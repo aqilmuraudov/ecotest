@@ -1,4 +1,4 @@
-import { loadProjects, type ProjectInfo } from './core.js';
+import { loadProjects, type ProjectInfo, type Lang } from './core.js';
 import { blogPosts } from '../../src/data/blog.js';
 import { solutions } from '../../src/data/solutions.js';
 import { initialPagesContent } from '../../src/data/pagesContent.js';
@@ -7,7 +7,7 @@ import { initialPagesContent } from '../../src/data/pagesContent.js';
  * What AISeller knows about the website beyond the product catalogue: projects, solutions, articles, the company and how to reach it.
  * Nothing here costs tokens unless the customer's message is about it: a block is added to the prompt only on a matching intent.
  */
-type L = 'az' | 'ru';
+type L = Lang;
 const tr = (v: any, l: L): string => (typeof v === 'string' ? v : String(v?.[l] || v?.az || ''));
 const clip = (s: string, n: number) => {
   const t = s.replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();

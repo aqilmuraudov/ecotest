@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { env, rateLimit, clientIp, checkHuman } from './_lib/core.js';
+import { env, rateLimit, clientIp, checkHuman, parseLang, type Lang } from './_lib/core.js';
 import { addStrike, checkBan } from './_lib/log.js';
 import { visionPrompt } from './_lib/visionPrompt.js';
 import { getAiRuntime, roleTargets, type AiTarget } from './_lib/aiconfig.js';
@@ -21,7 +21,7 @@ type Outcome =
   | { kind: 'reject'; reason: 'people' | 'nsfw' | 'unrelated' }
   | { kind: 'fail'; status?: number; reason?: string; finish?: string | null };
 
-async function askVision(t: AiTarget, image: string, lang: 'az' | 'ru'): Promise<Outcome> {
+async function askVision(t: AiTarget, image: string, lang: Lang): Promise<Outcome> {
   try {
     const r = await fetch(`${t.base}/chat/completions`, {
       method: 'POST',
@@ -89,7 +89,7 @@ export default async function handler(req: any, res: any) {
   const ok = m[1] === 'jpeg' ? head[0] === 0xff && head[1] === 0xd8 : m[1] === 'png' ? head[0] === 0x89 && head[1] === 0x50 : head.slice(0, 4).toString() === 'RIFF';
   if (!ok) return res.status(400).json({ error: 'bad_image' });
 
-  const lang = body.lang === 'ru' ? 'ru' : 'az';
+  const lang = parseLang(body.lang);
   let last: Outcome = { kind: 'fail' };
   for (const t of targets.slice(0, 3)) {
     last = await askVision(t, image, lang);

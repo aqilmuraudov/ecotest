@@ -17,7 +17,7 @@ interface ContactModalProps {
   contextParam?: string;
 }
 
-// Short, plain wording. English is switched off on the site for now, so it falls back to Azerbaijani.
+// Short, plain wording.
 const TEXT = {
   az: {
     place: 'İşıqlandırma harada lazımdır?',
@@ -61,6 +61,27 @@ const TEXT = {
     configMsg: (s: string) => `Здравствуйте, хочу узнать стоимость и сроки производства для следующей конфигурации:\n${s}`,
     generalMsg: 'Клиент отправил заявку',
   },
+  en: {
+    place: 'Where is the lighting needed?',
+    placeHint: 'optional',
+    places: ['Apartment / house', 'Office', 'Shop', 'Restaurant / cafe', 'Hotel', 'Other'],
+    note: 'Note (optional)',
+    notePlaceholder: 'For example: area, the product you want, timing…',
+    namePh: 'First name',
+    surnamePh: 'Last name',
+    phoneHint: 'We will contact you',
+    errName: 'Enter your name.',
+    errPhone: 'Enter a valid phone number.',
+    errRate: 'Too many requests. Please try again in a few minutes.',
+    errSend: 'Could not send. Please try again later.',
+    consent: 'By sending this request you agree to your data being used to process it.',
+    doneTitle: 'Your request has been received!',
+    close: 'Close',
+    config: 'Custom configuration',
+    productMsg: (n: string, c: string) => `Hello, I would like technical information and a price offer for the product "${n}" (${c}).`,
+    configMsg: (s: string) => `Hello, I would like a price offer and the production time for the following custom configuration:\n${s}`,
+    generalMsg: 'The customer sent a request',
+  },
 };
 
 export const ContactModal: React.FC<ContactModalProps> = ({
@@ -72,7 +93,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   contextPage,
   contextParam
 }) => {
-  const lang: 'az' | 'ru' = currentLang === 'ru' ? 'ru' : 'az';
+  const lang = currentLang;
   const t = translations[lang];
   const x = TEXT[lang];
   const { addInquiry } = useData();

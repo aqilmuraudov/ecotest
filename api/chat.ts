@@ -1,4 +1,4 @@
-import { env, rateLimit, clientIp, checkHuman } from './_lib/core.js';
+import { env, rateLimit, clientIp, checkHuman, parseLang } from './_lib/core.js';
 import { logSession } from './_lib/log.js';
 import { getAiRuntime, roleTargets } from './_lib/aiconfig.js';
 
@@ -50,7 +50,7 @@ export default async function handler(req: any, res: any) {
   if (history.length === 0 || history[history.length - 1].role !== 'user') {
     return res.status(400).json({ error: 'Last message must come from the user.' });
   }
-  const lang: 'az' | 'ru' = body.lang === 'ru' ? 'ru' : 'az';
+  const lang = parseLang(body.lang);
   const pageType = String(body.page?.type ?? '');
   const page: PageCtx | undefined = PAGE_TYPES.has(pageType) ? { type: pageType, id: safeId(body.page?.id) || undefined } : undefined;
   const canned = safeId(body.canned, 40);
@@ -142,7 +142,9 @@ export default async function handler(req: any, res: any) {
     const { model } = await runChat(recent, lang, tracked, undefined, memory, page, extra);
     if (!formShown && shouldOfferForm(history)) {
       if (textLen < 40) {
-        const line = lang === 'ru'
+        const line = lang === 'en'
+          ? 'Please leave your name and number in the form below and our sales consultant will contact you.'
+          : lang === 'ru'
           ? 'Оставьте, пожалуйста, имя и номер в форме ниже, и наш консультант свяжется с вами.'
           : 'Zəhmət olmasa, aşağıdakı formada adınızı və nömrənizi yazın, satış məsləhətçimiz sizinlə əlaqə saxlasın.';
         send({ type: 'text', delta: (textLen ? ' ' : '') + line });

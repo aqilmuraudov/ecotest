@@ -1,4 +1,4 @@
-import { env, rateLimit, clientIp, sendTelegram, escapeHtml, loadCatalog, checkHuman, SALES_WHATSAPP, SITE_URL } from './_lib/core.js';
+import { env, rateLimit, clientIp, sendTelegram, escapeHtml, loadCatalog, checkHuman, parseLang, SALES_WHATSAPP, SITE_URL } from './_lib/core.js';
 import { summarize, type ChatMsg } from './_lib/ai.js';
 import { linkLead } from './_lib/log.js';
 
@@ -58,7 +58,7 @@ export default async function handler(req: any, res: any) {
 
   const name = String(body.name || '').trim().slice(0, 80);
   const phone = normalizePhone(String(body.phone || ''));
-  const lang: 'az' | 'ru' = body.lang === 'ru' ? 'ru' : 'az';
+  const lang = parseLang(body.lang);
   if (name.length < 2) return res.status(400).json({ error: 'name' });
   if (!phone) return res.status(400).json({ error: 'phone' });
   // the classic forms state the consent next to the submit button; the chat asks for an explicit tick
@@ -140,7 +140,9 @@ export default async function handler(req: any, res: any) {
   }
 
   // 2) notify the sales team
-  const greet = lang === 'ru'
+  const greet = lang === 'en'
+    ? `Hello, ${name}! This is Ecolife. We have received your request No. ${short}.`
+    : lang === 'ru'
     ? `Здравствуйте, ${name}! Это Ecolife. Получили вашу заявку №${short}.`
     : `Salam, ${name}! Ecolife-dan yazırıq. Sorğunuz (№${short}) qəbul olundu.`;
   const lines = [
@@ -167,7 +169,9 @@ export default async function handler(req: any, res: any) {
   ]);
 
   // 3) hand the customer a ready WhatsApp message to the consultant (optional follow-up)
-  const wa = lang === 'ru'
+  const wa = lang === 'en'
+    ? `Hello! I am writing from the Ecolife website. Request No. ${short}.${products.length ? ' Products I am interested in: ' + products.map(p => p.code).join(', ') + '.' : ''} My name is ${name}.`
+    : lang === 'ru'
     ? `Здравствуйте! Пишу с сайта Ecolife. Заявка №${short}.${products.length ? ' Интересуют: ' + products.map(p => p.code).join(', ') + '.' : ''} Меня зовут ${name}.`
     : `Salam! Ecolife saytından yazıram. Sorğu №${short}.${products.length ? ' Maraqlandığım məhsullar: ' + products.map(p => p.code).join(', ') + '.' : ''} Adım ${name}.`;
 

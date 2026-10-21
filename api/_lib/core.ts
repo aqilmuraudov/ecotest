@@ -225,6 +225,10 @@ export const publicItem = (i: CatalogItem) => ({
   url: i.url,
 });
 
+/** Site / chat language. Anything unknown is Azerbaijani. */
+export type Lang = 'az' | 'ru' | 'en';
+export const parseLang = (v: unknown): Lang => (v === 'ru' || v === 'en' ? v : 'az');
+
 // ---------- projects (public read, cached for 5 minutes): used to talk about the project page the customer is looking at
 export interface ProjectInfo {
   slug: string;
@@ -232,14 +236,14 @@ export interface ProjectInfo {
   category: string;
   location: string;
   year: string;
-  desc: { az: string; ru: string };
-  solution: { az: string; ru: string };
+  desc: Record<Lang, string>;
+  solution: Record<Lang, string>;
   products: string[];
   image: string;
 }
 let projectCache: { at: number; items: ProjectInfo[] } | null = null;
 
-const tr = (v: any, l: 'az' | 'ru'): string => (typeof v === 'string' ? v : String(v?.[l] || v?.az || ''));
+const tr = (v: any, l: Lang): string => (typeof v === 'string' ? v : String(v?.[l] || v?.az || ''));
 
 export async function loadProjects(): Promise<ProjectInfo[]> {
   if (projectCache && Date.now() - projectCache.at < 5 * 60 * 1000) return projectCache.items;
@@ -259,8 +263,8 @@ export async function loadProjects(): Promise<ProjectInfo[]> {
       category: String(r.category || ''),
       location: String(r.location || ''),
       year: String(r.year || ''),
-      desc: { az: tr(r.short_description, 'az'), ru: tr(r.short_description, 'ru') },
-      solution: { az: tr(r.lighting_solution, 'az'), ru: tr(r.lighting_solution, 'ru') },
+      desc: { az: tr(r.short_description, 'az'), ru: tr(r.short_description, 'ru'), en: tr(r.short_description, 'en') },
+      solution: { az: tr(r.lighting_solution, 'az'), ru: tr(r.lighting_solution, 'ru'), en: tr(r.lighting_solution, 'en') },
       products: Array.isArray(r.products_used) ? r.products_used.map(String) : [],
       image: typeof r.cover_image === 'string' && r.cover_image.startsWith('http') ? r.cover_image : '',
     }));

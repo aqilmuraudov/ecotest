@@ -10,28 +10,28 @@ export interface RoomDef {
   lux: number;
   cct: number; // preferred colour temperature
   cats: string[]; // catalogue categories to draw products from, best first
-  name: { az: string; ru: string };
+  name: { az: string; ru: string; en: string };
   words: string; // stems customers use (az / ru / en)
 }
 
 export const ROOMS: RoomDef[] = [
-  { key: 'living', lux: 150, cct: 3000, cats: ['downlights', 'linear', 'magnetic-systems'], name: { az: 'qonaq otağı', ru: 'гостиная' }, words: 'qonaq|zal otağı|living|гостин' },
-  { key: 'bedroom', lux: 100, cct: 3000, cats: ['downlights', 'led-lent'], name: { az: 'yataq otağı', ru: 'спальня' }, words: 'yataq|bedroom|спальн' },
-  { key: 'kitchen', lux: 300, cct: 4000, cats: ['downlights', 'panels', 'led-lent'], name: { az: 'mətbəx', ru: 'кухня' }, words: 'mətbəx|metbex|kitchen|кухн' },
-  { key: 'bathroom', lux: 200, cct: 3500, cats: ['downlights', 'panels'], name: { az: 'hamam', ru: 'ванная' }, words: 'hamam|vanna|sanitar|bathroom|ванн|санузел|туалет|tualet' },
-  { key: 'hall', lux: 100, cct: 3000, cats: ['downlights', 'linear'], name: { az: 'dəhliz', ru: 'коридор' }, words: 'dəhliz|dehliz|koridor|hall|прихож|коридор' },
-  { key: 'office', lux: 500, cct: 4000, cats: ['panels', 'linear', 'downlights'], name: { az: 'ofis', ru: 'офис' }, words: 'ofis|office|офис|kabinet|кабинет|iş otağı' },
-  { key: 'meeting', lux: 500, cct: 4000, cats: ['panels', 'linear', 'downlights'], name: { az: 'iclas otağı', ru: 'переговорная' }, words: 'iclas|meeting|переговор' },
-  { key: 'shop', lux: 500, cct: 4000, cats: ['track-lights', 'magnetic-systems', 'linear', 'downlights'], name: { az: 'mağaza', ru: 'магазин' }, words: 'mağaza|magaza|shop|store|магазин|butik|бутик|showroom|şou-?rum' },
-  { key: 'restaurant', lux: 200, cct: 3000, cats: ['track-lights', 'downlights', 'linear'], name: { az: 'restoran/kafe', ru: 'ресторан/кафе' }, words: 'restoran|restaurant|ресторан|kafe|cafe|кафе|coffee|bar\\b|бар\\b' },
-  { key: 'hotel', lux: 150, cct: 3000, cats: ['downlights', 'linear'], name: { az: 'otel otağı', ru: 'номер отеля' }, words: 'otel|hotel|отел|гостиниц' },
-  { key: 'gym', lux: 300, cct: 4000, cats: ['panels', 'linear', 'downlights'], name: { az: 'idman zalı', ru: 'спортзал' }, words: 'idman|fitness|fitnes|gym|спортзал|фитнес' },
+  { key: 'living', lux: 150, cct: 3000, cats: ['downlights', 'linear', 'magnetic-systems'], name: { az: 'qonaq otağı', ru: 'гостиная', en: 'living room' }, words: 'qonaq|zal otağı|living|lounge|гостин' },
+  { key: 'bedroom', lux: 100, cct: 3000, cats: ['downlights', 'led-lent'], name: { az: 'yataq otağı', ru: 'спальня', en: 'bedroom' }, words: 'yataq|bedroom|спальн' },
+  { key: 'kitchen', lux: 300, cct: 4000, cats: ['downlights', 'panels', 'led-lent'], name: { az: 'mətbəx', ru: 'кухня', en: 'kitchen' }, words: 'mətbəx|metbex|kitchen|кухн' },
+  { key: 'bathroom', lux: 200, cct: 3500, cats: ['downlights', 'panels'], name: { az: 'hamam', ru: 'ванная', en: 'bathroom' }, words: 'hamam|vanna|sanitar|bathroom|toilet|ванн|санузел|туалет|tualet' },
+  { key: 'hall', lux: 100, cct: 3000, cats: ['downlights', 'linear'], name: { az: 'dəhliz', ru: 'коридор', en: 'hallway' }, words: 'dəhliz|dehliz|koridor|hall|corridor|прихож|коридор' },
+  { key: 'office', lux: 500, cct: 4000, cats: ['panels', 'linear', 'downlights'], name: { az: 'ofis', ru: 'офис', en: 'office' }, words: 'ofis|office|офис|kabinet|кабинет|iş otağı' },
+  { key: 'meeting', lux: 500, cct: 4000, cats: ['panels', 'linear', 'downlights'], name: { az: 'iclas otağı', ru: 'переговорная', en: 'meeting room' }, words: 'iclas|meeting|переговор' },
+  { key: 'shop', lux: 500, cct: 4000, cats: ['track-lights', 'magnetic-systems', 'linear', 'downlights'], name: { az: 'mağaza', ru: 'магазин', en: 'shop' }, words: 'mağaza|magaza|shop|store|магазин|butik|бутик|showroom|şou-?rum' },
+  { key: 'restaurant', lux: 200, cct: 3000, cats: ['track-lights', 'downlights', 'linear'], name: { az: 'restoran/kafe', ru: 'ресторан/кафе', en: 'restaurant/cafe' }, words: 'restoran|restaurant|ресторан|kafe|cafe|кафе|coffee|bar\\b|бар\\b' },
+  { key: 'hotel', lux: 150, cct: 3000, cats: ['downlights', 'linear'], name: { az: 'otel otağı', ru: 'номер отеля', en: 'hotel room' }, words: 'otel|hotel|отел|гостиниц' },
+  { key: 'gym', lux: 300, cct: 4000, cats: ['panels', 'linear', 'downlights'], name: { az: 'idman zalı', ru: 'спортзал', en: 'gym' }, words: 'idman|fitness|fitnes|gym|спортзал|фитнес' },
 ];
 
 const EFFICACY: Record<string, number> = { downlights: 90, panels: 110, linear: 90, 'track-lights': 80, 'magnetic-systems': 80, 'led-lent': 80, bulbs: 80 };
 
-const AREA_RE = /(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|m²|m\^2|kv\.?\s?m|kvm|kvadrat|кв\.?\s?м|м2|м²|квадрат)/i;
-const HEIGHT_RE = /(?:tavan|hündürlük|hundurluk|высот\w*|потол\w*|ceiling)\D{0,24}(\d(?:[.,]\d)?)\s*(?:m\b|metr|м\b|метр)/i;
+const AREA_RE = /(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|m²|m\^2|kv\.?\s?m|kvm|kvadrat|sq\.?\s?m|sqm|square\s?met|кв\.?\s?м|м2|м²|квадрат)/i;
+const HEIGHT_RE = /(?:tavan|hündürlük|hundurluk|высот\w*|потол\w*|ceiling)\D{0,24}(\d(?:[.,]\d)?)\s*(?:m\b|metr|meter|м\b|метр)/i;
 const CCT_RE = /\b([2-6]\d00)\s?k\b/i;
 
 export function detectRoom(text: string): RoomDef | undefined {
@@ -100,7 +100,7 @@ export function roomPlan(room: RoomDef, area: number, items: CatalogItem[], heig
 /** A short, customer-facing answer built from the numbers (used when no language model is needed). */
 const fmt = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
-export function planText(p: RoomPlan, lang: 'az' | 'ru'): string {
+export function planText(p: RoomPlan, lang: 'az' | 'ru' | 'en'): string {
   const rn = p.room.name[lang];
   const first = p.options[0];
   const more = p.options.slice(1);
@@ -109,6 +109,11 @@ export function planText(p: RoomPlan, lang: 'az' | 'ru'): string {
     return `Для помещения «${rn}» площадью ${p.area} м² нужна освещённость около ${p.lux} лк. Это примерно ${fmt(p.lumens)} лм, то есть около ${p.watts} Вт суммарно (${p.cct} K). ` +
       (first ? `Например: ${line(first)}${more.map(o => `; или ${line(o)}`).join('')}. ` : '') +
       'Это ориентировочный расчёт: точную расстановку наш специалист выполнит в Dialux.';
+  }
+  if (lang === 'en') {
+    return `For a ${p.area} m² ${rn} the target light level is about ${p.lux} lux. That is about ${fmt(p.lumens)} lumens, or about ${p.watts} W in total (${p.cct}K). ` +
+      (first ? `For example: ${line(first)}${more.map(o => `; or ${line(o)}`).join('')}. ` : '') +
+      'This is an approximate calculation: our consultant prepares the exact layout in Dialux.';
   }
   return `${p.area} m² ${rn} üçün hədəf işıqlandırma təxminən ${p.lux} lüksdür. Bu, təxminən ${fmt(p.lumens)} lümen, yəni ümumilikdə təxminən ${p.watts} W (${p.cct}K) deməkdir. ` +
     (first ? `Məsələn: ${line(first)}${more.map(o => `; yaxud ${line(o)}`).join('')}. ` : '') +

@@ -259,10 +259,12 @@ export const ContactPage: React.FC<ContactPageProps> = ({ currentLang }) => {
                   </div>
 
                   <div>
-                    <span className={inputLabel}>{currentLang === 'ru' ? 'Где нужно освещение? · по желанию' : 'İşıqlandırma harada lazımdır? · istəyə bağlı'}</span>
+                    <span className={inputLabel}>{currentLang === 'ru' ? 'Где нужно освещение? · по желанию' : currentLang === 'en' ? 'Where is the lighting needed? · optional' : 'İşıqlandırma harada lazımdır? · istəyə bağlı'}</span>
                     <div className="flex flex-wrap gap-2">
                       {(currentLang === 'ru'
                         ? ['Квартира / дом', 'Офис', 'Магазин', 'Ресторан / кафе', 'Отель', 'Другое']
+                        : currentLang === 'en'
+                        ? ['Apartment / house', 'Office', 'Shop', 'Restaurant / cafe', 'Hotel', 'Other']
                         : ['Mənzil / ev', 'Ofis', 'Mağaza', 'Restoran / kafe', 'Otel', 'Digər']
                       ).map(p => {
                         const on = formData.projectType === p;
@@ -282,7 +284,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ currentLang }) => {
                   </div>
 
                   <div>
-                    <label className={inputLabel}>{currentLang === 'ru' ? 'Комментарий (по желанию)' : 'Qeyd (istəyə bağlı)'}</label>
+                    <label className={inputLabel}>{currentLang === 'ru' ? 'Комментарий (по желанию)' : currentLang === 'en' ? 'Note (optional)' : 'Qeyd (istəyə bağlı)'}</label>
                     <textarea
                       rows={3}
                       value={formData.message}

@@ -226,13 +226,17 @@ export const BlogPage: React.FC<BlogPageProps> = ({ currentLang, onNavigate, ini
           <div className="space-y-3 relative z-10 max-w-2xl">
             <div className="inline-flex items-center gap-2 bg-[#FFD21A]/10 border border-[#FFD21A]/30 px-3 py-1 rounded-sm text-[10px] font-mono-tech uppercase font-bold tracking-widest text-amber-warm">
               <span className="text-amber-warm">||||</span>
-              <span>Memarlıq & İşıq Məqalələri</span>
+              <span>{currentLang === 'az' ? 'Memarlıq & İşıq Məqalələri' : currentLang === 'ru' ? 'Статьи об архитектуре и свете' : 'Architecture & Lighting Articles'}</span>
             </div>
             <h1 className="text-3xl sm:text-5xl font-editorial-heading font-bold uppercase tracking-tight text-white">
               {currentLang === 'az' ? 'Xəbərlər & Mühəndislik Bloqu' : currentLang === 'ru' ? 'Новости и Блог' : 'News & Architecture Blog'}
             </h1>
             <p className="text-xs sm:text-sm text-soft leading-relaxed font-light">
-              Xətti LED optikası, Dialux hesablamaları, CRI standartları və müasir interyer işıqlandırma həlləri haqqında ekspert yazıları.
+              {currentLang === 'az'
+                ? 'Xətti LED optikası, Dialux hesablamaları, CRI standartları və müasir interyer işıqlandırma həlləri haqqında ekspert yazıları.'
+                : currentLang === 'ru'
+                ? 'Экспертные статьи о линейной LED-оптике, расчётах в Dialux, стандартах CRI и современных решениях для освещения интерьеров.'
+                : 'Expert articles on linear LED optics, Dialux calculations, CRI standards and modern interior lighting solutions.'}
             </p>
           </div>
         </div>

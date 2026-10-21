@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Language } from '../types';
 import { translations } from '../data/translations';
 import { useData } from '../context/DataContext';
+import { localizeValue } from '../utils/lang';
 import { FadeIn } from '../components/ui/FadeIn';
 import { EdProductCard } from '../components/ed/EdProductCard';
 import { SimilarProjectPopup } from '../components/SimilarProjectPopup';
@@ -130,7 +131,7 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
           <FadeIn delay={0.08}>
             <div className="border-y border-[var(--ed-line)] py-4 sm:py-5 mt-6 sm:mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
               {[
-                { icon: <MapPin className="w-3.5 h-3.5 text-amber-warm" />, label: t.projects.location, value: project.location },
+                { icon: <MapPin className="w-3.5 h-3.5 text-amber-warm" />, label: t.projects.location, value: localizeValue(project.location, currentLang) },
                 { icon: <Building2 className="w-3.5 h-3.5 text-amber-warm" />, label: t.projects.client, value: project.client },
                 { icon: <Calendar className="w-3.5 h-3.5 text-amber-warm" />, label: t.projects.year, value: project.year },
                 ...(project.architect ? [{ icon: <ArrowRight className="w-3.5 h-3.5 text-amber-warm" />, label: t.projects.architect, value: project.architect }] : []),

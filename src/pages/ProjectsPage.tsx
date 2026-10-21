@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Language, Project } from '../types';
 import { translations } from '../data/translations';
 import { useData } from '../context/DataContext';
+import { localizeValue } from '../utils/lang';
 import { FadeIn } from '../components/ui/FadeIn';
 import { EdLink, EdHairline } from '../components/ed/EditorialUI';
 import { EdCategoryPills } from '../components/ed/EdCategoryPills';
@@ -91,7 +92,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ currentLang, onNavig
                       </h2>
                       <div className="font-micro text-[9px] text-soft mt-4 flex flex-wrap gap-x-6 gap-y-1">
                         <span className="text-amber-warm">{lead.categoryName?.[currentLang] || lead.category}</span>
-                        <span>{lead.location}</span>
+                        <span>{localizeValue(lead.location, currentLang)}</span>
                         <span>{lead.client}</span>
                         <span>{lead.year}</span>
                       </div>
@@ -126,7 +127,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ currentLang, onNavig
                       </h3>
                       <div className="font-micro text-[9px] text-soft mt-3 flex flex-wrap gap-x-5 gap-y-1">
                         <span className="text-amber-warm">{project.categoryName[currentLang]}</span>
-                        <span>{project.location}</span>
+                        <span>{localizeValue(project.location, currentLang)}</span>
                         <span>{project.year}</span>
                       </div>
                     </div>

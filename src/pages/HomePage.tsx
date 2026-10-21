@@ -3,7 +3,7 @@ import { Language, Product, Project } from '../types';
 import { translations } from '../data/translations';
 import { solutions } from '../data/solutions';
 import { useData } from '../context/DataContext';
-import { getLocalizedText } from '../utils/lang';
+import { getLocalizedText, localizeValue } from '../utils/lang';
 import { motion, animate, useMotionValue, useScroll, useTransform, useReducedMotion, useAnimate, MotionConfig, MotionValue } from 'motion/react';
 import { FadeIn } from '../components/ui/FadeIn';
 import { EdButton, EdLink, EdSectionHead, EdHairline } from '../components/ed/EditorialUI';
@@ -61,7 +61,7 @@ const ProjectStackCard: React.FC<{
           <div>
             <h3 className="ed-display-md font-display text-ivory max-w-3xl">{project.title}</h3>
             <div className="font-micro text-[9px] text-soft mt-4 flex flex-wrap gap-x-6 gap-y-1">
-              <span>{project.location}</span>
+              <span>{localizeValue(project.location, lang)}</span>
               <span>{project.categoryName?.[lang] || project.category}</span>
               <span>{project.year}</span>
             </div>

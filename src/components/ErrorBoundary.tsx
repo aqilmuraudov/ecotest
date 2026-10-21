@@ -9,6 +9,13 @@ interface Props {
   fullScreen?: boolean;
 }
 
+// the boundary sits above the language state, so it reads the language App writes on <html lang>
+const TEXT = {
+  az: ['Səhifə yüklənmədi', 'Bir problem baş verdi. Səhifəni yeniləyin və ya ana səhifəyə qayıdın.', 'Yenilə', 'Ana səhifə'],
+  ru: ['Страница не загрузилась', 'Что-то пошло не так. Обновите страницу или вернитесь на главную.', 'Обновить', 'На главную'],
+  en: ['The page did not load', 'Something went wrong. Reload the page or go back to the home page.', 'Reload', 'Home page'],
+};
+
 /** Catches render errors so one broken page no longer blanks the whole site. */
 export class ErrorBoundary extends Component<Props, { error: Error | null }> {
   state: { error: Error | null } = { error: null };
@@ -31,14 +38,15 @@ export class ErrorBoundary extends Component<Props, { error: Error | null }> {
 
   render() {
     if (!this.state.error) return this.props.children;
+    const [title, text, reload, home] = TEXT[document.documentElement.lang as keyof typeof TEXT] || TEXT.az;
     return (
       <div className={`${this.props.fullScreen ? 'min-h-screen' : 'min-h-[60vh]'} flex items-center justify-center px-6 py-24 text-center`} style={{ background: 'var(--ed-bg, #1d1d1b)', color: 'var(--ed-ivory, #f3efe6)' }}>
         <div className="max-w-sm">
-          <h2 className="text-xl font-semibold mb-2">Səhifə yüklənmədi</h2>
-          <p className="text-sm opacity-70 mb-6">Bir problem baş verdi. Səhifəni yeniləyin və ya ana səhifəyə qayıdın.</p>
+          <h2 className="text-xl font-semibold mb-2">{title}</h2>
+          <p className="text-sm opacity-70 mb-6">{text}</p>
           <div className="flex gap-3 justify-center">
-            <button type="button" onClick={() => window.location.reload()} className="h-10 px-5 rounded-xl bg-[#FFD21A] text-black text-sm font-semibold">Yenilə</button>
-            <a href="/" className="h-10 px-5 rounded-xl border border-current/30 text-sm font-semibold inline-flex items-center opacity-80">Ana səhifə</a>
+            <button type="button" onClick={() => window.location.reload()} className="h-10 px-5 rounded-xl bg-[#FFD21A] text-black text-sm font-semibold">{reload}</button>
+            <a href="/" className="h-10 px-5 rounded-xl border border-current/30 text-sm font-semibold inline-flex items-center opacity-80">{home}</a>
           </div>
         </div>
       </div>

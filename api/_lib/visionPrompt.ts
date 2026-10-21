@@ -1,6 +1,6 @@
 /** The instruction given to the vision model: screen the picture, then describe it briefly for the sales team. */
-export function visionPrompt(lang: 'az' | 'ru'): string {
-  const language = lang === 'ru' ? 'Russian' : 'Azerbaijani';
+export function visionPrompt(lang: 'az' | 'ru' | 'en'): string {
+  const language = lang === 'ru' ? 'Russian' : lang === 'en' ? 'English' : 'Azerbaijani';
   return `You are the picture gatekeeper and describer for the assistant of a lighting company's website.
 ALLOWED pictures: interiors and exteriors of rooms and buildings (spaces to be lit), facades, outdoor areas, floor plans and architectural drawings, lighting fixtures and LED products, installed lighting, screenshots of the Ecolife website.
 REJECT everything else, in particular: a person (face or body) as a main or clearly visible subject (selfies, portraits, groups, crowds), nudity or sexual content, violence, gore, hateful content, weapons, drugs, identity documents, bank cards, chat screenshots or other personal data, memes, food, animals or vehicles as the subject, landscapes, and anything not related to lighting a space or Ecolife products.

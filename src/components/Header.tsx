@@ -193,7 +193,7 @@ export const Header: React.FC<HeaderProps> = ({
 
               {isLangDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-28 bg-[var(--ed-raise)] border border-[var(--ed-line)] rounded-xl shadow-xl py-1 z-50 animate-fadeIn">
-                  {(['az', 'ru'] as Language[]).map((lang) => (
+                  {(['az', 'ru', 'en'] as Language[]).map((lang) => (
                     <button
                       key={lang}
                       onClick={() => { onLanguageChange(lang); setIsLangDropdownOpen(false); }}
@@ -270,7 +270,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex-1 overflow-y-auto px-5 py-8 space-y-8">
             {/* Language pills */}
             <div className="flex gap-2">
-              {(['az', 'ru'] as Language[]).map((lang) => (
+              {(['az', 'ru', 'en'] as Language[]).map((lang) => (
                 <button
                   key={lang}
                   onClick={() => onLanguageChange(lang)}

@@ -6,6 +6,7 @@ import { solutions } from '../data/solutions';
 import { products as staticProducts } from '../data/products';
 import { projects as staticProjects } from '../data/projects';
 import { useData } from '../context/DataContext';
+import { localizeValue } from '../utils/lang';
 import { FadeIn } from '../components/ui/FadeIn';
 import { EdButton, EdLink, EdHairline } from '../components/ed/EditorialUI';
 import { EdProductCard } from '../components/ed/EdProductCard';
@@ -475,7 +476,7 @@ export const SolutionsPage: React.FC<SolutionsPageProps> = ({
                       <div className="absolute inset-0 bg-gradient-to-t from-[#141413]/90 via-[#141413]/25 to-transparent" />
                       <div className="absolute bottom-0 left-0 right-0 p-6 lg:p-7 flex items-end justify-between gap-4">
                         <div>
-                          <span className="font-micro text-[9px] text-amber-warm block mb-1.5">{proj.location}</span>
+                          <span className="font-micro text-[9px] text-amber-warm block mb-1.5">{localizeValue(proj.location, currentLang)}</span>
                           <h3 className="ed-display-sm font-display text-ivory">
                             {proj.title}
                           </h3>

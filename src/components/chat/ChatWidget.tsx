@@ -55,9 +55,9 @@ interface ChatWidgetProps {
 }
 
 export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate, page }) => {
-  const lang = (currentLang === 'ru' ? 'ru' : 'az') as ChatLang;
+  const lang: ChatLang = currentLang === 'ru' || currentLang === 'en' ? currentLang : 'az';
   const t = STR[lang];
-  const apiLang = currentLang === 'ru' ? 'ru' : 'az';
+  const apiLang = lang;
   const variant = useMemo(() => getVariant(), []);
 
   const [open, setOpen] = useState(false);
