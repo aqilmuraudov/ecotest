@@ -9,24 +9,34 @@ interface SimilarProjectPopupProps {
   cta: string;
   /** hide while something else covers the page (photo lightbox) */
   suspended?: boolean;
+  /** the project the card belongs to: closing it only silences that project */
+  projectKey: string;
   onContact: () => void;
 }
 
-const STORAGE_KEY = 'ecolife_similar_cta_closed';
+// a visitor who closes the card on a project is not shown it again on that project for an hour
+const STORAGE_PREFIX = 'ecolife_similar_cta_closed:';
+const HIDE_MS = 60 * 60 * 1000;
 // share of the scrollable page after which the card appears (a bit before the middle)
 const SHOW_AT = 0.35;
 
-const wasClosed = () => {
-  try { return sessionStorage.getItem(STORAGE_KEY) === '1'; } catch { return false; }
+const wasClosed = (projectKey: string) => {
+  try {
+    const at = Number(localStorage.getItem(STORAGE_PREFIX + projectKey));
+    return at > 0 && Date.now() - at < HIDE_MS;
+  } catch { return false; }
 };
 
 /**
  * "Have a similar project?" card shown in the centre of the screen once the visitor has scrolled to about the middle of a project page.
- * Closing it (or using the button) keeps it away for the rest of the visit, so it never nags.
+ * Closing it (or using the button) keeps it away from that project for an hour, so it never nags.
  */
-export const SimilarProjectPopup: React.FC<SimilarProjectPopupProps> = ({ title, description, cta, suspended = false, onContact }) => {
-  const [dismissed, setDismissed] = useState(wasClosed);
+export const SimilarProjectPopup: React.FC<SimilarProjectPopupProps> = ({ title, description, cta, suspended = false, projectKey, onContact }) => {
+  const [dismissed, setDismissed] = useState(() => wasClosed(projectKey));
   const [scrolled, setScrolled] = useState(false);
+
+  // the page component stays mounted when the visitor moves from one project to another
+  useEffect(() => { setDismissed(wasClosed(projectKey)); }, [projectKey]);
 
   useEffect(() => {
     if (dismissed) return;
@@ -41,7 +51,7 @@ export const SimilarProjectPopup: React.FC<SimilarProjectPopupProps> = ({ title,
 
   const close = () => {
     setDismissed(true);
-    try { sessionStorage.setItem(STORAGE_KEY, '1'); } catch { /* private mode: it just shows again next visit */ }
+    try { localStorage.setItem(STORAGE_PREFIX + projectKey, String(Date.now())); } catch { /* private mode: it just shows again next visit */ }
   };
 
   const open = !dismissed && scrolled && !suspended;

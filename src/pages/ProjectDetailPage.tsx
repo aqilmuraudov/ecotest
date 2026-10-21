@@ -300,6 +300,7 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
         description={t.projects.similarProjectDesc}
         cta={t.projects.contactEngineer}
         suspended={!!lightboxImg}
+        projectKey={project.slug || project.id}
         onContact={onOpenContact}
       />
 
