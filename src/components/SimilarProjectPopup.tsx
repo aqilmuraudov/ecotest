@@ -55,7 +55,7 @@ export const SimilarProjectPopup: React.FC<SimilarProjectPopupProps> = ({ title,
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[var(--ed-scrim)] backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-sm"
           onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}
         >
           <motion.aside
@@ -75,19 +75,19 @@ export const SimilarProjectPopup: React.FC<SimilarProjectPopupProps> = ({ title,
             type="button"
             onClick={close}
             aria-label="Close"
-            className="absolute top-2.5 right-2.5 p-1.5 rounded-full text-[var(--ed-mute)] hover:text-amber-warm hover:bg-[var(--ed-line-soft)] transition-colors"
+            className="absolute top-2.5 right-2.5 z-10 p-1.5 rounded-full text-[var(--ed-mute)] hover:text-amber-warm hover:bg-[var(--ed-line-soft)] transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
 
-          <div className="relative p-7 sm:p-8 pr-12">
-            <span className="relative flex h-2 w-2 mb-4">
+          <div className="relative p-7 sm:p-8 text-center">
+            <span className="relative flex h-2 w-2 mb-4 mx-auto">
               <span className="absolute inline-flex h-full w-full rounded-full bg-[var(--ed-amber)] opacity-60 animate-ping" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--ed-amber)]" />
             </span>
             <h3 className="ed-display-sm font-display text-ivory leading-tight">{title}</h3>
             <p className="text-xs text-mute mt-2.5 leading-relaxed">{description}</p>
-            <div className="mt-5">
+            <div className="mt-5 flex justify-center">
               <EdButton arrow onClick={() => { close(); onContact(); }}>
                 {cta}
               </EdButton>
