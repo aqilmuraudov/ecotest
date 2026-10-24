@@ -20,6 +20,17 @@ export function rateLimit(key: string, max: number, windowMs: number): boolean {
   return true;
 }
 
+/** The request body as an object, or null when it is not valid JSON (the caller answers 400 instead of crashing with 500). */
+export function readJson(req: any): Record<string, any> | null {
+  if (typeof req.body !== 'string') return req.body && typeof req.body === 'object' ? req.body : {};
+  try {
+    const v = JSON.parse(req.body || '{}');
+    return v && typeof v === 'object' ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 export function clientIp(req: any): string {
   const fwd = String(req.headers?.['x-forwarded-for'] || '').split(',')[0].trim();
   return fwd || req.socket?.remoteAddress || 'unknown';

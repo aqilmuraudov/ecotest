@@ -1,5 +1,6 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { readJson } from './_lib/core.js';
 
 // Vercel serverless function: returns a short-lived presigned PUT URL for Cloudflare R2.
 // Only authenticated admins (rows in public.admin_users) may request one.
@@ -7,6 +8,9 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 // plus VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY (already set for the frontend).
 
 const MAX_BYTES = 50 * 1024 * 1024;
+// files are served from the public R2 domain: pages and scripts a browser would run there are refused
+const ACTIVE_EXT = new Set(['html', 'htm', 'xhtml', 'shtml', 'js', 'mjs', 'cjs', 'php', 'swf']);
+const ACTIVE_TYPE = /(html|javascript|ecmascript|x-php|shockwave)/i;
 
 async function isAdmin(token: string): Promise<boolean> {
   const url = process.env.VITE_SUPABASE_URL;
@@ -36,7 +40,8 @@ export default async function handler(req: any, res: any) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
+  const body = readJson(req);
+  if (!body) return res.status(400).json({ error: 'Invalid request.' });
   const { filename, contentType, size, folder } = body as {
     filename?: string; contentType?: string; size?: number; folder?: string;
   };
@@ -48,6 +53,9 @@ export default async function handler(req: any, res: any) {
   const base = (filename.lastIndexOf('.') > 0 ? filename.slice(0, filename.lastIndexOf('.')) : filename)
     .toLowerCase().replace(/[^a-z0-9_-]/g, '-').slice(0, 40) || 'upload';
   const safeFolder = (folder || 'products').toLowerCase().replace(/[^a-z0-9_/-]/g, '').replace(/\.\./g, '') || 'products';
+  if (ACTIVE_EXT.has(ext) || ACTIVE_TYPE.test(String(contentType || ''))) {
+    return res.status(400).json({ error: 'This file type is not allowed.' });
+  }
   const key = `${safeFolder}/${base}-${Date.now()}.${ext}`;
   const type = contentType || 'application/octet-stream';
 

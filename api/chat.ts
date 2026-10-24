@@ -1,4 +1,4 @@
-import { env, rateLimit, clientIp, checkHuman, parseLang } from './_lib/core.js';
+import { env, rateLimit, clientIp, checkHuman, parseLang, readJson } from './_lib/core.js';
 import { logSession } from './_lib/log.js';
 import { getAiRuntime, roleTargets } from './_lib/aiconfig.js';
 
@@ -32,7 +32,8 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
+  const body = readJson(req);
+  if (!body) return res.status(400).json({ error: 'bad_request' });
   const raw: unknown[] = Array.isArray(body.messages) ? body.messages : [];
   const history: ChatMsg[] = raw
     .map((m: any) => {
@@ -120,7 +121,11 @@ export default async function handler(req: any, res: any) {
   }
   if (human.pass) send({ type: 'pass', token: human.pass });
 
-  const cacheKey = canned && history.length === 1 ? `${lang}|${page?.type || ''}|${page?.id || ''}|${canned}` : '';
+  // a cached answer is replayed to every visitor, so it may only come from the chip's own question: the question text is part
+  // of the key, and a request carrying the visitor's own context (photo notes, shortlist) is never cached
+  const cacheKey = canned && history.length === 1 && !extra.vision && !extra.shortlist?.length
+    ? `${lang}|${page?.type || ''}|${page?.id || ''}|${canned}|${history[0].content.replace(/\s+/g, ' ').trim().toLowerCase().slice(0, 300)}`
+    : '';
   const cached = cacheKey ? cacheGet(cacheKey) : null;
   if (cached) {
     for (const evt of cached) send(evt);

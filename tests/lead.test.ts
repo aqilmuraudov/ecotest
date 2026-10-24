@@ -337,6 +337,15 @@ describe('dedupe (same phone + source + productCode within 5 minutes)', () => {
     expect(net.telegrams()).toHaveLength(1);
   });
 
+  it("the same phone with another name is a new inquiry (a phone number alone does not return another person's answer)", async () => {
+    const net = mockNetwork();
+    await post(valid({ name: 'Aqil Test' }));
+    const other = await post(valid({ name: 'Somebody Else' }));
+    expect(other.body.duplicate).toBeUndefined();
+    expect(net.saves()).toHaveLength(2);
+    expect((await post(valid({ name: 'aqil test' }))).body.duplicate).toBe(true); // same name, other case
+  });
+
   it('a different productCode or source is a new inquiry', async () => {
     const net = mockNetwork();
     await post(valid({ source: 'product', productCode: 'EL-100' }));

@@ -1,4 +1,4 @@
-import { env, rateLimit, clientIp, sendTelegram, escapeHtml, loadCatalog, checkHuman, parseLang, SALES_WHATSAPP, SITE_URL } from './_lib/core.js';
+import { env, rateLimit, clientIp, sendTelegram, escapeHtml, loadCatalog, checkHuman, parseLang, readJson, SALES_WHATSAPP, SITE_URL } from './_lib/core.js';
 import { summarize, type ChatMsg } from './_lib/ai.js';
 import { linkLead } from './_lib/log.js';
 
@@ -46,7 +46,8 @@ export default async function handler(req: any, res: any) {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
-  const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
+  const body = readJson(req);
+  if (!body) return res.status(400).json({ error: 'bad_request' });
 
   if (body.website) return res.status(200).json({ ok: true }); // honeypot: pretend success to bots
   if (!rateLimit(`lead:${clientIp(req)}`, 5, 10 * 60 * 1000)) {
@@ -65,7 +66,8 @@ export default async function handler(req: any, res: any) {
   if (body.consent !== true) return res.status(400).json({ error: 'consent' });
 
   const sourceForKey = SOURCES[String(body.source)] ? String(body.source) : 'contact-form';
-  const dedupeKey = `${phone}|${sourceForKey}|${String(body.productCode || '')}`;
+  // the name is part of the key: knowing someone's phone number alone must not return their answer (name, products)
+  const dedupeKey = `${phone}|${sourceForKey}|${String(body.productCode || '')}|${name.toLowerCase()}`;
   const seen = recent.get(dedupeKey);
   if (seen && Date.now() - seen.at < DEDUPE_MS) return res.status(200).json({ ...seen.body, duplicate: true });
 

@@ -150,8 +150,16 @@ export default async function handler(req: any, res: any) {
       if (bad) return res.status(400).json({ error: bad });
       const base = trimSlash(String(body.baseUrl));
       const rt = await getAiRuntime();
-      // a key typed in the panel can be tried before it is saved; otherwise the stored (or environment) key is used
-      const key = cleanKey(body.key) || resolveKey(rt, provider)?.key || '';
+      // a key typed in the panel can be tried before it is saved; otherwise the stored (or environment) key is used,
+      // but only towards the host its provider is configured with, so an edited base URL can never carry a saved key elsewhere
+      const typed = cleanKey(body.key);
+      if (!typed) {
+        const own = rt.cfg.providers.find(p => p.id === provider)?.baseUrl;
+        if (!own || new URL(own).hostname.toLowerCase() !== new URL(base).hostname.toLowerCase()) {
+          return res.status(400).json({ error: 'Saxlanmış açar yalnız bu provayderin öz ünvanına göndərilir. Başqa ünvanı yoxlamaq üçün açarı xanaya yazın.' });
+        }
+      }
+      const key = typed || resolveKey(rt, provider)?.key || '';
       if (!key) return res.status(400).json({ error: 'Bu provayder üçün açar yoxdur' });
 
       if (action === 'models') {
