@@ -10,7 +10,7 @@ import { CALC_CHIP_Q, MAX_NUDGES, NUDGE_GAP_MS, nudgeFor, readNudgeState, writeN
 import { STR, WHATSAPP, type ChatLang } from './strings';
 import { validPhone } from '../../utils/phone';
 import {
-  CalcCard, LeadDoneView, LeadForm, LinkText, ProductCardView, ProjectCardView, ShortlistTray, ToolCards, ToolChips, resizeImage,
+  CalcCard, LeadDoneView, LeadForm, LinkText, ProductCards, ProjectCardView, ShortlistTray, ToolCards, ToolChips, resizeImage,
   type CalcInput, type LeadState, type ProductCard, type ProjectCard,
 } from './ui';
 
@@ -382,8 +382,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
       const data = await res.json().catch(() => ({}));
       if (res.status === 403) { clearPass(); return failed(t.captcha); }
       if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      // the server's WhatsApp link carries the product names and the customer's name
-      setLeadDone(prev => (prev ? { ...prev, whatsappUrl: data.whatsappUrl || prev.whatsappUrl, notified: !!data.notified } : prev));
+      // the server's WhatsApp link carries the product names and the customer's name; its number wins over ours
+      // (a repeated request within a few minutes is answered with the first request's number)
+      setLeadDone(prev => (prev ? { ...prev, short: data.short || prev.short, whatsappUrl: data.whatsappUrl || prev.whatsappUrl, notified: !!data.notified } : prev));
     } catch {
       failed(t.errSend);
     }
@@ -637,11 +638,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
                       )}
 
                       {m.products && m.products.length > 0 && (
-                        <div className="w-full space-y-2">
-                          {m.products.map(p => (
-                            <ProductCardView key={p.code} p={p} fav={favCodes.has(p.code)} t={t} onFav={toggleFav} onOpen={openProduct} />
-                          ))}
-                        </div>
+                        <ProductCards items={m.products} favCodes={favCodes} t={t} onFav={toggleFav} onOpen={openProduct} />
                       )}
 
                       {m.projects && m.projects.length > 0 && (

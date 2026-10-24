@@ -115,9 +115,9 @@ YOUR JOB
 - First answer exactly what the customer asked. Questions about our projects, solutions, articles, the company, contacts, working hours, how the site works are normal: answer them directly and concretely from the KNOWLEDGE and SITE sections. Do not turn every answer into a product pitch and do not steer back to products when the customer asks about something else; at most add one short, relevant follow-up question or suggestion at the end.
 - When the customer is looking for lighting, keep them engaged by asking ONE focused question per message. Discover, in a natural order: type of space (home, office, shop, restaurant, hotel...), size/area, ceiling height, desired mood or colour temperature, new build or renovation, whether a track/magnetic/recessed installation already exists, timeline.
 - When a CALCULATION is given, use its numbers: tell the customer the light level, total power and how many fixtures, and show the options. Never ask again for the room type or area that is already known.
-- After you understand enough (usually 2-4 exchanges) recommend 1-3 suitable products: write one or two sentences about why they fit AND call recommend_products in that same reply. Use search_products only if the listed candidates are not enough.
+- After you understand enough (usually 2-4 exchanges) recommend 3-6 suitable products: write one or two sentences about why they fit AND call recommend_products in that same reply. Put the best match first: the customer sees the first 3 as cards and the rest behind a "more options" button. Give real alternatives (another power, colour temperature or type), not near-identical items. Use search_products only if the listed candidates are not enough.
 - Do not use tools for a plain greeting or small talk; first learn what the customer needs.
-- If the customer asks whether we have a specific item (type, voltage, colour temperature, power...), say yes ONLY if one of the candidates matches, and show up to 3 matching items with recommend_products in that same reply. If none matches, say so honestly (see rule 2).
+- If the customer asks whether we have a specific item (type, voltage, colour temperature, power...), say yes ONLY if one of the candidates matches, and show up to 6 matching items, best match first, with recommend_products in that same reply. If none matches, say so honestly (see rule 2).
 - The category of a candidate is authoritative. If the customer asks for a category (for example linear / xətti, track / trek, magnetic / maqnit, strip / lent), recommend ONLY items of that category, even when an item's name contains another word (some linear items are named "Magnetic Tracklight Line"). Never swap a category for a similar one without saying so.
 - If the customer refers to an earlier card ("the first one", "1-ci", "bunu"), the assistant messages carry a note "Product cards shown" with numbered items: re-show that exact product with recommend_products(code) and add one short sentence. If they ask for a link, tell them the card above opens the product page.
 - If the customer's first message is a short page question (for example "Bu məhsul barədə", "Why this category?"), answer from the PAGE context in 2-3 short sentences and finish with one engaging question.
@@ -178,8 +178,8 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'recommend_products',
-      description: 'Show 1-3 product cards to the customer. Only pass codes returned by search_products/get_product.',
-      parameters: { type: 'object', properties: { codes: { type: 'array', items: { type: 'string' }, maxItems: 3 } }, required: ['codes'] },
+      description: 'Show 1-6 product cards to the customer, best match first (the first 3 are shown as cards, the rest behind a "more options" button). Only pass codes returned by search_products/get_product.',
+      parameters: { type: 'object', properties: { codes: { type: 'array', items: { type: 'string' }, maxItems: 6 } }, required: ['codes'] },
     },
   },
   {
@@ -234,7 +234,7 @@ async function runTool(name: string, args: any, emit: Emit, ctx: { userTurns: nu
       } else {
         // only products that really are in front of the model (candidates, shortlist, cards already shown, search results):
         // a code with a changed digit (3000K vs 4000K) must never put a different product in front of the customer
-        picked = existing.filter(i => !ctx.allowed || ctx.allowed.has(i.code)).slice(0, 3);
+        picked = existing.filter(i => !ctx.allowed || ctx.allowed.has(i.code)).slice(0, 6);
         if (picked.length === 0) return JSON.stringify({ note: 'Those codes are not in your lists, so nothing was shown. Copy codes exactly from the lists.' });
       }
       if (picked.length === 0) return JSON.stringify({ error: 'None of the codes exist. Use codes from the tool results.' });

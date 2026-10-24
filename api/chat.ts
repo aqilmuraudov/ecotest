@@ -40,7 +40,7 @@ export default async function handler(req: any, res: any) {
       let content = String(m?.content ?? '').slice(0, 1500);
       // cards the customer saw are invisible in the text; tell the model so "1-ci məhsul" / "the first one" resolves
       if (role === 'assistant' && Array.isArray(m?.shown) && m.shown.length) {
-        const list = m.shown.slice(0, 3).map((p: any, i: number) => `${i + 1}) ${String(p?.name ?? '').slice(0, 120)} (${safeId(p?.code, 20)})`).join('; ');
+        const list = m.shown.slice(0, 6).map((p: any, i: number) => `${i + 1}) ${String(p?.name ?? '').slice(0, 120)} (${safeId(p?.code, 20)})`).join('; ');
         content += `\n[Product cards shown to the customer: ${list}]`;
       }
       return { role, content } as ChatMsg;

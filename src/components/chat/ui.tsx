@@ -48,12 +48,16 @@ export const LinkText: React.FC<{ text: string; onNav: Nav }> = ({ text, onNav }
 
 // ------------------------------------------------------------------ cards
 export const ProductCardView: React.FC<{
-  p: ProductCard; fav: boolean; t: Strings; onFav: (p: ProductCard) => void; onOpen: (slug: string) => void;
-}> = ({ p, fav, t, onFav, onOpen }) => (
+  p: ProductCard; n?: number; fav: boolean; t: Strings; onFav: (p: ProductCard) => void; onOpen: (slug: string) => void;
+}> = ({ p, n, fav, t, onFav, onOpen }) => (
   <div className="group relative w-full flex items-center gap-3 rounded-2xl bg-[#1b1c21] border border-white/10 hover:border-[var(--ed-amber)]/60 p-2.5 transition-colors">
     <button type="button" onClick={() => onOpen(p.slug)} className="flex items-center gap-3 text-left min-w-0 flex-1">
-      <span className="ed-plate w-[72px] h-[72px] shrink-0 rounded-xl overflow-hidden grid place-items-center">
+      <span className="ed-plate relative w-[72px] h-[72px] shrink-0 rounded-xl overflow-hidden grid place-items-center">
         {p.image && <img src={p.image} alt="" loading="lazy" className="w-full h-full object-contain p-1.5" />}
+        {/* the number lets the customer say "the 2nd one" and the model knows which card that is */}
+        {n !== undefined && (
+          <span className="absolute top-1 left-1 min-w-[20px] h-5 px-1 grid place-items-center rounded-full bg-[#111216] border border-white/10 text-[var(--ed-amber)] text-[11px] font-semibold leading-none">{n}</span>
+        )}
       </span>
       <span className="min-w-0 flex-1 pr-9">
         <span className="block text-[13px] font-semibold leading-snug line-clamp-2">{p.name}</span>
@@ -73,6 +77,34 @@ export const ProductCardView: React.FC<{
     </button>
   </div>
 );
+
+// the best matches stay in view; further options wait behind one tap, so a long list does not bury the main choice
+export const FIRST_CARDS = 3;
+
+export const ProductCards: React.FC<{
+  items: ProductCard[]; favCodes: Set<string>; t: Strings; onFav: (p: ProductCard) => void; onOpen: (slug: string) => void;
+}> = ({ items, favCodes, t, onFav, onOpen }) => {
+  const [all, setAll] = useState(false);
+  // hiding a single card saves nothing
+  const shown = all || items.length <= FIRST_CARDS + 1 ? items : items.slice(0, FIRST_CARDS);
+  const hidden = items.length - shown.length;
+  return (
+    <div className="w-full space-y-2">
+      {shown.map((p, i) => (
+        <ProductCardView key={p.code} p={p} n={items.length > 1 ? i + 1 : undefined} fav={favCodes.has(p.code)} t={t} onFav={onFav} onOpen={onOpen} />
+      ))}
+      {hidden > 0 && (
+        <button
+          type="button"
+          onClick={() => setAll(true)}
+          className="w-full min-h-[44px] rounded-2xl border border-dashed border-white/15 text-[12.5px] text-[#c9c9cd] hover:border-[var(--ed-amber)]/60 hover:text-[var(--ed-amber)] transition-colors"
+        >
+          {t.moreCards(hidden)}
+        </button>
+      )}
+    </div>
+  );
+};
 
 export const ProjectCardView: React.FC<{ p: ProjectCard; t: Strings; onOpen: (slug: string) => void }> = ({ p, t, onOpen }) => (
   <button
