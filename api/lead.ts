@@ -27,7 +27,7 @@ const CALLBACK: Record<string, string> = {
   'tmrw-pm': 'Sabah 15:00-18:00',
 };
 
-function normalizePhone(input: string): string | null {
+export function normalizePhone(input: string): string | null {
   const d = input.replace(/\D/g, '');
   let full = d;
   if (d.length === 9) full = '994' + d; // 50 450 70 07
