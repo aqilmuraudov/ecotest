@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { validPhone } from '../utils/phone';
 import { Language } from '../types';
 import { translations } from '../data/translations';
 import { useData } from '../context/DataContext';
@@ -79,7 +80,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ currentLang }) => {
       setValidationError(ru ? 'Укажите имя.' : 'Adınızı yazın.');
       return;
     }
-    if (cleanPhone.replace(/\D/g, '').length < 9) {
+    if (!validPhone(cleanPhone)) {
       setValidationError(ru ? 'Укажите корректный номер телефона.' : 'Telefon nömrəsini düzgün yazın.');
       return;
     }

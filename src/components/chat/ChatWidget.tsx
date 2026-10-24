@@ -8,6 +8,7 @@ import { getSid, getVariant, track } from '../../lib/track';
 import { useData } from '../../context/DataContext';
 import { CALC_CHIP_Q, MAX_NUDGES, NUDGE_GAP_MS, nudgeFor, readNudgeState, writeNudgeState, type ChatPage, type Nudge } from './nudges';
 import { STR, WHATSAPP, type ChatLang } from './strings';
+import { validPhone } from '../../utils/phone';
 import {
   CalcCard, LeadDoneView, LeadForm, LinkText, ProductCardView, ProjectCardView, ShortlistTray, ToolCards, ToolChips, resizeImage,
   type CalcInput, type LeadState, type ProductCard, type ProjectCard,
@@ -40,14 +41,6 @@ const FAV_KEY = 'ecolife-chat-fav';
 const uid = () => Math.random().toString(36).slice(2, 10);
 const tidy = (s: string) => s.replace(/[ \t]{2,}/g, ' ').trim();
 
-/** Same rules as /api/lead: Azerbaijan numbers are 994 + 9 digits (also accepted as 9 digits or 0 + 9), others 11-15 digits. */
-function validPhone(input: string): boolean {
-  const d = input.replace(/\D/g, '');
-  if (d.length === 9 || (d.length === 10 && d.startsWith('0'))) return true;
-  if (d.startsWith('994')) return d.length === 12 && d[3] !== '0';
-  return d.length >= 11 && d.length <= 15;
-}
-
 interface ChatWidgetProps {
   currentLang: Language;
   onNavigate: (page: string, param?: string) => void;
@@ -77,7 +70,6 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
   });
   const [lead, setLead] = useState<LeadState>({ name: '', phone: '+994 ', consent: false, website: '', callback: 'asap' });
   const [leadErr, setLeadErr] = useState('');
-  const [leadBusy, setLeadBusy] = useState(false);
   const [leadDone, setLeadDone] = useState<LeadDone | null>(null);
   const [calcOpen, setCalcOpen] = useState(false);
   const [trayOpen, setTrayOpen] = useState(false);
@@ -355,7 +347,14 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
     if (lead.name.trim().length < 2) return setLeadErr(t.errName);
     if (!validPhone(lead.phone)) return setLeadErr(t.errPhone);
     if (!lead.consent) return setLeadErr(t.errConsent);
-    setLeadBusy(true);
+    // the customer sees "request received" at once; the request itself (human check, database, Telegram) runs in the background
+    const ref = Math.random().toString(36).slice(2, 6);
+    const codes = shortlist.length ? shortlist.map(p => p.code) : chosenCodes;
+    const hi = apiLang === 'en' ? 'Hello! I am writing from the Ecolife website.' : apiLang === 'ru' ? 'Здравствуйте! Пишу с сайта Ecolife.' : 'Salam! Ecolife saytından yazıram.';
+    const waNow = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`${hi} №${ref.toUpperCase()}${codes.length ? ' ' + codes.join(', ') : ''}`)}`;
+    setLeadDone({ short: ref.toUpperCase(), whatsappUrl: waNow, notified: true });
+    track('lead_submit', page.type, { shortlist: shortlist.length });
+    const failed = (msg: string) => { setLeadDone(null); setLeadErr(msg); };
     try {
       const pass = readPass();
       const cfToken = pass ? '' : (await getTurnstileToken()) || '';
@@ -366,6 +365,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
           name: lead.name,
           phone: lead.phone,
           consent: true,
+          ref,
           pass,
           cfToken,
           website: lead.website,
@@ -374,20 +374,18 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
           callback: lead.callback,
           vision: visionRef.current || undefined,
           sid: getSid(),
-          shortlist: shortlist.length ? shortlist.map(p => p.code) : chosenCodes,
+          shortlist: codes,
           products: lastShownCodes,
           transcript: messages.filter(m => !m.error && !m.local && m.content).map(m => ({ role: m.role, content: m.content })),
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.status === 403) { clearPass(); return setLeadErr(t.captcha); }
+      if (res.status === 403) { clearPass(); return failed(t.captcha); }
       if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      track('lead_submit', page.type, { shortlist: shortlist.length });
-      setLeadDone({ short: data.short || '', whatsappUrl: data.whatsappUrl || `https://wa.me/${WHATSAPP}`, notified: !!data.notified });
+      // the server's WhatsApp link carries the product names and the customer's name
+      setLeadDone(prev => (prev ? { ...prev, whatsappUrl: data.whatsappUrl || prev.whatsappUrl, notified: !!data.notified } : prev));
     } catch {
-      setLeadErr(t.errSend);
-    } finally {
-      setLeadBusy(false);
+      failed(t.errSend);
     }
   };
 
@@ -658,7 +656,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ currentLang, onNavigate,
                           {leadDone ? (
                             <LeadDoneView t={t} short={leadDone.short} whatsappUrl={leadDone.whatsappUrl} />
                           ) : (
-                            <LeadForm t={t} lead={lead} setLead={setLead} err={leadErr} busy={leadBusy} onSubmit={submitLead} />
+                            <LeadForm t={t} lead={lead} setLead={setLead} err={leadErr} busy={false} onSubmit={submitLead} />
                           )}
                         </div>
                       )}

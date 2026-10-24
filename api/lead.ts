@@ -99,7 +99,9 @@ export default async function handler(req: any, res: any) {
   const sid = String(body.sid || '').replace(/[^\w\-.]/g, '').slice(0, 40);
   const summary = history.length ? await summarize(history) : '';
 
-  const id = `inq-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  // the browser confirms the request at once and shows this reference before the server answers
+  const refRaw = String(body.ref || '').toLowerCase();
+  const id = `inq-${Date.now()}-${/^[a-z0-9]{4}$/.test(refRaw) ? refRaw : Math.random().toString(36).slice(2, 6)}`;
   const short = id.slice(-4).toUpperCase();
   const transcriptText = history.map(m => `${m.role === 'user' ? 'Müştəri' : 'AISeller'}: ${m.content}`).join('\n').slice(0, 9000);
 

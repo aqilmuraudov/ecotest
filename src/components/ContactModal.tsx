@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { validPhone } from '../utils/phone';
 import { Language, Product } from '../types';
 import { translations } from '../data/translations';
 import { useData } from '../context/DataContext';
@@ -134,7 +135,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
     const phone = sanitizePhone(form.phone);
     const note = sanitizeText(form.note, 1500);
     if (firstName.length < 2) { setError(x.errName); return; }
-    if (phone.replace(/\D/g, '').length < 9) { setError(x.errPhone); return; }
+    if (!validPhone(phone)) { setError(x.errPhone); return; }
 
     // what the sales team reads: the customer's own note, otherwise the standard sentence for what they were looking at
     const defaultMsg = prefilledProduct

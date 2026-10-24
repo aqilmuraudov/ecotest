@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { getTurnstileToken } from '../lib/turnstile';
+import { validPhone } from '../utils/phone';
+import { queueInquiry, readOutbox, writeOutbox, MAX_TRIES } from '../utils/inquiryOutbox';
 import { Product, BlogPost, Project, Inquiry, CategoryItem, SitePagesData } from '../types';
 import { products as initialProducts, productCategoriesList } from '../data/products';
 import { blogPosts as initialBlogPosts } from '../data/blog';
@@ -922,10 +924,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       status: 'new'
     };
 
+    // same checks as the server: a request it would refuse is refused here, before the visitor is told it went through
+    if (String(inqData.name || '').trim().length < 2) return { success: false, error: 'name' };
+    if (!validPhone(inqData.phone)) return { success: false, error: 'phone' };
+
     const updated = [newInquiry, ...inquiries];
     setInquiries(updated);
     saveToLocal(LOCAL_STORAGE_INQUIRIES, updated);
 
+    // the visitor is answered at once; the slow part (human check, database, Telegram) runs in the background
+    void deliverInquiry(inqData).then(r => { if (!r.success) queueInquiry(inqData, r.error); });
+    return { success: true };
+  };
+
+  const deliverInquiry = async (inqData: Omit<Inquiry, 'id' | 'createdAt' | 'status'>): Promise<{ success: boolean; error?: string }> => {
     // 1) the shared lead pipeline (validation, database, Telegram to the sales team)
     try {
       const cfToken = (await getTurnstileToken()) || ''; // empty when the human check is not configured
@@ -991,6 +1003,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, error: e?.message || 'Network error' };
     }
   };
+
+  // inquiries that could not be delivered earlier are retried on load and when the browser is back online
+  const flushing = React.useRef(false);
+  useEffect(() => {
+    const flush = async () => {
+      if (flushing.current) return;
+      const queued = readOutbox();
+      if (!queued.length) return;
+      flushing.current = true;
+      const left = [];
+      for (const q of queued) {
+        const r = await deliverInquiry(q.data);
+        if (!r.success && q.tries + 1 < MAX_TRIES) left.push({ ...q, tries: q.tries + 1 });
+      }
+      writeOutbox(left);
+      flushing.current = false;
+    };
+    void flush();
+    window.addEventListener('online', flush);
+    return () => window.removeEventListener('online', flush);
+  }, []);
 
   const updateInquiryStatus = async (id: string, status: Inquiry['status']): Promise<{ success: boolean; error?: string }> => {
     const updated = inquiries.map(i => i.id === id ? { ...i, status } : i);
