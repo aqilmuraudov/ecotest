@@ -89,7 +89,7 @@ export const SimilarProjectPopup: React.FC<SimilarProjectPopupProps> = ({ title,
             type="button"
             onClick={close}
             aria-label="Close"
-            className="absolute top-2.5 right-2.5 z-10 p-1.5 rounded-full text-[var(--ed-mute)] hover:text-amber-warm hover:bg-[var(--ed-line-soft)] transition-colors"
+            className="absolute top-1 right-1 z-10 w-11 h-11 flex items-center justify-center rounded-full text-[var(--ed-mute)] hover:text-amber-warm hover:bg-[var(--ed-line-soft)] transition-colors"
           >
             <X className="w-4 h-4" />
           </button>

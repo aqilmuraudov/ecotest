@@ -26,3 +26,8 @@ Vite + React 19 + TypeScript + Tailwind v4 + Motion. Supabase (REST, Auth, RLS).
 - Windows + Git Bash/PowerShell. Python is handy for binary-safe multi-line edits (files may be CRLF).
 - The preview pane runs hidden: disable CSS transitions when auditing colours.
 - Env files: `.env.local` (not committed) holds local keys; the service-role key is NOT local.
+
+## Release workflow
+- Small UI fixes: commit straight to `main` when the user says "commit et / push et".
+- Risky changes (lead pipeline `api/lead.ts`, chat/AI, database, auth, env vars): work on a branch `feat/<name>`, push it only when told. Vercel builds a Preview URL for every non-`main` branch; the user checks it there, and it is merged to `main` only when told.
+- Preview deploys use the Vercel "Preview" environment variables. Unless they differ from Production, a test inquiry sent from a preview writes to the production Supabase and notifies the production Telegram chat: check Vercel -> Settings -> Environment Variables before sending real test leads from a preview.
